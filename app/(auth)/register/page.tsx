@@ -140,11 +140,11 @@ export default function RegisterPage() {
                 <div className="relative mt-1">
                   <Input
                     type={showPassword ? 'text' : 'password'}
-                    className="pr-10 bg-white/8 border-white/10 text-black placeholder:text-white/25 focus:border-blue-500 h-10 text-sm focus:bg-white/10 focus:text-white"
+                    className="pr-10 bg-white/8 border-white/10 text-white placeholder:text-white/25 focus:border-blue-500 h-10 text-sm"
                     placeholder="Min. 8 characters"
                     {...register('password')}
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-black hover:text-white/60 transition-colors">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
@@ -153,7 +153,7 @@ export default function RegisterPage() {
 
               <div>
                 <Label className="text-white/70 text-xs">Confirm Password</Label>
-                <Input type="password" className="mt-1 bg-white/8 border-white/10 text-black placeholder:text-white/25 focus:border-blue-500 focus:bg-white/10 focus:text-white h-10 text-sm" placeholder="Re-enter password" {...register('confirmPassword')} />
+                <Input type="password" className="mt-1 bg-white/8 border-white/10 text-white placeholder:text-white/25 focus:border-blue-500 h-10 text-sm" placeholder="Re-enter password" {...register('confirmPassword')} />
                 {errors.confirmPassword && <p className="text-xs text-red-400 mt-1">{errors.confirmPassword.message}</p>}
               </div>
 

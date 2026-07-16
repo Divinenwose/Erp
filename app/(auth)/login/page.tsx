@@ -19,7 +19,7 @@ const loginSchema = z.object({
 });
 type LoginForm = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {   
+export default function LoginPage() {
   const { signIn } = useAuth();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -119,21 +119,13 @@ export default function LoginPage() {
                 </div>
                 <div className="relative mt-1.5">
                   <Input
-                    type={showPassword ? "text" : "password"}
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
-                    className="pr-10 bg-white/8 border-white/10 text-black placeholder:text-white/25 focus:border-blue-500 focus:bg-white/10 focus:text-white"
-                    {...register("password")}
+                    className="pr-10 bg-white/8 border-white/10 text-white placeholder:text-white/25 focus:border-blue-500"
+                    {...register('password')}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-md bg-white/10 border border-white/10 text-black hover:bg-white/15 hover:text-white transition-all duration-200"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors">
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>}

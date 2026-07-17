@@ -121,10 +121,10 @@ export default function LoginPage() {
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
-                    className="pr-10 bg-white/8 border-white/10 text-black placeholder:text-white/25 focus:border-blue-500 focus:bg-white/10 focus:text-white"
+                    className="pr-10 bg-white/8 border-white/10 text-white placeholder:text-white/25 focus:border-blue-500"
                     {...register('password')}
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-black transition-colors">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>

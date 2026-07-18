@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -16,10 +16,35 @@ interface SidebarProps {
 
 function NavItemComponent({ item, collapsed, depth = 0 }: { item: NavItem; collapsed: boolean; depth?: number }) {
   const pathname = usePathname();
+  const { hasPermission, isSuperAdmin } = useAuth();
   const [open, setOpen] = useState(false);
 
+  // Check if user has permission for this item
+  const hasAccess = useMemo(() => {
+    // Super Admin has access to everything
+    if (isSuperAdmin()) return true;
+    
+    // If no permission required, allow access
+    if (!item.permission) return true;
+    
+    // Check if user has the specific permission
+    return hasPermission(item.permission);
+  }, [item.permission, hasPermission, isSuperAdmin]);
+
+  // Filter children based on permissions
+  const visibleChildren = useMemo(() => {
+    if (!item.children) return [];
+    return item.children.filter(child => {
+      if (!child.permission) return true;
+      return hasPermission(child.permission);
+    });
+  }, [item.children, hasPermission]);
+
+  // If no access and no visible children, don't render
+  if (!hasAccess && visibleChildren.length === 0) return null;
+
   const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + '/') : false;
-  const isParentActive = item.children?.some(
+  const isParentActive = visibleChildren.some(
     (child) => child.href && (pathname === child.href || pathname.startsWith(child.href + '/'))
   );
 
@@ -29,7 +54,7 @@ function NavItemComponent({ item, collapsed, depth = 0 }: { item: NavItem; colla
 
   const Icon = item.icon;
 
-  if (item.children) {
+  if (visibleChildren.length > 0) {
     return (
       <div>
         <button
@@ -60,7 +85,7 @@ function NavItemComponent({ item, collapsed, depth = 0 }: { item: NavItem; colla
         </button>
         {open && !collapsed && (
           <div className="mt-1 space-y-0.5 pl-4 border-l border-gray-200 dark:border-gray-700 ml-5">
-            {item.children.map((child) => (
+            {visibleChildren.map((child) => (
               <NavItemComponent key={child.href ?? child.title} item={child} collapsed={false} depth={depth + 1} />
             ))}
           </div>

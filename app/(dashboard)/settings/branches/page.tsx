@@ -1,158 +1,356 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase, Branch } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { logAuditEvent } from '@/lib/audit';
+import { Can } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
-import EmptyState from '@/components/common/EmptyState';
-import StatusBadge from '@/components/common/StatusBadge';
+import KPICard from '@/components/common/KPICard';
+import DataTable, { Column } from '@/components/common/DataTable';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, Plus, Pencil, Trash2, Phone, Globe } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MapPin, Plus, Edit, Trash2, Phone, Globe, Building2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { toast } from 'sonner';
 
-const INITIAL_BRANCHES = [
-  { id: 1, name: 'Headquarters', type: 'HQ', address: '1200 W Innovation Blvd, Chicago, IL 60601', phone: '+1 312-555-0100', country: 'United States', employees: 85, status: 'active' },
-  { id: 2, name: 'New York Office', type: 'Office', address: '350 Fifth Ave, New York, NY 10118', phone: '+1 212-555-0102', country: 'United States', employees: 32, status: 'active' },
-  { id: 3, name: 'London Branch', type: 'Office', address: '30 St Mary Axe, London EC3A 8BF', phone: '+44 20 7555 0103', country: 'United Kingdom', employees: 18, status: 'active' },
-  { id: 4, name: 'Austin Distribution', type: 'Warehouse', address: '4500 Industry Park, Austin, TX 78744', phone: '+1 512-555-0104', country: 'United States', employees: 22, status: 'active' },
-  { id: 5, name: 'Singapore Hub', type: 'Office', address: '1 Raffles Place, Singapore 048616', phone: '+65 6555 0105', country: 'Singapore', employees: 12, status: 'planned' },
-];
+const branchSchema = z.object({
+  name: z.string().min(1, 'Required').min(2, 'Name must be at least 2 characters'),
+  type: z.enum(['office', 'warehouse', 'hq', 'store']),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
+  phone: z.string().optional(),
+});
+type BranchForm = z.infer<typeof branchSchema>;
 
-const TYPE_COLORS: Record<string, string> = {
-  HQ: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  Office: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
-  Warehouse: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+const typeLabels: Record<string, string> = {
+  office: 'Office',
+  warehouse: 'Warehouse',
+  hq: 'Headquarters',
+  store: 'Retail Store',
 };
 
 export default function BranchesPage() {
-  const [branches] = useState(INITIAL_BRANCHES);
-  const [showForm, setShowForm] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newAddress, setNewAddress] = useState('');
-  const [newType, setNewType] = useState('Office');
+  const { company, user: currentUser } = useAuth();
+  const [branches, setBranches] = useState<(Branch & { employee_count?: number })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editBranch, setEditBranch] = useState<Branch | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<BranchForm>({
+    resolver: zodResolver(branchSchema),
+    defaultValues: { type: 'office' },
+  });
+
+  const load = async () => {
+    if (!company?.id) return;
+    setLoading(true);
+
+    const [branchRes, empRes] = await Promise.all([
+      supabase.from('branches').select('*').eq('company_id', company.id).order('name'),
+      supabase.from('employees').select('branch_id').eq('company_id', company.id),
+    ]);
+
+    const branchesWithCounts = (branchRes.data ?? []).map((branch: Branch) => ({
+      ...branch,
+      employee_count: empRes.data?.filter((e: any) => e.branch_id === branch.id).length || 0,
+    }));
+
+    setBranches(branchesWithCounts);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [company?.id]);
+
+  const openEdit = (branch: Branch) => {
+    setEditBranch(branch);
+    reset({
+      name: branch.name,
+      type: branch.type,
+      address: branch.address ?? '',
+      city: branch.city ?? '',
+      country: branch.country ?? '',
+      phone: branch.phone ?? '',
+    });
+    setDialogOpen(true);
+  };
+
+  const onSubmit = async (data: BranchForm) => {
+    if (!company?.id) return;
+
+    if (editBranch) {
+      const { error } = await supabase
+        .from('branches')
+        .update({
+          name: data.name,
+          type: data.type,
+          address: data.address,
+          city: data.city,
+          country: data.country,
+          phone: data.phone,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editBranch.id);
+
+      if (error) {
+        toast.error('Failed to update branch');
+        return;
+      }
+
+      await logAuditEvent(company.id, currentUser?.id || '', {
+        action: 'branch_updated',
+        module: 'branches',
+        record_id: editBranch.id,
+        new_values: { name: data.name },
+      });
+
+      toast.success('Branch updated');
+    } else {
+      const { error } = await supabase.from('branches').insert({
+        company_id: company.id,
+        name: data.name,
+        type: data.type,
+        address: data.address,
+        city: data.city,
+        country: data.country,
+        phone: data.phone,
+      });
+
+      if (error) {
+        toast.error('Failed to create branch');
+        return;
+      }
+
+      await logAuditEvent(company.id, currentUser?.id || '', {
+        action: 'branch_created',
+        module: 'branches',
+        new_values: { name: data.name },
+      });
+
+      toast.success('Branch created');
+    }
+
+    reset();
+    setEditBranch(null);
+    setDialogOpen(false);
+    load();
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId || !company?.id) return;
+    setDeleting(true);
+
+    const { error } = await supabase.from('branches').delete().eq('id', deleteId);
+
+    if (error) {
+      toast.error('Failed to delete branch');
+    } else {
+      await logAuditEvent(company.id, currentUser?.id || '', {
+        action: 'branch_deleted',
+        module: 'branches',
+        record_id: deleteId,
+      });
+      toast.success('Branch deleted');
+      load();
+    }
+
+    setDeleteId(null);
+    setDeleting(false);
+  };
+
+  const columns: Column<(Branch & { employee_count?: number })>[] = [
+    {
+      key: 'name',
+      header: 'Branch',
+      sortable: true,
+      cell: (row) => (
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+            <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white text-sm">{row.name}</p>
+            {row.city && <p className="text-xs text-gray-400">{row.city}</p>}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      sortable: true,
+      cell: (row) => (
+        <Badge variant="secondary" className="text-xs capitalize">
+          {typeLabels[row.type] || row.type}
+        </Badge>
+      ),
+    },
+    {
+      key: 'address',
+      header: 'Location',
+      cell: (row) => (
+        <div className="text-sm">
+          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+            <MapPin className="h-3 w-3" />
+            <span className="truncate max-w-[150px]">{row.address || '—'}</span>
+          </div>
+          {row.country && (
+            <div className="flex items-center gap-1 text-gray-500 dark:text-gray-500 mt-0.5">
+              <Globe className="h-3 w-3" />
+              <span className="truncate max-w-[150px]">{row.country}</span>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'phone',
+      header: 'Phone',
+      cell: (row) => (
+        <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+          <Phone className="h-3 w-3" />
+          <span>{row.phone || '—'}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'employee_count',
+      header: 'Employees',
+      sortable: true,
+      cell: (row) => <span className="text-sm">{row.employee_count ?? 0}</span>,
+    },
+    {
+      key: 'actions',
+      header: '',
+      headerClassName: 'w-10',
+      cell: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Edit className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => openEdit(row)}>
+              <Edit className="h-4 w-4 mr-2" />Edit
+            </DropdownMenuItem>
+            <Can resource="branches" action="delete">
+              <DropdownMenuItem className="text-red-600" onClick={() => setDeleteId(row.id)}>
+                <Trash2 className="h-4 w-4 mr-2" />Delete
+              </DropdownMenuItem>
+            </Can>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Branches & Locations"
+        title="Branches"
         description="Manage company offices, branches, and warehouses"
         breadcrumbs={[{ label: 'Settings' }, { label: 'Branches' }]}
       >
-        <Button
-          size="sm"
-          className="bg-blue-600 hover:bg-blue-700"
-          onClick={() => setShowForm(v => !v)}
-        >
-          <Plus className="h-4 w-4 mr-2" />{showForm ? 'Cancel' : 'Add Branch'}
-        </Button>
+        <Can resource="branches" action="create">
+          <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditBranch(null); reset(); } setDialogOpen(open); }}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />Add Branch
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editBranch ? 'Edit Branch' : 'Create Branch'}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label>Branch Name *</Label>
+                    <Input className="mt-1" {...register('name')} />
+                    {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
+                  </div>
+                  <div>
+                    <Label>Type *</Label>
+                    <Controller name="type" control={control} render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="office">Office</SelectItem>
+                          <SelectItem value="warehouse">Warehouse</SelectItem>
+                          <SelectItem value="hq">Headquarters</SelectItem>
+                          <SelectItem value="store">Retail Store</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )} />
+                  </div>
+                  <div>
+                    <Label>Phone</Label>
+                    <Input className="mt-1" {...register('phone')} />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Address</Label>
+                    <Input className="mt-1" {...register('address')} placeholder="Street address" />
+                  </div>
+                  <div>
+                    <Label>City</Label>
+                    <Input className="mt-1" {...register('city')} />
+                  </div>
+                  <div>
+                    <Label>Country</Label>
+                    <Input className="mt-1" {...register('country')} />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); setEditBranch(null); reset(); }}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>
+                    {isSubmitting ? 'Saving...' : editBranch ? 'Update' : 'Create'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </Can>
       </PageHeader>
 
-      {showForm && (
-        <Card className="dark:bg-gray-900 dark:border-gray-800">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">New Branch / Location</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Branch Name *</label>
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={e => setNewName(e.target.value)}
-                  placeholder="e.g. Tokyo Office"
-                  className="w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
-                <select
-                  value={newType}
-                  onChange={e => setNewType(e.target.value)}
-                  className="w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Office">Office</option>
-                  <option value="Warehouse">Warehouse</option>
-                  <option value="HQ">Headquarters</option>
-                  <option value="Store">Retail Store</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
-                <input
-                  type="text"
-                  value={newAddress}
-                  onChange={e => setNewAddress(e.target.value)}
-                  placeholder="Street, City, Country"
-                  className="w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" size="sm" onClick={() => setShowForm(false)}>Cancel</Button>
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowForm(false)}>
-                Save Branch
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {branches.map(branch => (
-          <Card key={branch.id} className="dark:bg-gray-900 dark:border-gray-800 hover:shadow-md transition-shadow">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{branch.name}</h3>
-                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${TYPE_COLORS[branch.type] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {branch.type}
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                    <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                    <span className="leading-relaxed">{branch.address}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-1.5 mb-3">
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  <Phone className="h-3.5 w-3.5 shrink-0" /><span>{branch.phone}</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  <Globe className="h-3.5 w-3.5 shrink-0" /><span>{branch.country}</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-3 border-t dark:border-gray-800">
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={branch.status} />
-                  <span className="text-xs text-gray-400">{branch.employees} employees</span>
-                </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-blue-600">
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-rose-600">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard title="Total Branches" value={branches.length} icon={<Building2 className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+        <KPICard title="Total Employees" value={branches.reduce((a, b) => a + (b.employee_count || 0), 0)} icon={<MapPin className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
       </div>
 
-      {branches.length === 0 && (
-        <Card className="dark:bg-gray-900 dark:border-gray-800">
-          <CardContent className="py-12">
-            <EmptyState
-              icon={<MapPin className="h-12 w-12" />}
-              title="No branches yet"
-              description="Add your first branch or office location to get started."
-              action={<Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowForm(true)}><Plus className="h-4 w-4 mr-2" />Add Branch</Button>}
-            />
-          </CardContent>
-        </Card>
-      )}
+      <DataTable
+        data={branches}
+        columns={columns}
+        loading={loading}
+        searchPlaceholder="Search branches..."
+        searchKeys={['name', 'address', 'city', 'country', 'phone']}
+        pageSize={15}
+        emptyTitle="No branches yet"
+        emptyDescription="Add branches to manage your locations"
+      />
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        loading={deleting}
+        title="Delete Branch?"
+        description="This will permanently delete the branch. Any employees assigned to this branch will need to be reassigned."
+        confirmLabel="Delete"
+      />
     </div>
   );
 }

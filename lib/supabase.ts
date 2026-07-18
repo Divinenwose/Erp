@@ -13,6 +13,10 @@ export type Database = {
       employees: { Row: Employee; Insert: Omit<Employee, 'id' | 'created_at' | 'updated_at'>; Update: Partial<Employee> };
       departments: { Row: Department; Insert: Omit<Department, 'id' | 'created_at' | 'updated_at'>; Update: Partial<Department> };
       branches: { Row: Branch; Insert: Omit<Branch, 'id' | 'created_at' | 'updated_at'>; Update: Partial<Branch> };
+      roles: { Row: Role; Insert: Omit<Role, 'id' | 'created_at' | 'updated_at'>; Update: Partial<Role> };
+      permissions: { Row: Permission; Insert: Omit<Permission, 'id' | 'created_at'>; Update: Partial<Permission> };
+      role_permissions: { Row: RolePermission; Insert: Omit<RolePermission, 'id' | 'created_at'>; Update: Partial<RolePermission> };
+      user_roles: { Row: UserRole; Insert: Omit<UserRole, 'id' | 'assigned_at'>; Update: Partial<UserRole> };
     };
   };
 };
@@ -117,4 +121,37 @@ export interface Branch {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface Role {
+  id: string;
+  company_id?: string;
+  name: string;
+  description?: string;
+  is_system: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Permission {
+  id: string;
+  resource: string;
+  action: string;
+  description?: string;
+  created_at: string;
+}
+
+export interface RolePermission {
+  id: string;
+  role_id: string;
+  permission_id: string;
+  created_at: string;
+}
+
+export interface UserRole {
+  id: string;
+  user_id: string;
+  role_id: string;
+  assigned_by?: string;
+  assigned_at: string;
 }

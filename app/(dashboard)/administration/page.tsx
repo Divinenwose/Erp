@@ -6,9 +6,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, Car, UserCheck, Wrench, Package, Briefcase } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils';
 
 export default function AdministrationOverviewPage() {
+  const router = useRouter();
   const modules = [
     { title: 'Assets', description: 'Fixed asset management', icon: Briefcase, href: '/administration/assets', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600', count: '124 assets' },
     { title: 'Fleet', description: 'Vehicle management', icon: Car, href: '/administration/fleet', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600', count: '18 vehicles' },
@@ -19,7 +21,7 @@ export default function AdministrationOverviewPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Administration" description="Manage office facilities, assets, and operations" breadcrumbs={[{ label: 'Administration' }]}>
-        <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700"><Link href="/administration/assets">Register Asset</Link></Button>
+        <Button size="sm" onClick={() => router.push('/administration/assets')} className="bg-blue-600 hover:bg-blue-700">Register Asset</Button>
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

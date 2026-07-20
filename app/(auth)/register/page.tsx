@@ -43,8 +43,8 @@ export default function RegisterPage() {
     });
     if (error) { toast.error(error.message || 'Registration failed'); setLoading(false); }
     else {
-      toast.success('Workspace created! Redirecting...');
-      router.push('/dashboard');
+      toast.success('Workspace created! Please sign in to continue.');
+      router.push('/login');
     }
   };
 

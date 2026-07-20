@@ -119,7 +119,7 @@ function getRequiredPermission(pathname: string): string | null {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, hasPermission, isSuperAdmin } = useAuth();
+  const { user, loading, hasPermission, isSuperAdmin, isCompanyAdmin, permissions } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -129,15 +129,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return;
     }
 
+    // Only check permissions after loading is complete and user is authenticated
     if (!loading && user && pathname !== '/unauthorized') {
       const requiredPermission = getRequiredPermission(pathname);
       
-      // Super Admin bypasses all permission checks
-      if (!isSuperAdmin() && requiredPermission && !hasPermission(requiredPermission)) {
+      // Super Admin and Company Admin bypass all permission checks
+      // Also wait for permissions to be loaded before checking
+      if (!isCompanyAdmin() && requiredPermission && permissions.length > 0 && !hasPermission(requiredPermission)) {
         router.replace('/unauthorized');
       }
     }
-  }, [user, loading, router, pathname, hasPermission, isSuperAdmin]);
+  }, [user, loading, router, pathname, hasPermission, isCompanyAdmin, permissions]);
 
   if (loading) {
     return (

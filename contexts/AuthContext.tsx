@@ -56,28 +56,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const fetchRolesAndPermissions = async (userId: string) => {
-    // Fetch user roles
-    const { data: userRoles } = await supabase
-      .from('user_roles')
-      .select('role_id, roles(*)')
-      .eq('user_id', userId);
+    // Fetch user profile to get the role field
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
 
-    const roleList = (userRoles?.map((ur: any) => ur.roles).filter(Boolean) ?? []) as Role[];
-    setRoles(roleList);
+    // Since we're using the simple profiles.role field, we need to map it to permissions
+    // For now, Company Admin gets all permissions, others get limited permissions
+    const userRole = userProfile?.role || 'employee';
 
-    // Fetch permissions for user's roles
-    if (roleList.length > 0) {
-      const roleIds = roleList.map(r => r.id);
-      const { data: rolePerms } = await supabase
-        .from('role_permissions')
-        .select('permission_id, permissions(*)')
-        .in('role_id', roleIds);
+    // Create a mock role object from the profiles.role field
+    const mockRole: Role = {
+      id: userRole, // Use the role name as ID for now
+      company_id: profile?.company_id,
+      name: userRole,
+      description: `${userRole} role`,
+      is_system: userRole === 'Company Admin',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setRoles([mockRole]);
 
-      const permList = (rolePerms?.map((rp: any) => rp.permissions).filter(Boolean) ?? []) as Permission[];
-      setPermissions(permList);
+    // Fetch all permissions from the database
+    const { data: allPerms } = await supabase
+      .from('permissions')
+      .select('*');
+
+    // Filter permissions based on role
+    let permList: Permission[] = [];
+    if (userRole === 'Company Admin' || userRole === 'Super Admin') {
+      // Company Admin gets all permissions except system-level
+      permList = (allPerms ?? []).filter(p => p.resource !== 'roles' && p.resource !== 'permissions');
+    } else if (userRole === 'employee') {
+      // Employee gets basic permissions
+      permList = (allPerms ?? []).filter(p => 
+        p.resource === 'dashboard' || 
+        (p.resource === 'hr.leave' && p.action === 'view') ||
+        (p.resource === 'hr.leave' && p.action === 'create') ||
+        (p.resource === 'hr.attendance' && p.action === 'view')
+      );
     } else {
-      setPermissions([]);
+      // Other roles get no permissions by default
+      permList = [];
     }
+
+    setPermissions(permList);
   };
 
   const refreshProfile = async () => {
@@ -149,7 +174,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     data: { firstName: string; lastName: string; companyName: string }
   ) => {
-    const { data: authData, error } = await supabase.auth.signUp({ email, password });
+    const { data: authData, error } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+      }
+    });
     if (error) return { error: error as Error };
 
     if (authData.user) {
@@ -172,50 +203,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: 'Company Admin',
       });
 
-      // Assign Company Admin role to the new user
-      const { data: companyAdminRole } = await supabase
-        .from('roles')
-        .select('id')
-        .eq('name', 'Company Admin')
-        .eq('company_id', companyData.id)
-        .maybeSingle();
-
-      let roleId = companyAdminRole?.id;
-
-      // If company-specific role doesn't exist, use system Company Admin role
-      if (!roleId) {
-        const { data: systemRole } = await supabase
-          .from('roles')
-          .select('id')
-          .eq('name', 'Company Admin')
-          .eq('is_system', true)
-          .maybeSingle();
-        roleId = systemRole?.id;
-      }
-
-      // If still no role, create a company-specific Company Admin role
-      if (!roleId) {
-        const { data: newRole } = await supabase
-          .from('roles')
-          .insert({
-            company_id: companyData.id,
-            name: 'Company Admin',
-            description: 'Full company access with all permissions',
-            is_system: false,
-          })
-          .select('id')
-          .single();
-        roleId = newRole?.id;
-      }
-
-      // Assign role to user
-      if (roleId) {
-        await supabase.from('user_roles').insert({
-          user_id: authData.user.id,
-          role_id: roleId,
-          assigned_by: authData.user.id,
-        });
-      }
+      // Note: Since the database uses profiles.role field instead of user_roles table,
+      // we don't need to assign roles via user_roles. The role is already set in profiles.
 
       // Seed demo data in background
       try {

@@ -351,8 +351,8 @@ export default function FurniturePage() {
           </Button>
           <Can resource="assets.furniture" action="create">
             <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditItem(null); reset(); } setDialogOpen(open); }}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+              <DialogTrigger asChild={false}>
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />Add Furniture
                 </Button>
               </DialogTrigger>

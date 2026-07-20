@@ -322,8 +322,8 @@ export default function MaintenanceRequestsPage() {
           </Button>
           <Can resource="facilities.maintenance" action="create">
             <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditRequest(null); reset(); } setDialogOpen(open); }}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+              <DialogTrigger asChild={false}>
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />New Request
                 </Button>
               </DialogTrigger>

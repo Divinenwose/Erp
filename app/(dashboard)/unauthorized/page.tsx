@@ -1,3 +1,5 @@
+'use client';
+
 import { ShieldAlert, Home, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -28,11 +30,9 @@ export default function UnauthorizedPage() {
               </Link>
             </Button>
             
-            <Button asChild onClick={() => window.history.back()}>
-              <button>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Go Back
-              </button>
+            <Button variant="outline" onClick={() => window.history.back()}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Go Back
             </Button>
           </div>
           

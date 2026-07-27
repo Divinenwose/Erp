@@ -252,7 +252,7 @@ export default function AssetAssignmentsPage() {
           </div>
           <div>
             <p className="font-medium text-gray-900 dark:text-white text-sm">{getAssetName(row)}</p>
-            <Badge className={typeColors[row.asset_type] || typeColors.furniture} variant="secondary" className="capitalize text-xs">
+            <Badge className={`${typeColors[row.asset_type] || typeColors.furniture} capitalize text-xs`} variant="secondary">
               {row.asset_type}
             </Badge>
           </div>

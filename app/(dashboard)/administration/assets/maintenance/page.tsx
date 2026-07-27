@@ -129,7 +129,7 @@ export default function AssetMaintenancePage() {
     if (editRecord) {
       const { error } = await supabase
         .from('asset_maintenance')
-        .update({ 
+        .update({
           ...payload,
           status: data.completed_date ? 'completed' : 'scheduled',
           updated_at: new Date().toISOString(),
@@ -203,7 +203,7 @@ export default function AssetMaintenancePage() {
 
     const { error } = await supabase
       .from('asset_maintenance')
-      .update({ 
+      .update({
         status: 'completed',
         completed_date: new Date().toISOString().split('T')[0],
         updated_at: new Date().toISOString(),
@@ -236,7 +236,7 @@ export default function AssetMaintenancePage() {
       m.status,
       m.performed_by_profile ? `${m.performed_by_profile.first_name} ${m.performed_by_profile.last_name}` : '',
     ]);
-    
+
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -276,8 +276,13 @@ export default function AssetMaintenancePage() {
             <Package className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <p className="font-medium text-gray-900 dark:text-white text-sm">{getAssetName(row)}</p>
-            <Badge className={typeColors[row.asset_type] || typeColors.furniture} variant="secondary" className="capitalize text-xs">
+            <p className="font-medium text-gray-900 dark:text-white text-sm">
+              {getAssetName(row)}
+            </p>
+            <Badge
+              variant="secondary"
+              className={`${typeColors[row.asset_type] || typeColors.furniture} capitalize text-xs`}
+            >
               {row.asset_type}
             </Badge>
           </div>
@@ -289,7 +294,10 @@ export default function AssetMaintenancePage() {
       header: 'Type',
       sortable: true,
       cell: (row) => (
-        <Badge className={maintTypeColors[row.maintenance_type] || maintTypeColors.routine} variant="secondary" className="capitalize">
+        <Badge
+          variant="secondary"
+          className={`${maintTypeColors[row.maintenance_type] || maintTypeColors.routine} capitalize`}
+        >
           {row.maintenance_type}
         </Badge>
       ),

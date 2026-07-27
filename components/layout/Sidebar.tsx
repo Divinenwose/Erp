@@ -16,29 +16,34 @@ interface SidebarProps {
 
 function NavItemComponent({ item, collapsed, depth = 0 }: { item: NavItem; collapsed: boolean; depth?: number }) {
   const pathname = usePathname();
-  const { hasPermission, isSuperAdmin } = useAuth();
+  const { hasPermission, isSuperAdmin, isCompanyAdmin, permissions } = useAuth();
   const [open, setOpen] = useState(false);
 
   // Check if user has permission for this item
   const hasAccess = useMemo(() => {
-    // Super Admin has access to everything
-    if (isSuperAdmin()) return true;
-    
+    // Super Admin and Company Admin have access to everything
+    if (isSuperAdmin() || isCompanyAdmin()) return true;
+
     // If no permission required, allow access
     if (!item.permission) return true;
-    
+
     // Check if user has the specific permission
     return hasPermission(item.permission);
-  }, [item.permission, hasPermission, isSuperAdmin]);
+  }, [item.permission, hasPermission, isSuperAdmin, isCompanyAdmin]);
 
   // Filter children based on permissions
   const visibleChildren = useMemo(() => {
     if (!item.children) return [];
-    return item.children.filter(child => {
+    // Super Admin and Company Admin see all children
+    if (isSuperAdmin() || isCompanyAdmin()) {
+      return item.children;
+    }
+    const filtered = item.children.filter(child => {
       if (!child.permission) return true;
       return hasPermission(child.permission);
     });
-  }, [item.children, hasPermission]);
+    return filtered;
+  }, [item.children, hasPermission, isSuperAdmin, isCompanyAdmin]);
 
   // If no access and no visible children, don't render
   if (!hasAccess && visibleChildren.length === 0) return null;

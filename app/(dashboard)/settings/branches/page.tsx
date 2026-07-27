@@ -245,7 +245,7 @@ export default function BranchesPage() {
             <DropdownMenuItem onClick={() => openEdit(row)}>
               <Edit className="h-4 w-4 mr-2" />Edit
             </DropdownMenuItem>
-            <Can resource="branches" action="delete">
+            <Can resource="settings.branches" action="delete">
               <DropdownMenuItem className="text-red-600" onClick={() => setDeleteId(row.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />Delete
               </DropdownMenuItem>
@@ -263,7 +263,7 @@ export default function BranchesPage() {
         description="Manage company offices, branches, and warehouses"
         breadcrumbs={[{ label: 'Settings' }, { label: 'Branches' }]}
       >
-        <Can resource="branches" action="create">
+        <Can resource="settings.branches" action="create">
           <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditBranch(null); reset(); } setDialogOpen(open); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="bg-blue-600 hover:bg-blue-700">

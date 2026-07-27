@@ -56,53 +56,91 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const fetchRolesAndPermissions = async (userId: string) => {
-    // Fetch user profile to get the role field
-    const { data: userProfile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .maybeSingle();
+    // Fetch user's roles from user_roles table
+    const { data: userRoles, error: userRolesError } = await supabase
+      .from('user_roles')
+      .select('role_id, roles(*)')
+      .eq('user_id', userId);
 
-    // Since we're using the simple profiles.role field, we need to map it to permissions
-    // For now, Company Admin gets all permissions, others get limited permissions
-    const userRole = userProfile?.role || 'employee';
+    if (userRolesError) {
+      console.error('Error fetching user roles:', userRolesError);
+      // Fallback: try to get role from profiles.role
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (userProfile?.role) {
+        // Create a mock role from profiles.role
+        const mockRole: Role = {
+          id: userProfile.role,
+          company_id: profile?.company_id,
+          name: userProfile.role,
+          description: `${userProfile.role} role`,
+          is_system: userProfile.role === 'Company Admin',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        setRoles([mockRole]);
 
-    // Create a mock role object from the profiles.role field
-    const mockRole: Role = {
-      id: userRole, // Use the role name as ID for now
-      company_id: profile?.company_id,
-      name: userRole,
-      description: `${userRole} role`,
-      is_system: userRole === 'Company Admin',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setRoles([mockRole]);
-
-    // Fetch all permissions from the database
-    const { data: allPerms } = await supabase
-      .from('permissions')
-      .select('*');
-
-    // Filter permissions based on role
-    let permList: Permission[] = [];
-    if (userRole === 'Company Admin' || userRole === 'Super Admin') {
-      // Company Admin gets all permissions except system-level
-      permList = (allPerms ?? []).filter(p => p.resource !== 'roles' && p.resource !== 'permissions');
-    } else if (userRole === 'employee') {
-      // Employee gets basic permissions
-      permList = (allPerms ?? []).filter(p => 
-        p.resource === 'dashboard' || 
-        (p.resource === 'hr.leave' && p.action === 'view') ||
-        (p.resource === 'hr.leave' && p.action === 'create') ||
-        (p.resource === 'hr.attendance' && p.action === 'view')
-      );
-    } else {
-      // Other roles get no permissions by default
-      permList = [];
+        // For Company Admin fallback, load all permissions
+        if (userProfile.role === 'Company Admin') {
+          const { data: allPerms } = await supabase
+            .from('permissions')
+            .select('*');
+          setPermissions(allPerms || []);
+        }
+      }
+      return;
     }
 
-    setPermissions(permList);
+    // Extract roles from the join
+    const rolesList = userRoles?.map((ur: any) => ur.roles).filter(Boolean) || [];
+    setRoles(rolesList);
+
+    // If no roles, return early
+    if (rolesList.length === 0) {
+      setPermissions([]);
+      return;
+    }
+
+    // Get role IDs
+    const roleIds = rolesList.map((r: Role) => r.id);
+
+    // Fetch permissions for these roles from role_permissions
+    const { data: rolePerms, error: rolePermsError } = await supabase
+      .from('role_permissions')
+      .select('permission_id')
+      .in('role_id', roleIds);
+
+    if (rolePermsError) {
+      console.error('Error fetching role permissions:', rolePermsError);
+      setPermissions([]);
+      return;
+    }
+
+    // Get permission IDs
+    const permissionIds = rolePerms?.map((rp: any) => rp.permission_id) || [];
+
+    if (permissionIds.length === 0) {
+      setPermissions([]);
+      return;
+    }
+
+    // Fetch actual permission details
+    const { data: permissions, error: permsError } = await supabase
+      .from('permissions')
+      .select('*')
+      .in('id', permissionIds);
+
+    if (permsError) {
+      console.error('Error fetching permissions:', permsError);
+      setPermissions([]);
+      return;
+    }
+
+    setPermissions(permissions || []);
   };
 
   const refreshProfile = async () => {
@@ -239,7 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const hasPermission = (permission: string): boolean => {
-    // Permission format: resource.action (e.g., employees.create)
+    // Permission format: resource.action (e.g., dashboard.view, hr.employees.view)
     return permissions.some(p => `${p.resource}.${p.action}` === permission);
   };
 

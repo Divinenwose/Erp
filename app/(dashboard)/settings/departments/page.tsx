@@ -200,7 +200,7 @@ export default function DepartmentsPage() {
             <DropdownMenuItem onClick={() => openEdit(row)}>
               <Edit className="h-4 w-4 mr-2" />Edit
             </DropdownMenuItem>
-            <Can resource="departments" action="delete">
+            <Can resource="settings.departments" action="delete">
               <DropdownMenuItem className="text-red-600" onClick={() => setDeleteId(row.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />Delete
               </DropdownMenuItem>
@@ -218,7 +218,7 @@ export default function DepartmentsPage() {
         description="Manage organizational departments and cost centers"
         breadcrumbs={[{ label: 'Settings' }, { label: 'Departments' }]}
       >
-        <Can resource="departments" action="create">
+        <Can resource="settings.departments" action="create">
           <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditDept(null); reset(); } setDialogOpen(open); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="bg-blue-600 hover:bg-blue-700">

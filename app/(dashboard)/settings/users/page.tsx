@@ -437,7 +437,7 @@ export default function UsersSettingsPage() {
             <DropdownMenuItem onClick={() => openEdit(row)}>
               <Edit className="h-4 w-4 mr-2" />Edit
             </DropdownMenuItem>
-            <Can resource="users" action="manage">
+            <Can resource="settings.users" action="edit">
               <DropdownMenuItem onClick={() => setResetPasswordId(row.id)}>
                 <Key className="h-4 w-4 mr-2" />Reset Password
               </DropdownMenuItem>
@@ -464,7 +464,7 @@ export default function UsersSettingsPage() {
         description="Manage team members and their access"
         breadcrumbs={[{ label: 'Settings' }, { label: 'Users' }]}
       >
-        <Can resource="users" action="create">
+        <Can resource="settings.users" action="create">
           <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditUser(null); reset(); } setDialogOpen(open); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
@@ -575,7 +575,7 @@ export default function UsersSettingsPage() {
             <Button size="sm" variant="outline" onClick={() => setSelectedUsers([])}>
               Clear
             </Button>
-            <Can resource="users" action="manage">
+            <Can resource="settings.users" action="edit">
               <DropdownMenu open={bulkActionOpen} onOpenChange={setBulkActionOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" className="bg-blue-600 hover:bg-blue-700">

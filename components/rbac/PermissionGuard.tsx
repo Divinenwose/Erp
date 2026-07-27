@@ -18,10 +18,10 @@ interface PermissionGuardProps {
  * </PermissionGuard>
  */
 export function PermissionGuard({ permission, children, fallback = null }: PermissionGuardProps) {
-  const { hasPermission, isSuperAdmin } = useAuth();
+  const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
 
-  // Super Admin has all permissions
-  if (isSuperAdmin()) {
+  // Super Admin and Company Admin have all permissions
+  if (isSuperAdmin() || isCompanyAdmin()) {
     return <>{children}</>;
   }
 
@@ -78,10 +78,10 @@ interface CanProps {
  * </Can>
  */
 export function Can({ resource, action, children, fallback = null }: CanProps) {
-  const { can, isSuperAdmin } = useAuth();
+  const { can, isSuperAdmin, isCompanyAdmin } = useAuth();
 
-  // Super Admin can do everything
-  if (isSuperAdmin()) {
+  // Super Admin and Company Admin can do everything
+  if (isSuperAdmin() || isCompanyAdmin()) {
     return <>{children}</>;
   }
 

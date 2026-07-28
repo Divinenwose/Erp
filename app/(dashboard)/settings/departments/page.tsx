@@ -22,8 +22,10 @@ import { toast } from 'sonner';
 
 const deptSchema = z.object({
   name: z.string().min(1, 'Required').min(2, 'Name must be at least 2 characters'),
+  code: z.string().optional(),
   description: z.string().optional(),
-  cost_center: z.string().optional(),
+  budget: z.number().optional(),
+  is_active: z.boolean().default(true),
 });
 type DeptForm = z.infer<typeof deptSchema>;
 
@@ -64,8 +66,10 @@ export default function DepartmentsPage() {
     setEditDept(dept);
     reset({
       name: dept.name,
+      code: dept.code ?? '',
       description: dept.description ?? '',
-      cost_center: dept.cost_center ?? '',
+      budget: dept.budget,
+      is_active: dept.is_active,
     });
     setDialogOpen(true);
   };
@@ -78,8 +82,10 @@ export default function DepartmentsPage() {
         .from('departments')
         .update({
           name: data.name,
+          code: data.code,
           description: data.description,
-          cost_center: data.cost_center,
+          budget: data.budget,
+          is_active: data.is_active,
           updated_at: new Date().toISOString(),
         })
         .eq('id', editDept.id);
@@ -101,8 +107,10 @@ export default function DepartmentsPage() {
       const { error } = await supabase.from('departments').insert({
         company_id: company.id,
         name: data.name,
+        code: data.code,
         description: data.description,
-        cost_center: data.cost_center,
+        budget: data.budget || 0,
+        is_active: data.is_active,
       });
 
       if (error) {
@@ -236,12 +244,20 @@ export default function DepartmentsPage() {
                   {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
                 </div>
                 <div>
+                  <Label>Code</Label>
+                  <Input className="mt-1" {...register('code')} placeholder="e.g., DEPT-001" />
+                </div>
+                <div>
                   <Label>Description</Label>
                   <Input className="mt-1" {...register('description')} />
                 </div>
                 <div>
-                  <Label>Cost Center</Label>
-                  <Input className="mt-1" {...register('cost_center')} placeholder="e.g., CC-1001" />
+                  <Label>Budget</Label>
+                  <Input className="mt-1" type="number" {...register('budget')} placeholder="0.00" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" {...register('is_active')} id="is_active" />
+                  <Label htmlFor="is_active" className="cursor-pointer">Is Active</Label>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); setEditDept(null); reset(); }}>

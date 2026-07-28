@@ -24,20 +24,17 @@ import { toast } from 'sonner';
 
 const branchSchema = z.object({
   name: z.string().min(1, 'Required').min(2, 'Name must be at least 2 characters'),
-  type: z.enum(['office', 'warehouse', 'hq', 'store']),
+  code: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
+  state: z.string().optional(),
   country: z.string().optional(),
   phone: z.string().optional(),
+  email: z.string().optional(),
+  is_headquarter: z.boolean().default(false),
+  is_active: z.boolean().default(true),
 });
 type BranchForm = z.infer<typeof branchSchema>;
-
-const typeLabels: Record<string, string> = {
-  office: 'Office',
-  warehouse: 'Warehouse',
-  hq: 'Headquarters',
-  store: 'Retail Store',
-};
 
 export default function BranchesPage() {
   const { company, user: currentUser } = useAuth();
@@ -50,7 +47,7 @@ export default function BranchesPage() {
 
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<BranchForm>({
     resolver: zodResolver(branchSchema),
-    defaultValues: { type: 'office' },
+    defaultValues: { is_headquarter: false, is_active: true },
   });
 
   const load = async () => {
@@ -77,11 +74,15 @@ export default function BranchesPage() {
     setEditBranch(branch);
     reset({
       name: branch.name,
-      type: branch.type,
+      code: branch.code ?? '',
       address: branch.address ?? '',
       city: branch.city ?? '',
+      state: branch.state ?? '',
       country: branch.country ?? '',
       phone: branch.phone ?? '',
+      email: branch.email ?? '',
+      is_headquarter: branch.is_headquarter,
+      is_active: branch.is_active,
     });
     setDialogOpen(true);
   };
@@ -94,11 +95,15 @@ export default function BranchesPage() {
         .from('branches')
         .update({
           name: data.name,
-          type: data.type,
+          code: data.code,
           address: data.address,
           city: data.city,
+          state: data.state,
           country: data.country,
           phone: data.phone,
+          email: data.email,
+          is_headquarter: data.is_headquarter,
+          is_active: data.is_active,
           updated_at: new Date().toISOString(),
         })
         .eq('id', editBranch.id);
@@ -120,11 +125,15 @@ export default function BranchesPage() {
       const { error } = await supabase.from('branches').insert({
         company_id: company.id,
         name: data.name,
-        type: data.type,
+        code: data.code,
         address: data.address,
         city: data.city,
+        state: data.state,
         country: data.country,
         phone: data.phone,
+        email: data.email,
+        is_headquarter: data.is_headquarter,
+        is_active: data.is_active,
       });
 
       if (error) {
@@ -187,12 +196,22 @@ export default function BranchesPage() {
       ),
     },
     {
-      key: 'type',
+      key: 'is_headquarter',
       header: 'Type',
       sortable: true,
       cell: (row) => (
-        <Badge variant="secondary" className="text-xs capitalize">
-          {typeLabels[row.type] || row.type}
+        <Badge variant={row.is_headquarter ? 'default' : 'secondary'} className="text-xs">
+          {row.is_headquarter ? 'Headquarters' : 'Branch'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'is_active',
+      header: 'Status',
+      sortable: true,
+      cell: (row) => (
+        <Badge variant={row.is_active ? 'default' : 'secondary'} className="text-xs">
+          {row.is_active ? 'Active' : 'Inactive'}
         </Badge>
       ),
     },
@@ -282,18 +301,8 @@ export default function BranchesPage() {
                     {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
                   </div>
                   <div>
-                    <Label>Type *</Label>
-                    <Controller name="type" control={control} render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="office">Office</SelectItem>
-                          <SelectItem value="warehouse">Warehouse</SelectItem>
-                          <SelectItem value="hq">Headquarters</SelectItem>
-                          <SelectItem value="store">Retail Store</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )} />
+                    <Label>Code</Label>
+                    <Input className="mt-1" {...register('code')} placeholder="e.g. NY-001" />
                   </div>
                   <div>
                     <Label>Phone</Label>
@@ -308,8 +317,24 @@ export default function BranchesPage() {
                     <Input className="mt-1" {...register('city')} />
                   </div>
                   <div>
+                    <Label>State/Province</Label>
+                    <Input className="mt-1" {...register('state')} />
+                  </div>
+                  <div>
                     <Label>Country</Label>
                     <Input className="mt-1" {...register('country')} />
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input className="mt-1" type="email" {...register('email')} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" {...register('is_headquarter')} id="is_headquarter" />
+                    <Label htmlFor="is_headquarter" className="cursor-pointer">Is Headquarters</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" {...register('is_active')} id="is_active" />
+                    <Label htmlFor="is_active" className="cursor-pointer">Is Active</Label>
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
@@ -336,7 +361,7 @@ export default function BranchesPage() {
         columns={columns}
         loading={loading}
         searchPlaceholder="Search branches..."
-        searchKeys={['name', 'address', 'city', 'country', 'phone']}
+        searchKeys={['name', 'address', 'city', 'state', 'country', 'phone', 'code']}
         pageSize={15}
         emptyTitle="No branches yet"
         emptyDescription="Add branches to manage your locations"

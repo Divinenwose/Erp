@@ -261,7 +261,7 @@ export default function CourierRegisterPage() {
       header: 'Type',
       sortable: true,
       cell: (row) => (
-        <Badge className={typeColors[row.type] || typeColors.incoming} variant="secondary" className="capitalize">
+        <Badge className={`${typeColors[row.type] || typeColors.incoming} capitalize`} variant="secondary">
           {row.type}
         </Badge>
       ),

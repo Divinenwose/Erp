@@ -250,7 +250,7 @@ export default function LettersPage() {
       header: 'Type',
       sortable: true,
       cell: (row) => (
-        <Badge className={typeColors[row.letter_type] || typeColors.other} variant="secondary" className="capitalize">
+        <Badge className={`${typeColors[row.letter_type] || typeColors.other} capitalize`} variant="secondary">
           {row.letter_type}
         </Badge>
       ),

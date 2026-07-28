@@ -245,7 +245,7 @@ export default function ArchivePage() {
       header: 'Type',
       sortable: true,
       cell: (row) => (
-        <Badge className={typeColors[row.document_type] || typeColors.other} variant="secondary" className="capitalize">
+        <Badge className={`${typeColors[row.document_type] || typeColors.other} capitalize`} variant="secondary">
           {row.document_type}
         </Badge>
       ),

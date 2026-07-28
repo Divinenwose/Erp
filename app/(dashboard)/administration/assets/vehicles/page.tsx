@@ -264,7 +264,7 @@ export default function VehiclesPage() {
       header: 'Type',
       sortable: true,
       cell: (row) => (
-        <Badge className={typeColors[row.type] || typeColors.other} variant="secondary" className="capitalize">
+        <Badge className={`${typeColors[row.type] || typeColors.other} capitalize`} variant="secondary">
           {row.type}
         </Badge>
       ),

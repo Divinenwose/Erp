@@ -259,7 +259,7 @@ export default function IncomingMailPage() {
       header: 'Type',
       sortable: true,
       cell: (row) => (
-        <Badge className={typeColors[row.mail_type] || typeColors.other} variant="secondary" className="capitalize">
+        <Badge className={`${typeColors[row.mail_type] || typeColors.other} capitalize`} variant="secondary">
           {row.mail_type}
         </Badge>
       ),

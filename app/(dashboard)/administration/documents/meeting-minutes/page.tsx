@@ -247,7 +247,7 @@ export default function MeetingMinutesPage() {
       header: 'Type',
       sortable: true,
       cell: (row) => (
-        <Badge className={typeColors[row.meeting_type] || typeColors.other} variant="secondary" className="capitalize">
+        <Badge className={`${typeColors[row.meeting_type] || typeColors.other} capitalize`} variant="secondary">
           {row.meeting_type}
         </Badge>
       ),

@@ -173,12 +173,12 @@ export default function DepartmentsPage() {
       ),
     },
     {
-      key: 'cost_center',
-      header: 'Cost Center',
+      key: 'code',
+      header: 'Code',
       sortable: true,
       cell: (row) => (
         <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-          {row.cost_center || '—'}
+          {row.code || '—'}
         </code>
       ),
     },

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import EmptyState from './EmptyState';
 import { useDebounce } from '@/lib/hooks';
 
-export interface Column<T = Record<string, unknown>> {
+export interface Column<T = any> {
   key: string;
   header: string;
   cell?: (row: T) => React.ReactNode;
@@ -18,12 +18,12 @@ export interface Column<T = Record<string, unknown>> {
   hidden?: boolean;
 }
 
-interface DataTableProps<T extends Record<string, unknown>> {
+interface DataTableProps<T extends object> {
   data: T[];
   columns: Column<T>[];
   loading?: boolean;
   searchPlaceholder?: string;
-  searchKeys?: (keyof T)[];
+  searchKeys?: string[];
   pageSize?: number;
   emptyTitle?: string;
   emptyDescription?: string;
@@ -31,7 +31,7 @@ interface DataTableProps<T extends Record<string, unknown>> {
   emptyAction?: React.ReactNode;
   toolbar?: React.ReactNode;
   onExport?: () => void;
-  rowKey?: keyof T;
+  rowKey?: string;
   onRowClick?: (row: T) => void;
 }
 
@@ -47,10 +47,10 @@ function SkeletonRow({ cols }: { cols: number }) {
   );
 }
 
-export default function DataTable<T extends Record<string, unknown>>({
+export default function DataTable<T extends object>({
   data, columns, loading, searchPlaceholder = 'Search...', searchKeys = [],
   pageSize = 15, emptyTitle = 'No records found', emptyDescription = 'No data to display',
-  emptyIcon, emptyAction, toolbar, onExport, rowKey = 'id' as keyof T, onRowClick,
+  emptyIcon, emptyAction, toolbar, onExport, rowKey = 'id', onRowClick,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -63,15 +63,15 @@ export default function DataTable<T extends Record<string, unknown>>({
   // Filter
   const filtered = debouncedSearch
     ? data.filter(row => {
-        const keys = searchKeys.length > 0 ? searchKeys : (Object.keys(row) as (keyof T)[]);
-        return keys.some(k => String(row[k] ?? '').toLowerCase().includes(debouncedSearch.toLowerCase()));
+        const keys = searchKeys.length > 0 ? searchKeys : Object.keys(row);
+        return keys.some(k => String((row as any)[k] ?? '').toLowerCase().includes(debouncedSearch.toLowerCase()));
       })
     : data;
 
   // Sort
   const sorted = sortKey
     ? [...filtered].sort((a, b) => {
-        const av = a[sortKey]; const bv = b[sortKey];
+        const av = (a as any)[sortKey]; const bv = (b as any)[sortKey];
         if (av == null) return 1; if (bv == null) return -1;
         const cmp = av < bv ? -1 : av > bv ? 1 : 0;
         return sortDir === 'asc' ? cmp : -cmp;
@@ -156,7 +156,7 @@ export default function DataTable<T extends Record<string, unknown>>({
             ) : (
               paginatedRows.map(row => (
                 <tr
-                  key={String(row[rowKey] ?? Math.random())}
+                  key={String((row as any)[rowKey] ?? Math.random())}
                   className={cn(
                     'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors',
                     onRowClick && 'cursor-pointer'
@@ -165,7 +165,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                 >
                   {visibleColumns.map(col => (
                     <td key={col.key} className={cn('px-4 py-3 text-gray-700 dark:text-gray-300', col.className)}>
-                      {col.cell ? col.cell(row) : String(row[col.key] ?? '—')}
+                      {col.cell ? col.cell(row) : String((row as any)[col.key] ?? '—')}
                     </td>
                   ))}
                 </tr>

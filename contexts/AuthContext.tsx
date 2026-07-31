@@ -36,121 +36,150 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
+    try {
+      console.log('[AUTH] Fetching profile for user:', userId);
+      const { data: prof, error: profError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
 
-    if (prof) {
-      setProfile(prof as Profile);
-      if (prof.company_id) {
-        const { data: comp } = await supabase
-          .from('companies')
-          .select('*')
-          .eq('id', prof.company_id)
-          .maybeSingle();
-        setCompany(comp as Company);
+      console.log('[AUTH] Profile data:', prof);
+      console.log('[AUTH] Profile error:', profError);
 
-        // Check if departments exist for this company, sync if missing
-        if (comp) {
-          const { data: depts, error: deptError } = await supabase
-            .from('departments')
-            .select('id')
-            .eq('company_id', comp.id)
-            .limit(1);
+      if (profError) {
+        console.error('[AUTH] Error fetching profile:', profError);
+        return;
+      }
 
-          if (!deptError && (!depts || depts.length === 0)) {
-            console.log('[AUTH] No departments found, syncing from configuration');
-            try {
-              const { syncCompanyDepartments } = await import('@/lib/departments');
-              await syncCompanyDepartments(comp.id, comp.name);
-              console.log('[AUTH] Departments synced successfully');
-            } catch (syncError) {
-              console.error('[AUTH] Department sync failed:', syncError);
+      if (prof) {
+        setProfile(prof as Profile);
+        if (prof.company_id) {
+          console.log('[AUTH] Fetching company for company_id:', prof.company_id);
+          const { data: comp, error: compError } = await supabase
+            .from('companies')
+            .select('*')
+            .eq('id', prof.company_id)
+            .maybeSingle();
+
+          console.log('[AUTH] Company data:', comp);
+          console.log('[AUTH] Company error:', compError);
+
+          if (compError) {
+            console.error('[AUTH] Error fetching company:', compError);
+            return;
+          }
+
+          setCompany(comp as Company);
+
+          // Check if departments exist for this company, sync if missing
+          if (comp) {
+            const { data: depts, error: deptError } = await supabase
+              .from('departments')
+              .select('id')
+              .eq('company_id', comp.id)
+              .limit(1);
+
+            if (!deptError && (!depts || depts.length === 0)) {
+              console.log('[AUTH] No departments found, syncing from configuration');
+              try {
+                const { syncCompanyDepartments } = await import('@/lib/departments');
+                await syncCompanyDepartments(comp.id, comp.name);
+                console.log('[AUTH] Departments synced successfully');
+              } catch (syncError) {
+                console.error('[AUTH] Department sync failed:', syncError);
+              }
             }
           }
         }
       }
+    } catch (error) {
+      console.error('[AUTH] Unexpected error in fetchProfile:', error);
     }
   };
 
   const fetchRolesAndPermissions = async (userId: string) => {
-    console.log('[AUTH] Fetching roles and permissions for user:', userId);
-    
-    // Fetch user's roles from user_roles table (single source of truth)
-    const { data: userRoles, error: userRolesError } = await supabase
-      .from('user_roles')
-      .select('role_id, roles(*)')
-      .eq('user_id', userId);
+    try {
+      console.log('[AUTH] Fetching roles and permissions for user:', userId);
+      
+      // Fetch user's roles from user_roles table (single source of truth)
+      const { data: userRoles, error: userRolesError } = await supabase
+        .from('user_roles')
+        .select('role_id, roles(*)')
+        .eq('user_id', userId);
 
-    console.log('[AUTH] User roles query result:', userRoles);
-    console.log('[AUTH] User roles error:', userRolesError);
+      console.log('[AUTH] User roles query result:', userRoles);
+      console.log('[AUTH] User roles error:', userRolesError);
 
-    if (userRolesError) {
-      console.error('[AUTH] Error fetching user roles:', userRolesError);
+      if (userRolesError) {
+        console.error('[AUTH] Error fetching user roles:', userRolesError);
+        setRoles([]);
+        setPermissions([]);
+        return;
+      }
+
+      // Extract roles from the join
+      const rolesList = userRoles?.map((ur: any) => ur.roles).filter(Boolean) || [];
+      console.log('[AUTH] Roles list:', rolesList);
+      setRoles(rolesList);
+
+      // If no roles, return early
+      if (rolesList.length === 0) {
+        console.log('[AUTH] No roles found for user');
+        setPermissions([]);
+        return;
+      }
+
+      // Get role IDs
+      const roleIds = rolesList.map((r: Role) => r.id);
+      console.log('[AUTH] Role IDs:', roleIds);
+
+      // Fetch permissions for these roles from role_permissions
+      const { data: rolePerms, error: rolePermsError } = await supabase
+        .from('role_permissions')
+        .select('permission_id')
+        .in('role_id', roleIds);
+
+      console.log('[AUTH] Role permissions query result:', rolePerms);
+      console.log('[AUTH] Role permissions error:', rolePermsError);
+
+      if (rolePermsError) {
+        console.error('[AUTH] Error fetching role permissions:', rolePermsError);
+        setPermissions([]);
+        return;
+      }
+
+      // Get permission IDs
+      const permissionIds = rolePerms?.map((rp: any) => rp.permission_id) || [];
+      console.log('[AUTH] Permission IDs:', permissionIds);
+
+      if (permissionIds.length === 0) {
+        console.log('[AUTH] No permissions found for roles');
+        setPermissions([]);
+        return;
+      }
+
+      // Fetch actual permission details
+      const { data: permissions, error: permsError } = await supabase
+        .from('permissions')
+        .select('*')
+        .in('id', permissionIds);
+
+      console.log('[AUTH] Permissions query result:', permissions);
+      console.log('[AUTH] Permissions error:', permsError);
+
+      if (permsError) {
+        console.error('[AUTH] Error fetching permissions:', permsError);
+        setPermissions([]);
+        return;
+      }
+
+      setPermissions(permissions || []);
+    } catch (error) {
+      console.error('[AUTH] Unexpected error in fetchRolesAndPermissions:', error);
       setRoles([]);
       setPermissions([]);
-      return;
     }
-
-    // Extract roles from the join
-    const rolesList = userRoles?.map((ur: any) => ur.roles).filter(Boolean) || [];
-    console.log('[AUTH] Roles list:', rolesList);
-    setRoles(rolesList);
-
-    // If no roles, return early
-    if (rolesList.length === 0) {
-      console.log('[AUTH] No roles found for user');
-      setPermissions([]);
-      return;
-    }
-
-    // Get role IDs
-    const roleIds = rolesList.map((r: Role) => r.id);
-    console.log('[AUTH] Role IDs:', roleIds);
-
-    // Fetch permissions for these roles from role_permissions
-    const { data: rolePerms, error: rolePermsError } = await supabase
-      .from('role_permissions')
-      .select('permission_id')
-      .in('role_id', roleIds);
-
-    console.log('[AUTH] Role permissions query result:', rolePerms);
-    console.log('[AUTH] Role permissions error:', rolePermsError);
-
-    if (rolePermsError) {
-      console.error('[AUTH] Error fetching role permissions:', rolePermsError);
-      setPermissions([]);
-      return;
-    }
-
-    // Get permission IDs
-    const permissionIds = rolePerms?.map((rp: any) => rp.permission_id) || [];
-    console.log('[AUTH] Permission IDs:', permissionIds);
-
-    if (permissionIds.length === 0) {
-      console.log('[AUTH] No permissions found for roles');
-      setPermissions([]);
-      return;
-    }
-
-    // Fetch actual permission details
-    const { data: permissions, error: permsError } = await supabase
-      .from('permissions')
-      .select('*')
-      .in('id', permissionIds);
-
-    console.log('[AUTH] Permissions query result:', permissions);
-    console.log('[AUTH] Permissions error:', permsError);
-
-    if (permsError) {
-      console.error('[AUTH] Error fetching permissions:', permsError);
-      setPermissions([]);
-      return;
-    }
-
-    setPermissions(permissions || []);
   };
 
   const refreshProfile = async () => {

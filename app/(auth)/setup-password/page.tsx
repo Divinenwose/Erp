@@ -24,10 +24,15 @@ export default function SetupPasswordPage() {
   useEffect(() => {
     const validateSession = async () => {
       try {
+        console.log('[Setup Password] Validating session...');
         // Check if user has an active session (from auth callback)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
+        console.log('[Setup Password] Session:', session);
+        console.log('[Setup Password] Session error:', sessionError);
+
         if (sessionError || !session) {
+          console.log('[Setup Password] No valid session found');
           setError('Invalid invitation link. Please request a new invitation.');
           setLoading(false);
           return;
@@ -35,9 +40,11 @@ export default function SetupPasswordPage() {
 
         // Check if user already has a password set (they shouldn't if coming from invite)
         // This is a new user from invite, so they should be able to set password
+        console.log('[Setup Password] Session validated successfully');
         setTokenValid(true);
         setLoading(false);
       } catch (err) {
+        console.error('[Setup Password] Validation error:', err);
         setError('Failed to validate invitation. Please try again.');
         setLoading(false);
       }
@@ -78,6 +85,7 @@ export default function SetupPasswordPage() {
       
       // Redirect to dashboard after 2 seconds
       setTimeout(() => {
+        console.log('[Setup Password] Redirecting to dashboard...');
         router.push('/dashboard');
       }, 2000);
     } catch (err) {

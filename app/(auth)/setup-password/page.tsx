@@ -22,29 +22,19 @@ export default function SetupPasswordPage() {
   const [tokenValid, setTokenValid] = useState(false);
 
   useEffect(() => {
-    const validateToken = async () => {
-      const accessToken = searchParams.get('access_token');
-      const refreshToken = searchParams.get('refresh_token');
-      
-      if (!accessToken || !refreshToken) {
-        setError('Invalid invitation link. Please request a new invitation.');
-        setLoading(false);
-        return;
-      }
-
+    const validateSession = async () => {
       try {
-        // Set the session with the tokens from the URL
-        const { data: { session }, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
+        // Check if user has an active session (from auth callback)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError || !session) {
-          setError('Invalid or expired invitation link. Please request a new invitation.');
+          setError('Invalid invitation link. Please request a new invitation.');
           setLoading(false);
           return;
         }
 
+        // Check if user already has a password set (they shouldn't if coming from invite)
+        // This is a new user from invite, so they should be able to set password
         setTokenValid(true);
         setLoading(false);
       } catch (err) {
@@ -53,8 +43,8 @@ export default function SetupPasswordPage() {
       }
     };
 
-    validateToken();
-  }, [searchParams]);
+    validateSession();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -154,10 +154,13 @@ export async function createUser(input: CreateUserInput) {
     }
 
     // Step 6: Send invitation email
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    console.log('[SERVER ACTION] Sending invitation with redirect to:', `${appUrl}/auth/callback`);
+    
     const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       input.email,
       {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/setup-password`,
+        redirectTo: `${appUrl}/auth/callback`,
       }
     );
 

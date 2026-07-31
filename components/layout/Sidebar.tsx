@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { NavItem } from '@/config/navigation';
 import { getNavigationConfig } from '@/lib/company-modules';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { ChevronDown, ChevronRight, Building2, Zap, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -18,10 +19,31 @@ interface SidebarProps {
   onMobileClose: () => void;
 }
 
-function NavItemComponent({ item, collapsed, depth = 0, onMobileClose }: { item: NavItem; collapsed: boolean; depth?: number; onMobileClose?: () => void }) {
+function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, userDepartmentName }: { item: NavItem; collapsed: boolean; depth?: number; onMobileClose?: () => void; userDepartmentName?: string }) {
   const pathname = usePathname();
-  const { hasPermission, isSuperAdmin, isCompanyAdmin, permissions } = useAuth();
+  const { hasPermission, isSuperAdmin, isCompanyAdmin, permissions, profile } = useAuth();
   const [open, setOpen] = useState(false);
+
+  // Department to module mapping
+  const departmentModuleAccess: Record<string, string[]> = {
+    'Human Resources': ['hr'],
+    'Finance': ['finance'],
+    'Inventory': ['inventory'],
+    'Procurement': ['procurement'],
+    'Sales': ['crm'],
+    'Legal': ['legal'],
+    'Administration': ['facilities', 'assets', 'reception', 'supplies', 'vendors', 'documents'],
+    'Operations': ['operations'],
+    'IT': ['it'],
+    'Quality': ['qa_qc'],
+    'Logistics': ['logistics'],
+    'Marketing': ['client_marketing'],
+    'Customer Service': ['client_servicing'],
+    'Graphics': ['graphics'],
+    'Media': ['media'],
+    'Internal Control': ['internal_control'],
+    'Manufacturing': ['manufacturing'],
+  };
 
   // Check if user has permission for this item
   const hasAccess = useMemo(() => {
@@ -32,10 +54,21 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose }: { item:
     if (!item.permission) return true;
 
     // Check if user has the specific permission
-    return hasPermission(item.permission);
-  }, [item.permission, hasPermission, isSuperAdmin, isCompanyAdmin]);
+    if (!hasPermission(item.permission)) return false;
 
-  // Filter children based on permissions
+    // Check department-based access
+    if (userDepartmentName && item.module) {
+      const allowedModules = departmentModuleAccess[userDepartmentName] || [];
+      // Allow access if the module is in the department's allowed modules
+      if (allowedModules.length > 0 && !allowedModules.includes(item.module)) {
+        return false;
+      }
+    }
+
+    return hasPermission(item.permission);
+  }, [item.permission, item.module, hasPermission, isSuperAdmin, isCompanyAdmin, userDepartmentName]);
+
+  // Filter children based on permissions and department access
   const visibleChildren = useMemo(() => {
     if (!item.children) return [];
     // Super Admin and Company Admin see all children
@@ -44,10 +77,20 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose }: { item:
     }
     const filtered = item.children.filter(child => {
       if (!child.permission) return true;
-      return hasPermission(child.permission);
+      if (!hasPermission(child.permission)) return false;
+      
+      // Check department-based access for children
+      if (userDepartmentName && child.module) {
+        const allowedModules = departmentModuleAccess[userDepartmentName] || [];
+        if (allowedModules.length > 0 && !allowedModules.includes(child.module)) {
+          return false;
+        }
+      }
+      
+      return true;
     });
     return filtered;
-  }, [item.children, hasPermission, isSuperAdmin, isCompanyAdmin]);
+  }, [item.children, hasPermission, isSuperAdmin, isCompanyAdmin, userDepartmentName]);
 
   // If no access and no visible children, don't render
   if (!hasAccess && visibleChildren.length === 0) return null;
@@ -95,7 +138,7 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose }: { item:
         {open && !collapsed && (
           <div className="mt-1 space-y-0.5 pl-4 border-l border-gray-200 dark:border-gray-700 ml-5">
             {visibleChildren.map((child) => (
-              <NavItemComponent key={child.href ?? child.title} item={child} collapsed={false} depth={depth + 1} onMobileClose={onMobileClose} />
+              <NavItemComponent key={child.href ?? child.title} item={child} collapsed={false} depth={depth + 1} onMobileClose={onMobileClose} userDepartmentName={userDepartmentName} />
             ))}
           </div>
         )}
@@ -135,7 +178,25 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose }: { item:
 }
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
-  const { company } = useAuth();
+  const { company, profile } = useAuth();
+  const [userDepartmentName, setUserDepartmentName] = useState<string | undefined>();
+
+  // Fetch user's department name
+  useEffect(() => {
+    const fetchDepartmentName = async () => {
+      if (profile?.department_id) {
+        const { data: dept } = await supabase
+          .from('departments')
+          .select('name')
+          .eq('id', profile.department_id)
+          .maybeSingle();
+        setUserDepartmentName(dept?.name);
+      } else {
+        setUserDepartmentName(undefined);
+      }
+    };
+    fetchDepartmentName();
+  }, [profile?.department_id]);
 
   // Get navigation config using shared helper
   const navigationItems = useMemo(() => {
@@ -214,7 +275,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         <ScrollArea className="flex-1 px-3 py-3">
           <nav className="space-y-0.5">
             {navigationItems.map((item) => (
-              <NavItemComponent key={item.href ?? item.title} item={item} collapsed={collapsed} onMobileClose={onMobileClose} />
+              <NavItemComponent key={item.href ?? item.title} item={item} collapsed={collapsed} onMobileClose={onMobileClose} userDepartmentName={userDepartmentName} />
             ))}
           </nav>
         </ScrollArea>

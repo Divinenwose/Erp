@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, Profile, Company, Role, Permission } from '@/lib/supabase';
 import { logAuthEvent } from '@/lib/audit';
@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
+  const isInitialized = useRef(false);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -190,29 +191,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    if (isInitialized.current) return;
+    isInitialized.current = true;
+
+    let isMounted = true;
+
+    const initializeAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!isMounted) return;
+
       setSession(session);
       setUser(session?.user ?? null);
+      
       if (session?.user) {
-        Promise.all([
+        await Promise.all([
           fetchProfile(session.user.id),
           fetchRolesAndPermissions(session.user.id),
-        ]).finally(() => setLoading(false));
+        ]);
+        if (isMounted) setLoading(false);
       } else {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
-    });
+    };
+
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+
       setSession(session);
       setUser(session?.user ?? null);
+      
       (async () => {
-        if (session?.user) {
+        if (session?.user && isMounted) {
           await Promise.all([
             fetchProfile(session.user.id),
             fetchRolesAndPermissions(session.user.id),
           ]);
-        } else {
+        } else if (!session?.user && isMounted) {
           setProfile(null);
           setCompany(null);
           setRoles([]);
@@ -221,7 +238,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })();
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

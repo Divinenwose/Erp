@@ -180,25 +180,46 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, userDepar
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const { company, profile } = useAuth();
   const [userDepartmentName, setUserDepartmentName] = useState<string | undefined>();
-  const departmentIdRef = useRef<string | null>(null);
+  const [isFetchingDepartment, setIsFetchingDepartment] = useState(false);
 
   // Fetch user's department name
   useEffect(() => {
+    let isMounted = true;
+
     const fetchDepartmentName = async () => {
-      if (profile?.department_id && profile.department_id !== departmentIdRef.current) {
-        departmentIdRef.current = profile.department_id;
+      if (!profile?.department_id) {
+        setUserDepartmentName(undefined);
+        return;
+      }
+
+      if (isFetchingDepartment) return;
+
+      setIsFetchingDepartment(true);
+
+      try {
         const { data: dept } = await supabase
           .from('departments')
           .select('name')
           .eq('id', profile.department_id)
           .maybeSingle();
-        setUserDepartmentName(dept?.name);
-      } else if (!profile?.department_id && departmentIdRef.current !== null) {
-        departmentIdRef.current = null;
-        setUserDepartmentName(undefined);
+
+        if (isMounted) {
+          setUserDepartmentName(dept?.name);
+        }
+      } catch (error) {
+        console.error('[Sidebar] Error fetching department:', error);
+      } finally {
+        if (isMounted) {
+          setIsFetchingDepartment(false);
+        }
       }
     };
+
     fetchDepartmentName();
+
+    return () => {
+      isMounted = false;
+    };
   }, [profile?.department_id]);
 
   // Get navigation config using shared helper

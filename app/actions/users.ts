@@ -270,7 +270,6 @@ export async function updateUser(input: UpdateUserInput) {
         module: 'users',
         record_id: input.user_id,
         new_values: { 
-          email: input.email,
           roles: input.role_ids,
           department_id: input.department_id,
         },

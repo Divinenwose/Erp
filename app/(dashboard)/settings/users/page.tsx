@@ -134,7 +134,6 @@ export default function UsersSettingsPage() {
         user_id: editUser.id,
         first_name: data.first_name,
         last_name: data.last_name,
-        email: data.email,
         phone: data.phone,
         job_title: data.job_title,
         department_id: data.department_id,

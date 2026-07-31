@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -180,18 +180,21 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, userDepar
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const { company, profile } = useAuth();
   const [userDepartmentName, setUserDepartmentName] = useState<string | undefined>();
+  const departmentIdRef = useRef<string | null>(null);
 
   // Fetch user's department name
   useEffect(() => {
     const fetchDepartmentName = async () => {
-      if (profile?.department_id) {
+      if (profile?.department_id && profile.department_id !== departmentIdRef.current) {
+        departmentIdRef.current = profile.department_id;
         const { data: dept } = await supabase
           .from('departments')
           .select('name')
           .eq('id', profile.department_id)
           .maybeSingle();
         setUserDepartmentName(dept?.name);
-      } else {
+      } else if (!profile?.department_id && departmentIdRef.current !== null) {
+        departmentIdRef.current = null;
         setUserDepartmentName(undefined);
       }
     };

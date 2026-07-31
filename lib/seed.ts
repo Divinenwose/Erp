@@ -1,36 +1,61 @@
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { getDepartmentsForCompany } from './departments';
 
-export async function seedDemoData(companyId: string) {
-  // Check if already seeded
-  const { count } = await supabase
-    .from('employees')
-    .select('id', { count: 'exact', head: true })
-    .eq('company_id', companyId);
-  if ((count ?? 0) > 0) return;
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-  // Branches
-  const { data: branches } = await supabase.from('branches').insert([
-    { company_id: companyId, name: 'Headquarters', code: 'HQ', city: 'San Francisco', country: 'US', is_headquarter: true, is_active: true },
-    { company_id: companyId, name: 'East Coast Office', code: 'EC', city: 'New York', country: 'US', is_headquarter: false, is_active: true },
+export async function seedDemoData(companyId: string, companyName?: string) {
+  console.log('[SEED] Starting demo data seed for company:', companyName);
+  console.log('[SEED] Company ID:', companyId);
+
+  // Create branches first (departments need branch_id)
+  console.log('[SEED] Creating branches');
+  const { data: branches, error: branchError } = await supabase.from('branches').insert([
+    { company_id: companyId, name: 'Headquarters', code: 'HQ', is_headquarter: true, is_active: true },
+    { company_id: companyId, name: 'East Coast', code: 'EC', is_headquarter: false, is_active: true },
   ]).select();
+
+  if (branchError) {
+    console.error('[SEED] Branch creation failed:', branchError);
+    return;
+  }
 
   const hqId = branches?.[0]?.id;
   const ecId = branches?.[1]?.id;
 
-  // Departments
-  const { data: depts } = await supabase.from('departments').insert([
-    { company_id: companyId, name: 'Engineering', code: 'ENG', branch_id: hqId, budget: 450000, is_active: true },
-    { company_id: companyId, name: 'Sales & Marketing', code: 'SLS', branch_id: hqId, budget: 180000, is_active: true },
-    { company_id: companyId, name: 'Finance', code: 'FIN', branch_id: hqId, budget: 120000, is_active: true },
-    { company_id: companyId, name: 'Operations', code: 'OPS', branch_id: ecId, budget: 200000, is_active: true },
-    { company_id: companyId, name: 'Human Resources', code: 'HR', branch_id: hqId, budget: 90000, is_active: true },
-  ]).select();
+  console.log('[SEED] Creating departments');
+  // Get departments from centralized configuration
+  const departmentConfigs = getDepartmentsForCompany(companyName);
+  
+  // Assign branches to departments
+  // Operations, Logistics, Manufacturing go to East Coast branch
+  // All others go to Headquarters
+  const eastCoastDepts = ['Operations', 'Logistics', 'Manufacturing'];
+  
+  const departmentsToCreate = departmentConfigs.map((dept: any) => ({
+    company_id: companyId,
+    name: dept.name,
+    code: dept.code,
+    branch_id: eastCoastDepts.includes(dept.name) ? ecId : hqId,
+    budget: dept.budget,
+    is_active: true,
+  }));
+  
+  const { data: depts, error: deptError } = await supabase.from('departments').insert(departmentsToCreate).select();
 
-  const engId = depts?.[0]?.id;
-  const slsId = depts?.[1]?.id;
-  const finId = depts?.[2]?.id;
-  const opsId = depts?.[3]?.id;
-  const hrId = depts?.[4]?.id;
+  console.log('[SEED] Departments created:', depts);
+  console.log('[SEED] Department error:', deptError);
+
+  // Get department IDs by name to handle different department lists
+  const getDeptId = (name: string) => depts?.find((d: any) => d.name === name)?.id;
+  
+  const hrId = getDeptId('Human Resources');
+  const finId = getDeptId('Finance & Accounts');
+  const opsId = getDeptId('Operations');
+  const slsId = getDeptId('Sales & CRM');
+  const engId = getDeptId('Engineering') || getDeptId('IT'); // Fallback for non-Targfit
 
   // Employees
   const { data: employees } = await supabase.from('employees').insert([
@@ -127,7 +152,7 @@ export async function seedDemoData(companyId: string) {
   const wh1 = warehouses?.[0]?.id;
   if (wh1 && products) {
     await supabase.from('inventory_items').insert(
-      products.filter(p => p.track_inventory).map(p => ({
+      products.filter((p: any) => p.track_inventory).map((p: any) => ({
         company_id: companyId, product_id: p.id, warehouse_id: wh1,
         quantity_on_hand: Math.floor(Math.random() * 50) + 10,
         quantity_reserved: 0, quantity_available: Math.floor(Math.random() * 50) + 10,

@@ -40,44 +40,83 @@ export default function RolesSettingsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<RoleForm>({
+  const { register, handleSubmit, reset, control, setValue, formState: { errors, isSubmitting } } = useForm<RoleForm>({
     resolver: zodResolver(roleSchema),
     defaultValues: { permission_ids: [] },
   });
 
   const load = async () => {
-    if (!company?.id) return;
     setLoading(true);
 
-    const [rolesRes, permsRes] = await Promise.all([
-      supabase
-        .from('roles')
-        .select('*, user_roles(user_id), role_permissions(permission_id)')
-        .eq('company_id', company.id)
-        .or('is_system.eq.true')
-        .order('name'),
-      supabase.from('permissions').select('*').order('resource, action'),
+    console.log('[Roles Page] Loading data');
+    console.log('[Roles Page] Company ID:', company?.id);
+
+    // First, check raw counts without filters
+    const [countRoles, countPerms] = await Promise.all([
+      supabase.from('roles').select('*', { count: 'exact', head: true }),
+      supabase.from('permissions').select('*', { count: 'exact', head: true }),
     ]);
 
-    const rolesWithCounts = (rolesRes.data ?? []).map((r: any) => ({
-      ...r,
-      user_count: r.user_roles?.length || 0,
-      permission_count: r.role_permissions?.length || 0,
-    }));
+    console.log('[Roles Page] Total roles in database:', countRoles.count);
+    console.log('[Roles Page] Total permissions in database:', countPerms.count);
+    console.log('[Roles Page] Roles count error:', countRoles.error);
+    console.log('[Roles Page] Permissions count error:', countPerms.error);
 
-    setRoles(rolesWithCounts);
+    // Permissions are global, load them regardless of company
+    const permsRes = await supabase.from('permissions').select('*').order('resource, action');
+    
+    console.log('[Roles Page] Permissions query result:', permsRes);
+    console.log('[Roles Page] Permissions data length:', permsRes.data?.length);
+    console.log('[Roles Page] Permissions data sample:', permsRes.data?.slice(0, 3));
+    console.log('[Roles Page] Permissions error:', permsRes.error);
+    
     setPermissions(permsRes.data ?? []);
+
+    // Roles are company-specific (or system), only load if company exists
+    if (company?.id) {
+      const rolesRes = await supabase
+        .from('roles')
+        .select('*, user_roles(user_id), role_permissions(permission_id)')
+        .or(`company_id.eq.${company.id},is_system.eq.true`)
+        .order('name');
+
+      console.log('[Roles Page] Roles query result:', rolesRes);
+      console.log('[Roles Page] Roles data length:', rolesRes.data?.length);
+      console.log('[Roles Page] Roles data:', rolesRes.data);
+      console.log('[Roles Page] Roles error:', rolesRes.error);
+
+      const rolesWithCounts = (rolesRes.data ?? []).map((r: any) => ({
+        ...r,
+        user_count: r.user_roles?.length || 0,
+        permission_count: r.role_permissions?.length || 0,
+      }));
+
+      setRoles(rolesWithCounts);
+    } else {
+      console.log('[Roles Page] No company ID, skipping roles load');
+      setRoles([]);
+    }
+
     setLoading(false);
   };
 
   useEffect(() => { load(); }, [company?.id]);
 
-  const openEdit = (role: Role & { permission_count?: number }) => {
+  const openEdit = async (role: Role & { permission_count?: number }) => {
     setEditRole(role);
+    
+    // Load existing permissions for this role
+    const { data: rolePerms } = await supabase
+      .from('role_permissions')
+      .select('permission_id')
+      .eq('role_id', role.id);
+    
+    const permissionIds = rolePerms?.map(rp => rp.permission_id) || [];
+    
     reset({
       name: role.name,
       description: role.description ?? '',
-      permission_ids: [], // Will load from role_permissions
+      permission_ids: permissionIds,
     });
     setDialogOpen(true);
   };
@@ -304,6 +343,31 @@ export default function RolesSettingsPage() {
                 </div>
                 <div>
                   <Label>Permissions</Label>
+                  <div className="flex gap-2 mt-1 mb-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const allPermissionIds = permissions.map(p => p.id);
+                        setValue('permission_ids', allPermissionIds);
+                      }}
+                      className="text-xs"
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setValue('permission_ids', []);
+                      }}
+                      className="text-xs"
+                    >
+                      Clear All
+                    </Button>
+                  </div>
                   <Controller name="permission_ids" control={control} render={({ field }) => (
                     <div className="mt-2 space-y-4 max-h-60 overflow-y-auto border rounded-md p-4">
                       {Object.entries(groupedPermissions).map(([resource, perms]) => (

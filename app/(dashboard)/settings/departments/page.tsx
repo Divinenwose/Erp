@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Plus, Edit, Trash2, Users } from 'lucide-react';
+import { Building2, Plus, Edit, Trash2, Users, RefreshCw } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,13 +30,14 @@ const deptSchema = z.object({
 type DeptForm = z.infer<typeof deptSchema>;
 
 export default function DepartmentsPage() {
-  const { company, user: currentUser } = useAuth();
+  const { company, user: currentUser, isSuperAdmin, isCompanyAdmin } = useAuth();
   const [departments, setDepartments] = useState<(Department & { employee_count?: number })[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDept, setEditDept] = useState<Department | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<DeptForm>({
     resolver: zodResolver(deptSchema),
@@ -155,6 +156,30 @@ export default function DepartmentsPage() {
     setDeleting(false);
   };
 
+  const handleSyncDepartments = async () => {
+    if (!company?.id) return;
+    setSyncing(true);
+
+    try {
+      const { syncCompanyDepartments } = await import('@/lib/departments');
+      const result = await syncCompanyDepartments(company.id, company.name, undefined, true);
+
+      if (result.errors.length > 0) {
+        toast.error(`Sync completed with ${result.errors.length} errors`);
+        console.error('Sync errors:', result.errors);
+      } else {
+        toast.success(`Departments synced: ${result.created} created, ${result.updated} updated, ${result.deleted} deleted`);
+      }
+
+      load();
+    } catch (error: any) {
+      toast.error('Failed to sync departments');
+      console.error('Sync error:', error);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const columns: Column<(Department & { employee_count?: number })>[] = [
     {
       key: 'name',
@@ -226,51 +251,64 @@ export default function DepartmentsPage() {
         description="Manage organizational departments and cost centers"
         breadcrumbs={[{ label: 'Settings' }, { label: 'Departments' }]}
       >
-        <Can resource="settings.departments" action="create">
-          <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditDept(null); reset(); } setDialogOpen(open); }}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" />Add Department
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editDept ? 'Edit Department' : 'Create Department'}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
-                <div>
-                  <Label>Department Name *</Label>
-                  <Input className="mt-1" {...register('name')} />
-                  {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
-                </div>
-                <div>
-                  <Label>Code</Label>
-                  <Input className="mt-1" {...register('code')} placeholder="e.g., DEPT-001" />
-                </div>
-                <div>
-                  <Label>Description</Label>
-                  <Input className="mt-1" {...register('description')} />
-                </div>
-                <div>
-                  <Label>Budget</Label>
-                  <Input className="mt-1" type="number" {...register('budget')} placeholder="0.00" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" {...register('is_active')} id="is_active" />
-                  <Label htmlFor="is_active" className="cursor-pointer">Is Active</Label>
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); setEditDept(null); reset(); }}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : editDept ? 'Update' : 'Create'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </Can>
+        <div className="flex gap-2">
+          {(isSuperAdmin() || isCompanyAdmin()) && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSyncDepartments}
+              disabled={syncing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync Departments'}
+            </Button>
+          )}
+          <Can resource="settings.departments" action="create">
+            <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditDept(null); reset(); } setDialogOpen(open); }}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="h-4 w-4 mr-2" />Add Department
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editDept ? 'Edit Department' : 'Create Department'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
+                  <div>
+                    <Label>Department Name *</Label>
+                    <Input className="mt-1" {...register('name')} />
+                    {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
+                  </div>
+                  <div>
+                    <Label>Code</Label>
+                    <Input className="mt-1" {...register('code')} placeholder="e.g., DEPT-001" />
+                  </div>
+                  <div>
+                    <Label>Description</Label>
+                    <Input className="mt-1" {...register('description')} />
+                  </div>
+                  <div>
+                    <Label>Budget</Label>
+                    <Input className="mt-1" type="number" {...register('budget')} placeholder="0.00" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" {...register('is_active')} id="is_active" />
+                    <Label htmlFor="is_active" className="cursor-pointer">Is Active</Label>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); setEditDept(null); reset(); }}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>
+                      {isSubmitting ? 'Saving...' : editDept ? 'Update' : 'Create'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </Can>
+        </div>
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

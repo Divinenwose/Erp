@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logRoleChange, logAuditEvent } from '@/lib/audit';
 import { Can } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
+import { createUser, updateUser } from '@/app/actions/users';
 import KPICard from '@/components/common/KPICard';
 import StatusBadge from '@/components/common/StatusBadge';
 import DataTable, { Column } from '@/components/common/DataTable';
@@ -35,6 +36,8 @@ const userSchema = z.object({
   department_id: z.string().optional(),
   branch_id: z.string().optional(),
   role_ids: z.array(z.string()).min(1, 'At least one role required'),
+  create_employee_record: z.boolean().optional(),
+  assign_as_department_head: z.boolean().optional(),
 });
 type UserForm = z.infer<typeof userSchema>;
 
@@ -62,22 +65,34 @@ export default function UsersSettingsPage() {
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<UserForm>({
     resolver: zodResolver(userSchema),
     defaultValues: { role_ids: [] },
+    mode: 'onSubmit',
   });
 
   const load = async () => {
     if (!company?.id) return;
     setLoading(true);
     
+    console.log('[Users Page] Loading data for company:', company.id);
+
     const [usersRes, rolesRes, deptRes, branchRes] = await Promise.all([
       supabase
         .from('profiles')
         .select('*, user_roles(role_id, roles(*)), departments(*), branches(*)')
         .eq('company_id', company.id)
         .order('created_at', { ascending: false }),
-      supabase.from('roles').select('*').eq('company_id', company.id).or('is_system.eq.true'),
+      supabase.from('roles').select('*').or(`company_id.eq.${company.id},is_system.eq.true`),
       supabase.from('departments').select('*').eq('company_id', company.id),
       supabase.from('branches').select('*').eq('company_id', company.id),
     ]);
+
+    console.log('[Users Page] Roles query result:', rolesRes);
+    console.log('[Users Page] Roles data length:', rolesRes.data?.length);
+    console.log('[Users Page] Roles data:', rolesRes.data);
+    console.log('[Users Page] Roles error:', rolesRes.error);
+    console.log('[Users Page] Departments data length:', deptRes.data?.length);
+    console.log('[Users Page] Departments data:', deptRes.data);
+    console.log('[Users Page] Departments error:', deptRes.error);
+    console.log('[Users Page] Branches data length:', branchRes.data?.length);
 
     const usersWithRoles = (usersRes.data ?? []).map((u: any) => ({
       ...u,
@@ -109,112 +124,55 @@ export default function UsersSettingsPage() {
   };
 
   const onSubmit = async (data: UserForm) => {
+    console.log('[Users Page] Form submitted with data:', data);
+    console.log('[Users Page] Form errors:', errors);
     if (!company?.id) return;
-    
-    if (editUser) {
-      // Update existing user
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          first_name: data.first_name,
-          last_name: data.last_name,
-          email: data.email,
-          phone: data.phone,
-          job_title: data.job_title,
-          department_id: data.department_id,
-          branch_id: data.branch_id,
-          display_name: `${data.first_name} ${data.last_name}`,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', editUser.id);
 
-      if (profileError) {
-        toast.error('Failed to update user');
+    if (editUser) {
+      // Update existing user using Server Action
+      const result = await updateUser({
+        user_id: editUser.id,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        phone: data.phone,
+        job_title: data.job_title,
+        department_id: data.department_id,
+        branch_id: data.branch_id,
+        role_ids: data.role_ids,
+        company_id: company.id,
+        assigned_by: currentUser?.id || '',
+      });
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to update user');
         return;
       }
-
-      // Update roles
-      const { error: deleteRolesError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', editUser.id);
-
-      if (!deleteRolesError) {
-        const roleInserts = data.role_ids.map(roleId => ({
-          user_id: editUser.id,
-          role_id: roleId,
-          assigned_by: currentUser?.id,
-        }));
-        
-        await supabase.from('user_roles').insert(roleInserts);
-      }
-
-      // Audit log
-      await logRoleChange(company.id, currentUser?.id || '', editUser.id, 'role_updated');
-      await logAuditEvent(company.id, currentUser?.id || '', {
-        action: 'user_updated',
-        module: 'users',
-        record_id: editUser.id,
-        new_values: { email: data.email, roles: data.role_ids },
-      });
 
       toast.success('User updated');
     } else {
-      // Create new user (invite)
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Create new user using Server Action
+      const result = await createUser({
         email: data.email,
-        email_confirm: true,
-        user_metadata: {
-          first_name: data.first_name,
-          last_name: data.last_name,
-        },
+        first_name: data.first_name,
+        last_name: data.last_name,
+        phone: data.phone,
+        job_title: data.job_title,
+        department_id: data.department_id,
+        branch_id: data.branch_id,
+        role_ids: data.role_ids,
+        company_id: company.id,
+        assigned_by: currentUser?.id || '',
+        create_employee_record: data.create_employee_record,
+        assign_as_department_head: data.assign_as_department_head,
       });
 
-      if (authError) {
-        toast.error('Failed to create user');
+      if (!result.success) {
+        toast.error(result.error || 'Failed to create user');
         return;
       }
 
-      if (authData.user) {
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: authData.user.id,
-          company_id: company.id,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          display_name: `${data.first_name} ${data.last_name}`,
-          email: data.email,
-          phone: data.phone,
-          job_title: data.job_title,
-          department_id: data.department_id,
-          branch_id: data.branch_id,
-          is_active: true,
-        });
-
-        if (profileError) {
-          toast.error('Failed to create profile');
-          return;
-        }
-
-        // Assign roles
-        const roleInserts = data.role_ids.map(roleId => ({
-          user_id: authData.user.id,
-          role_id: roleId,
-          assigned_by: currentUser?.id,
-        }));
-        
-        await supabase.from('user_roles').insert(roleInserts);
-
-        // Audit log
-        await logRoleChange(company.id, currentUser?.id || '', authData.user.id, 'role_assigned');
-        await logAuditEvent(company.id, currentUser?.id || '', {
-          action: 'user_created',
-          module: 'users',
-          record_id: authData.user.id,
-          new_values: { email: data.email, roles: data.role_ids },
-        });
-
-        toast.success('User created successfully');
-      }
+      toast.success(result.message || 'User created successfully');
     }
 
     reset();
@@ -465,7 +423,17 @@ export default function UsersSettingsPage() {
         breadcrumbs={[{ label: 'Settings' }, { label: 'Users' }]}
       >
         <Can resource="settings.users" action="create">
-          <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditUser(null); reset(); } setDialogOpen(open); }}>
+          <Dialog open={dialogOpen} onOpenChange={open => {
+            if (open && !editUser) {
+              console.log('[Users Page] Opening dialog for new user, resetting form');
+              reset({ role_ids: [] });
+            }
+            if (!open) {
+              setEditUser(null);
+              reset();
+            }
+            setDialogOpen(open);
+          }}>
             <DialogTrigger asChild>
               <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="h-4 w-4 mr-2" />Add User
@@ -475,8 +443,8 @@ export default function UsersSettingsPage() {
               <DialogHeader>
                 <DialogTitle>{editUser ? 'Edit User' : 'Add New User'}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit(onSubmit, (errors) => console.log('[Users Page] Form validation errors:', errors))} className="space-y-4 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>First Name *</Label>
                     <Input className="mt-1" {...register('first_name')} />
@@ -523,28 +491,66 @@ export default function UsersSettingsPage() {
                     <Label>Roles *</Label>
                     <Controller name="role_ids" control={control} render={({ field }) => (
                       <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
-                        {roles.map(role => (
-                          <div key={role.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={role.id}
-                              checked={field.value.includes(role.id)}
-                              onCheckedChange={checked => {
-                                if (checked) {
-                                  field.onChange([...field.value, role.id]);
-                                } else {
-                                  field.onChange(field.value.filter(id => id !== role.id));
-                                }
-                              }}
-                            />
-                            <label htmlFor={role.id} className="text-sm cursor-pointer flex-1">
-                              {role.name}
-                              {role.is_system && <span className="ml-2 text-xs text-gray-400">(System)</span>}
-                            </label>
-                          </div>
-                        ))}
+                        {roles.length === 0 ? (
+                          <p className="text-sm text-gray-500">No roles available. Please create roles first.</p>
+                        ) : (
+                          roles.map(role => (
+                            <div key={role.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={role.id}
+                                checked={field.value.includes(role.id)}
+                                onCheckedChange={checked => {
+                                  if (checked) {
+                                    field.onChange([...field.value, role.id]);
+                                  } else {
+                                    field.onChange(field.value.filter(id => id !== role.id));
+                                  }
+                                }}
+                              />
+                              <label htmlFor={role.id} className="text-sm cursor-pointer flex-1">
+                                {role.name}
+                                {role.is_system && <span className="ml-2 text-xs text-gray-400">(System)</span>}
+                              </label>
+                            </div>
+                          ))
+                        )}
                       </div>
                     )} />
-                    {errors.role_ids && <p className="text-xs text-red-500 mt-1">{errors.role_ids.message}</p>}
+                    {errors.role_ids && <p className="text-xs text-red-500 mt-1 font-medium">{errors.role_ids.message}</p>}
+                  </div>
+                  <div className="col-span-2 space-y-3 pt-2 border-t">
+                    <Controller
+                      name="create_employee_record"
+                      control={control}
+                      render={({ field }) => (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="create_employee_record"
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                          <label htmlFor="create_employee_record" className="text-sm cursor-pointer">
+                            Create employee record
+                          </label>
+                        </div>
+                      )}
+                    />
+                    <Controller
+                      name="assign_as_department_head"
+                      control={control}
+                      render={({ field }) => (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="assign_as_department_head"
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                          <label htmlFor="assign_as_department_head" className="text-sm cursor-pointer">
+                            Assign as department head
+                          </label>
+                        </div>
+                      )}
+                    />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
@@ -561,7 +567,7 @@ export default function UsersSettingsPage() {
         </Can>
       </PageHeader>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard title="Total Users" value={users.length} icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Active" value={active} icon={<UserCheck className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
         <KPICard title="Inactive" value={users.length - active} icon={<UserX className="h-4 w-4 text-red-600" />} iconBg="bg-red-50 dark:bg-red-950/50" loading={loading} />
@@ -569,7 +575,7 @@ export default function UsersSettingsPage() {
       </div>
 
       {selectedUsers.length > 0 && (
-        <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg">
           <span className="text-sm text-blue-700 dark:text-blue-400">{selectedUsers.length} user{selectedUsers.length > 1 ? 's' : ''} selected</span>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setSelectedUsers([])}>

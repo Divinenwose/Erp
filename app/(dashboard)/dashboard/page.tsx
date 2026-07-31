@@ -170,7 +170,7 @@ export default function DashboardPage() {
       </PageHeader>
 
       {/* Primary KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard title="Total Revenue (YTD)" value={formatCurrency(stats.totalRevenue + 2010000)} change={12.4} changeLabel="vs last year" icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
         <KPICard title="Active Employees" value={stats.employees} change={3.2} changeLabel="this month" icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Active Customers" value={stats.customers} change={8.1} changeLabel="this month" icon={<Building2 className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
@@ -178,7 +178,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Alert counters */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Pending Leaves', count: stats.pendingLeaves, icon: Clock, color: 'amber', href: '/hr/leave' },
           { label: 'Open Invoices', count: stats.openInvoices, icon: FileText, color: 'blue', href: '/finance/invoices' },
@@ -205,7 +205,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-semibold">Revenue vs Expenses (Last 6 Months)</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={230}>
+            <ResponsiveContainer width="100%" height={200} minHeight={200}>
               <AreaChart data={revenueData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colRev" x1="0" y1="0" x2="0" y2="1">
@@ -235,9 +235,9 @@ export default function DashboardPage() {
             <CardDescription>{pipelineData.reduce((a, d) => a + d.value, 0)} total opportunities</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={140}>
+            <ResponsiveContainer width="100%" height={120} minHeight={120}>
               <PieChart>
-                <Pie data={pipelineData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={2} dataKey="value">
+                <Pie data={pipelineData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={2} dataKey="value">
                   {pipelineData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>
                 <Tooltip />
@@ -259,7 +259,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Bottom row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Dept spend */}
         <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-2">
@@ -361,7 +361,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {recentEmployees.map(emp => (
                 <div key={emp.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors">
                   <Avatar className="h-9 w-9 shrink-0">

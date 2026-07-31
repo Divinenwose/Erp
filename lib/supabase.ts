@@ -42,6 +42,7 @@ export interface Company {
   trial_ends_at?: string;
   max_users: number;
   is_active: boolean;
+  created_by?: string;
   created_at: string;
   updated_at: string;
 }

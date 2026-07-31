@@ -15,13 +15,20 @@ export default function PermissionsSettingsPage() {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    if (!company?.id) return;
-    const { data } = await supabase.from('permissions').select('*').order('resource, action');
+    console.log('[Permissions Page] Loading permissions');
+    
+    // Permissions are global, don't require company
+    const { data, error } = await supabase.from('permissions').select('*').order('resource, action');
+    
+    console.log('[Permissions Page] Permissions query result:', data);
+    console.log('[Permissions Page] Permissions data length:', data?.length);
+    console.log('[Permissions Page] Permissions error:', error);
+    
     setPermissions(data ?? []);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [company?.id]);
+  useEffect(() => { load(); }, []);
 
   // Group permissions by resource
   const groupedPermissions = permissions.reduce((acc, perm) => {

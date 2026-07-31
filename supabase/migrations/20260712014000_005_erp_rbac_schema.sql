@@ -65,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role_id);
 -- RLS Policies for Roles
 DROP POLICY IF EXISTS "company_select_roles" ON roles;
 CREATE POLICY "company_select_roles" ON roles FOR SELECT
-TO authenticated USING (company_id = user_company_id() OR is_system = true);
+TO authenticated USING (company_id = user_company_id() OR is_system = true OR company_id IS NULL);
 
 DROP POLICY IF EXISTS "company_insert_roles" ON roles;
 CREATE POLICY "company_insert_roles" ON roles FOR INSERT

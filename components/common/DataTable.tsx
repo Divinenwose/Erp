@@ -100,7 +100,7 @@ export default function DataTable<T extends object>({
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-        <div className="relative flex-1 min-w-[180px] max-w-xs">
+        <div className="relative flex-1 min-w-[140px] sm:min-w-[180px] max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             className="pl-9 h-9"
@@ -122,8 +122,8 @@ export default function DataTable<T extends object>({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
               {visibleColumns.map(col => (
@@ -177,7 +177,7 @@ export default function DataTable<T extends object>({
 
       {/* Pagination */}
       {!loading && sorted.length > pageSize && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-800">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-800">
           <p className="text-xs text-gray-400">
             Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, sorted.length)} of {sorted.length}
           </p>

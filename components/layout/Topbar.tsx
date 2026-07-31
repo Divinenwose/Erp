@@ -18,6 +18,8 @@ import { useRouter } from 'next/navigation';
 interface TopbarProps {
   onMenuToggle: () => void;
   sidebarCollapsed: boolean;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
 const mockNotifications = [
@@ -26,7 +28,7 @@ const mockNotifications = [
   { id: '3', title: 'Invoice overdue', message: 'Invoice INV-0043 is 5 days overdue', time: new Date(Date.now() - 86400000).toISOString(), type: 'error', read: true },
 ];
 
-export default function Topbar({ onMenuToggle, sidebarCollapsed }: TopbarProps) {
+export default function Topbar({ onMenuToggle, sidebarCollapsed, mobileOpen, onMobileClose }: TopbarProps) {
   const { theme, setTheme } = useTheme();
   const { user, profile, company, signOut } = useAuth();
   const router = useRouter();
@@ -42,13 +44,13 @@ export default function Topbar({ onMenuToggle, sidebarCollapsed }: TopbarProps) 
   };
 
   return (
-    <header className="h-16 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 flex items-center px-4 gap-3 shrink-0 z-40">
+    <header className="h-16 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 flex items-center px-2 sm:px-4 gap-2 sm:gap-3 shrink-0 z-40">
       <Button variant="ghost" size="icon" onClick={onMenuToggle} className="shrink-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
         <Menu className="h-5 w-5" />
       </Button>
 
       {/* Search */}
-      <div className="flex-1 max-w-lg">
+      <div className="flex-1 max-w-lg hidden sm:block">
         {searchOpen ? (
           <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2">
             <Search className="h-4 w-4 text-gray-400 shrink-0" />
@@ -74,6 +76,13 @@ export default function Topbar({ onMenuToggle, sidebarCollapsed }: TopbarProps) 
             <kbd className="hidden sm:inline text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700">⌘K</kbd>
           </button>
         )}
+      </div>
+
+      {/* Mobile search button */}
+      <div className="sm:hidden">
+        <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} className="text-gray-500">
+          <Search className="h-5 w-5" />
+        </Button>
       </div>
 
       <div className="flex items-center gap-1 ml-auto">
@@ -116,7 +125,7 @@ export default function Topbar({ onMenuToggle, sidebarCollapsed }: TopbarProps) 
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
+          <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-2rem)]">
             <div className="flex items-center justify-between px-3 py-2 border-b">
               <span className="font-semibold text-sm">Notifications</span>
               {unreadCount > 0 && <Badge variant="secondary" className="text-xs">{unreadCount} new</Badge>}
@@ -158,7 +167,7 @@ export default function Topbar({ onMenuToggle, sidebarCollapsed }: TopbarProps) 
               <ChevronDown className="h-3.5 w-3.5 text-gray-400 hidden md:block" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuContent align="end" className="w-52 max-w-[calc(100vw-2rem)]">
             <DropdownMenuLabel>
               <div>
                 <p className="font-medium">{displayName}</p>

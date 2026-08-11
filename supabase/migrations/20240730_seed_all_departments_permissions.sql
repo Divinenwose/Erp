@@ -109,6 +109,7 @@ VALUES
   ('assets.vehicles', 'view', 'View vehicles', NOW()),
   ('assets.assignment', 'view', 'View assignments', NOW()),
   ('assets.maintenance', 'view', 'View asset maintenance', NOW()),
+  ('assets.movement', 'view', 'View asset movement history', NOW()),
   ('assets', 'create', 'Create assets', NOW()),
   ('assets', 'update', 'Update assets', NOW()),
   ('assets', 'delete', 'Delete assets', NOW()),
@@ -126,11 +127,42 @@ VALUES
   ('vendors.maintenance', 'view', 'View maintenance vendors', NOW()),
   ('vendors.internet', 'view', 'View internet providers', NOW()),
   ('vendors.electricity', 'view', 'View electricity providers', NOW()),
+  ('vendors.quotations', 'view', 'View vendor quotations', NOW()),
+  ('vendors.performance', 'view', 'View vendor performance', NOW()),
   ('documents', 'view', 'View Documents section', NOW()),
   ('documents.policies', 'view', 'View policies', NOW()),
   ('documents.letters', 'view', 'View letters', NOW()),
   ('documents.minutes', 'view', 'View meeting minutes', NOW()),
-  ('documents.archive', 'view', 'View archive', NOW())
+  ('documents.archive', 'view', 'View archive', NOW()),
+  ('attendance', 'view', 'View Staff Attendance section', NOW()),
+  ('attendance.daily', 'view', 'View daily attendance', NOW()),
+  ('attendance.clock_in_out', 'view', 'View clock in/out', NOW()),
+  ('attendance.lateness', 'view', 'View lateness register', NOW()),
+  ('attendance.absence', 'view', 'View absence register', NOW()),
+  ('attendance.id_compliance', 'view', 'View ID card compliance', NOW()),
+  ('attendance.reports', 'view', 'View attendance reports', NOW()),
+  ('inspections', 'view', 'View Inspections section', NOW()),
+  ('inspections.cleanliness', 'view', 'View cleanliness inspections', NOW()),
+  ('inspections.restroom', 'view', 'View restroom inspections', NOW()),
+  ('inspections.workspace', 'view', 'View workspace inspections', NOW()),
+  ('inspections.reception', 'view', 'View reception inspections', NOW()),
+  ('inspections.meeting_rooms', 'view', 'View meeting room inspections', NOW()),
+  ('inspections.issues', 'view', 'View inspection issues', NOW()),
+  ('fuel', 'view', 'View Fuel Management section', NOW()),
+  ('fuel.records', 'view', 'View fuel records', NOW()),
+  ('fuel.drivers', 'view', 'View driver fuel usage', NOW()),
+  ('fuel.vehicles', 'view', 'View vehicle fuel history', NOW()),
+  ('drivers', 'view', 'View Drivers section', NOW()),
+  ('drivers.list', 'view', 'View drivers list', NOW()),
+  ('drivers.trips', 'view', 'View driver trips', NOW()),
+  ('drivers.licenses', 'view', 'View driver licenses', NOW()),
+  ('purchase_requests', 'view', 'View Purchase Requests section', NOW()),
+  ('purchase_requests.list', 'view', 'View all purchase requests', NOW()),
+  ('purchase_requests.pending', 'view', 'View pending purchase requests', NOW()),
+  ('purchase_requests.my', 'view', 'View my purchase requests', NOW()),
+  ('purchase_requests.approvals', 'view', 'View purchase request approvals', NOW()),
+  ('purchase_requests.reports', 'view', 'View purchase request reports', NOW()),
+  ('admin_reports', 'view', 'View Administration reports', NOW())
 ON CONFLICT (resource, action) DO NOTHING;
 
 -- Operations
@@ -377,6 +409,17 @@ AND (
   p.resource LIKE 'vendors.%' OR
   p.resource = 'documents' OR
   p.resource LIKE 'documents.%' OR
+  p.resource = 'attendance' OR
+  p.resource LIKE 'attendance.%' OR
+  p.resource = 'inspections' OR
+  p.resource LIKE 'inspections.%' OR
+  p.resource = 'fuel' OR
+  p.resource LIKE 'fuel.%' OR
+  p.resource = 'drivers' OR
+  p.resource LIKE 'drivers.%' OR
+  p.resource = 'purchase_requests' OR
+  p.resource LIKE 'purchase_requests.%' OR
+  p.resource = 'admin_reports' OR
   p.resource = 'settings' OR
   p.resource LIKE 'settings.%'
 )

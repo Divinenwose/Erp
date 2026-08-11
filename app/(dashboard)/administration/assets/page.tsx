@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { PermissionGuard } from '@/components/rbac/PermissionGuard';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
@@ -26,28 +27,68 @@ const assetSchema = z.object({
   brand: z.string().optional(),
   model: z.string().optional(),
   serial_number: z.string().optional(),
+  barcode: z.string().optional(),
   purchase_date: z.string().optional(),
   purchase_price: z.coerce.number().min(0).default(0),
   location: z.string().optional(),
   condition: z.string().default('good'),
   warranty_expiry: z.string().optional(),
+  department_id: z.string().optional(),
+  branch_id: z.string().optional(),
 });
 type AssetForm = z.infer<typeof assetSchema>;
 
+const lifecycleSchema = z.object({
+  event_type: z.string().min(1, 'Required'),
+  assigned_to: z.string().optional(),
+  new_location: z.string().optional(),
+  department_id: z.string().optional(),
+  branch_id: z.string().optional(),
+  cost: z.coerce.number().min(0).optional(),
+  notes: z.string().optional(),
+});
+type LifecycleForm = z.infer<typeof lifecycleSchema>;
+
 export default function AssetsPage() {
-  const { company } = useAuth();
+  const { company, user } = useAuth();
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [lifecycleDialogOpen, setLifecycleDialogOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [lifecycleEvents, setLifecycleEvents] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<AssetForm>({ resolver: zodResolver(assetSchema), defaultValues: { condition: 'good' } });
+  const { register: registerLifecycle, handleSubmit: handleLifecycleSubmit, reset: resetLifecycle, formState: { errors: lifecycleErrors, isSubmitting: isLifecycleSubmitting } } = useForm<LifecycleForm>();
 
   const load = async () => {
     if (!company?.id) return;
-    const { data } = await supabase.from('assets').select('*, departments(name), employees(first_name, last_name)').eq('company_id', company.id).order('created_at', { ascending: false });
-    setAssets(data ?? []);
+    const [assetsData, deptsData, branchesData, employeesData] = await Promise.all([
+      supabase.from('assets').select('*, departments(name), employees(first_name, last_name)').eq('company_id', company.id).order('created_at', { ascending: false }),
+      supabase.from('departments').select('*').eq('company_id', company.id),
+      supabase.from('branches').select('*').eq('company_id', company.id),
+      supabase.from('profiles').select('id, first_name, last_name').eq('company_id', company.id),
+    ]);
+    setAssets(assetsData.data ?? []);
+    setDepartments(deptsData.data ?? []);
+    setBranches(branchesData.data ?? []);
+    setEmployees(employeesData.data ?? []);
     setLoading(false);
+  };
+
+  const loadLifecycleEvents = async (assetId: string) => {
+    if (!company?.id) return;
+    const { data } = await supabase
+      .from('asset_lifecycle_events')
+      .select('*, profiles(first_name, last_name), departments(name), branches(name)')
+      .eq('company_id', company.id)
+      .eq('asset_id', assetId)
+      .order('event_date', { ascending: false });
+    setLifecycleEvents(data ?? []);
   };
 
   useEffect(() => { load(); }, [company?.id]);
@@ -59,6 +100,53 @@ export default function AssetsPage() {
     if (error) { toast.error('Failed to register asset'); return; }
     toast.success('Asset registered');
     reset(); setDialogOpen(false); load();
+  };
+
+  const onLifecycleSubmit = async (data: LifecycleForm) => {
+    if (!company?.id || !selectedAsset) return;
+    
+    const previousStatus = selectedAsset.status;
+    const newStatus = data.event_type === 'retired' ? 'retired' : data.event_type === 'disposed' ? 'disposed' : selectedAsset.status;
+    
+    const { error } = await supabase.from('asset_lifecycle_events').insert({
+      company_id: company.id,
+      asset_id: selectedAsset.id,
+      event_type: data.event_type,
+      previous_status,
+      new_status,
+      assigned_to: data.assigned_to,
+      previous_location: selectedAsset.location,
+      new_location: data.new_location,
+      department_id: data.department_id,
+      branch_id: data.branch_id,
+      cost: data.cost,
+      notes: data.notes,
+      performed_by: user?.id,
+    });
+
+    if (error) { toast.error('Failed to record lifecycle event'); return; }
+
+    // Update asset if status changed
+    if (newStatus !== previousStatus) {
+      await supabase.from('assets').update({ 
+        status: new_status,
+        location: data.new_location || selectedAsset.location,
+        department_id: data.department_id,
+        branch_id: data.branch_id,
+      }).eq('id', selectedAsset.id);
+    }
+
+    toast.success('Lifecycle event recorded');
+    resetLifecycle();
+    setLifecycleDialogOpen(false);
+    load();
+    if (selectedAsset) loadLifecycleEvents(selectedAsset.id);
+  };
+
+  const openLifecycleDialog = (asset: any) => {
+    setSelectedAsset(asset);
+    loadLifecycleEvents(asset.id);
+    setLifecycleDialogOpen(true);
   };
 
   const filtered = assets.filter(a => !search || `${a.name} ${a.asset_type ?? ''} ${a.brand ?? ''} ${a.serial_number ?? ''}`.toLowerCase().includes(search.toLowerCase()));
@@ -75,11 +163,13 @@ export default function AssetsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Asset Management" description="Track and manage company assets" breadcrumbs={[{ label: 'Administration' }, { label: 'Assets' }]}>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Register Asset</Button>
-          </DialogTrigger>
+      <PermissionGuard permission="assets.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view assets</div>}>
+        <PageHeader title="Asset Management" description="Track and manage company assets" breadcrumbs={[{ label: 'Administration' }, { label: 'Assets' }]}>
+          <PermissionGuard permission="assets.create">
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Register Asset</Button>
+              </DialogTrigger>
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader><DialogTitle>Register New Asset</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -108,6 +198,7 @@ export default function AssetsPage() {
                 <div><Label>Brand</Label><Input className="mt-1" {...register('brand')} /></div>
                 <div><Label>Model</Label><Input className="mt-1" {...register('model')} /></div>
                 <div><Label>Serial Number</Label><Input className="mt-1" {...register('serial_number')} /></div>
+                <div><Label>Barcode</Label><Input className="mt-1" {...register('barcode')} placeholder="Scan or enter barcode" /></div>
                 <div><Label>Purchase Date</Label><Input className="mt-1" type="date" {...register('purchase_date')} /></div>
                 <div><Label>Purchase Price</Label><Input className="mt-1" type="number" step="0.01" {...register('purchase_price')} /></div>
                 <div><Label>Warranty Expiry</Label><Input className="mt-1" type="date" {...register('warranty_expiry')} /></div>
@@ -120,6 +211,7 @@ export default function AssetsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </PermissionGuard>
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -163,9 +255,9 @@ export default function AssetsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem><Edit className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
-                      <DropdownMenuItem>Assign</DropdownMenuItem>
-                      <DropdownMenuItem>Schedule Maintenance</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openLifecycleDialog(a)}><Briefcase className="h-4 w-4 mr-2" />View Lifecycle</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openLifecycleDialog(a)}><Edit className="h-4 w-4 mr-2" />Update Status</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openLifecycleDialog(a)}><MapPin className="h-4 w-4 mr-2" />Transfer</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -174,6 +266,110 @@ export default function AssetsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Lifecycle Dialog */}
+      <Dialog open={lifecycleDialogOpen} onOpenChange={setLifecycleDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Asset Lifecycle - {selectedAsset?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Lifecycle Events History */}
+            <div>
+              <h3 className="text-sm font-medium mb-3">Lifecycle History</h3>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {lifecycleEvents.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No lifecycle events recorded</p>
+                ) : (
+                  lifecycleEvents.map((event) => (
+                    <div key={event.id} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                      <div className="w-2 h-2 rounded-full bg-blue-600 mt-2" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium capitalize">{event.event_type.replace('_', ' ')}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatDate(event.event_date)} · {event.profiles ? `${event.profiles.first_name} ${event.profiles.last_name}` : 'System'}
+                        </p>
+                        {event.notes && <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{event.notes}</p>}
+                        {(event.previous_status || event.new_status) && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Status: {event.previous_status || 'N/A'} → {event.new_status || 'N/A'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Add Lifecycle Event Form */}
+            <div className="border-t dark:border-gray-800 pt-4">
+              <h3 className="text-sm font-medium mb-3">Record New Event</h3>
+              <form onSubmit={handleLifecycleSubmit(onLifecycleSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Event Type *</Label>
+                    <select className="mt-1 w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950" {...registerLifecycle('event_type')}>
+                      <option value="">Select event type</option>
+                      <option value="assigned">Assign</option>
+                      <option value="transferred">Transfer</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="repair">Repair</option>
+                      <option value="retired">Retire</option>
+                      <option value="disposed">Dispose</option>
+                      <option value="upgraded">Upgrade</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Assign To</Label>
+                    <select className="mt-1 w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950" {...registerLifecycle('assigned_to')}>
+                      <option value="">Select employee</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>New Location</Label>
+                    <Input className="mt-1" placeholder="e.g. Office Floor 3" {...registerLifecycle('new_location')} />
+                  </div>
+                  <div>
+                    <Label>Cost</Label>
+                    <Input className="mt-1" type="number" step="0.01" placeholder="0.00" {...registerLifecycle('cost')} />
+                  </div>
+                  <div>
+                    <Label>Department</Label>
+                    <select className="mt-1 w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950" {...registerLifecycle('department_id')}>
+                      <option value="">Select department</option>
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>{dept.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Branch</Label>
+                    <select className="mt-1 w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950" {...registerLifecycle('branch_id')}>
+                      <option value="">Select branch</option>
+                      {branches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>{branch.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Notes</Label>
+                    <Input className="mt-1" placeholder="Additional details..." {...registerLifecycle('notes')} />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setLifecycleDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isLifecycleSubmitting}>Record Event</Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      </PermissionGuard>
     </div>
   );
 }

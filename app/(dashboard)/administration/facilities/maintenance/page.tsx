@@ -30,6 +30,7 @@ const maintenanceSchema = z.object({
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
   branch_id: z.string().optional(),
   assigned_to: z.string().optional(),
+  estimated_cost: z.string().optional(),
 });
 type MaintenanceForm = z.infer<typeof maintenanceSchema>;
 
@@ -79,6 +80,7 @@ export default function MaintenanceRequestsPage() {
       priority: req.priority,
       branch_id: req.branch_id ?? undefined,
       assigned_to: req.assigned_to ?? undefined,
+      estimated_cost: req.estimated_cost?.toString() ?? '',
     });
     setDialogOpen(true);
   };
@@ -95,6 +97,7 @@ export default function MaintenanceRequestsPage() {
           priority: data.priority,
           branch_id: data.branch_id,
           assigned_to: data.assigned_to,
+          estimated_cost: data.estimated_cost ? parseFloat(data.estimated_cost) : null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', editRequest.id);
@@ -120,6 +123,7 @@ export default function MaintenanceRequestsPage() {
         priority: data.priority,
         branch_id: data.branch_id,
         assigned_to: data.assigned_to,
+        estimated_cost: data.estimated_cost ? parseFloat(data.estimated_cost) : null,
         requested_by: currentUser?.id,
         status: 'pending',
       });
@@ -365,7 +369,7 @@ export default function MaintenanceRequestsPage() {
                         </Select>
                       )} />
                     </div>
-                    <div className="col-span-2">
+                    <div>
                       <Label>Assign To</Label>
                       <Controller name="assigned_to" control={control} render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value ?? ''}>
@@ -373,6 +377,10 @@ export default function MaintenanceRequestsPage() {
                           <SelectContent>{users.map(u => <SelectItem key={u.id} value={u.id}>{u.first_name} {u.last_name}</SelectItem>)}</SelectContent>
                         </Select>
                       )} />
+                    </div>
+                    <div>
+                      <Label>Estimated Cost</Label>
+                      <Input className="mt-1" type="number" step="0.01" placeholder="0.00" {...register('estimated_cost')} />
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-2">

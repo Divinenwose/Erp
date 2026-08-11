@@ -4,11 +4,11 @@ import {
   FileText, Shield, GraduationCap, CheckSquare, Wrench, TrendingUp,
   Globe, Bell, Search, ChevronDown, ChevronRight, LogOut, Moon, Sun,
   Menu, X, Home, Briefcase, CreditCard, Target, Award, BookOpen,
-  AlertTriangle, Warehouse, Car, Clipboard, Calendar, Activity,
+  AlertTriangle, Warehouse, Car, Clipboard, Calendar, Activity, Clock,
   PieChart, Layers, Database, UserPlus, ShieldCheck, Key, WrenchIcon,
   Mail, Inbox, Archive, FileCheck, SprayCan, Zap, MapPin, Monitor,
   Sofa, Cpu, Printer, FileSignature, Factory, Store, Scissors,
-  HelpCircle, Megaphone, Palette, MonitorPlay, ClipboardCheck,
+  HelpCircle, Megaphone, Palette, MonitorPlay, ClipboardCheck, IdCard, Fuel,
   Scale, ShoppingBag
 } from 'lucide-react';
 
@@ -155,11 +155,13 @@ export const defaultNavigationConfig: NavItem[] = [
         icon: Briefcase,
         permission: 'assets.view',
         children: [
+          { title: 'Overview', href: '/administration/assets', icon: Briefcase, permission: 'assets.view' },
           { title: 'Furniture', href: '/administration/assets/furniture', icon: Sofa, permission: 'assets.furniture.view' },
           { title: 'Equipment', href: '/administration/assets/equipment', icon: Cpu, permission: 'assets.equipment.view' },
           { title: 'Vehicles', href: '/administration/assets/vehicles', icon: Car, permission: 'assets.vehicles.view' },
           { title: 'Assignments', href: '/administration/assets/assignments', icon: UserCheck, permission: 'assets.assignment.view' },
           { title: 'Maintenance', href: '/administration/assets/maintenance', icon: Wrench, permission: 'assets.maintenance.view' },
+          { title: 'Movement History', href: '/administration/assets/movement-history', icon: TrendingUp, permission: 'assets.movement.view' },
         ]
       },
       { 
@@ -188,10 +190,12 @@ export const defaultNavigationConfig: NavItem[] = [
         icon: Building2,
         permission: 'vendors.view',
         children: [
-          { title: 'Cleaning', href: '/administration/vendors/cleaning', icon: SprayCan, permission: 'vendors.cleaning.view' },
-          { title: 'Maintenance', href: '/administration/vendors/maintenance', icon: Wrench, permission: 'vendors.maintenance.view' },
-          { title: 'Internet', href: '/administration/vendors/internet', icon: Globe, permission: 'vendors.internet.view' },
-          { title: 'Electricity', href: '/administration/vendors/electricity', icon: Zap, permission: 'vendors.electricity.view' },
+          { title: 'Cleaning', href: '/administration/vendor-management/cleaning-vendors', icon: SprayCan, permission: 'vendors.cleaning.view' },
+          { title: 'Maintenance', href: '/administration/vendor-management/maintenance-vendors', icon: Wrench, permission: 'vendors.maintenance.view' },
+          { title: 'Internet', href: '/administration/vendor-management/internet-providers', icon: Globe, permission: 'vendors.internet.view' },
+          { title: 'Electricity', href: '/administration/vendor-management/electricity-providers', icon: Zap, permission: 'vendors.electricity.view' },
+          { title: 'Quotations', href: '/administration/vendor-management/quotations', icon: FileText, permission: 'vendors.quotations.view' },
+          { title: 'Performance', href: '/administration/vendor-management/performance', icon: TrendingUp, permission: 'vendors.performance.view' },
         ]
       },
       { 
@@ -203,6 +207,77 @@ export const defaultNavigationConfig: NavItem[] = [
           { title: 'Letters', href: '/administration/documents/letters', icon: FileSignature, permission: 'documents.letters.view' },
           { title: 'Meeting Minutes', href: '/administration/documents/minutes', icon: Clipboard, permission: 'documents.minutes.view' },
           { title: 'Archive', href: '/administration/documents/archive', icon: Archive, permission: 'documents.archive.view' },
+        ]
+      },
+      { 
+        title: 'Staff Attendance', 
+        icon: Activity,
+        permission: 'attendance.view',
+        children: [
+          { title: 'Overview', href: '/administration/attendance', icon: LayoutDashboard, permission: 'attendance.view' },
+          { title: 'Daily Attendance', href: '/administration/attendance/daily', icon: Calendar, permission: 'attendance.daily.view' },
+          { title: 'Clock In/Out', href: '/administration/attendance/clock-in-out', icon: Clock, permission: 'attendance.clock_in_out.view' },
+          { title: 'Lateness', href: '/administration/attendance/lateness', icon: AlertTriangle, permission: 'attendance.lateness.view' },
+          { title: 'Absence', href: '/administration/attendance/absence', icon: UserCheck, permission: 'attendance.absence.view' },
+          { title: 'ID Compliance', href: '/administration/attendance/id-compliance', icon: IdCard, permission: 'attendance.id_compliance.view' },
+          { title: 'Reports', href: '/administration/attendance/reports', icon: FileText, permission: 'attendance.reports.view' },
+        ]
+      },
+      { 
+        title: 'Inspections', 
+        icon: ClipboardCheck,
+        permission: 'inspections.view',
+        children: [
+          { title: 'Overview', href: '/administration/inspections', icon: LayoutDashboard, permission: 'inspections.view' },
+          { title: 'Cleanliness', href: '/administration/inspections/cleanliness', icon: SprayCan, permission: 'inspections.cleanliness.view' },
+          { title: 'Restroom', href: '/administration/inspections/restroom', icon: UserCheck, permission: 'inspections.restroom.view' },
+          { title: 'Workspace', href: '/administration/inspections/workspace', icon: Monitor, permission: 'inspections.workspace.view' },
+          { title: 'Reception', href: '/administration/inspections/reception', icon: Building2, permission: 'inspections.reception.view' },
+          { title: 'Meeting Rooms', href: '/administration/inspections/meeting-rooms', icon: Monitor, permission: 'inspections.meeting_rooms.view' },
+          { title: 'Issues', href: '/administration/inspections/issues', icon: AlertTriangle, permission: 'inspections.issues.view' },
+        ]
+      },
+      { 
+        title: 'Fuel Management', 
+        icon: Fuel,
+        permission: 'fuel.view',
+        children: [
+          { title: 'Overview', href: '/administration/fuel', icon: LayoutDashboard, permission: 'fuel.view' },
+          { title: 'Fuel Records', href: '/administration/fuel/records', icon: FileText, permission: 'fuel.records.view' },
+          { title: 'Driver Usage', href: '/administration/fuel/drivers', icon: UserCheck, permission: 'fuel.drivers.view' },
+          { title: 'Vehicle History', href: '/administration/fuel/vehicles', icon: Car, permission: 'fuel.vehicles.view' },
+        ]
+      },
+      { 
+        title: 'Drivers', 
+        icon: Car,
+        permission: 'drivers.view',
+        children: [
+          { title: 'Overview', href: '/administration/drivers', icon: LayoutDashboard, permission: 'drivers.view' },
+          { title: 'Drivers List', href: '/administration/drivers/list', icon: Users, permission: 'drivers.list.view' },
+          { title: 'Trips', href: '/administration/drivers/trips', icon: MapPin, permission: 'drivers.trips.view' },
+          { title: 'Licenses', href: '/administration/drivers/licenses', icon: IdCard, permission: 'drivers.licenses.view' },
+        ]
+      },
+      { 
+        title: 'Purchase Requests', 
+        icon: Clipboard,
+        permission: 'purchase_requests.view',
+        children: [
+          { title: 'Overview', href: '/administration/purchase-requests', icon: LayoutDashboard, permission: 'purchase_requests.view' },
+          { title: 'All Requests', href: '/administration/purchase-requests/list', icon: FileText, permission: 'purchase_requests.list.view' },
+          { title: 'Pending', href: '/administration/purchase-requests/pending', icon: Clock, permission: 'purchase_requests.pending.view' },
+          { title: 'My Requests', href: '/administration/purchase-requests/my-requests', icon: UserCheck, permission: 'purchase_requests.my.view' },
+          { title: 'Approvals', href: '/administration/purchase-requests/approvals', icon: CheckSquare, permission: 'purchase_requests.approvals.view' },
+          { title: 'Reports', href: '/administration/purchase-requests/reports', icon: BarChart3, permission: 'purchase_requests.reports.view' },
+        ]
+      },
+      { 
+        title: 'Reports', 
+        icon: BarChart3,
+        permission: 'admin_reports.view',
+        children: [
+          { title: 'Overview', href: '/administration/reports', icon: LayoutDashboard, permission: 'admin_reports.view' },
         ]
       },
     ],
@@ -423,11 +498,13 @@ export const navigationConfig: NavItem[] = [
         icon: Briefcase,
         permission: 'assets.view',
         children: [
+          { title: 'Overview', href: '/administration/assets', icon: Briefcase, permission: 'assets.view' },
           { title: 'Furniture', href: '/administration/assets/furniture', icon: Sofa, permission: 'assets.furniture.view' },
           { title: 'Equipment', href: '/administration/assets/equipment', icon: Cpu, permission: 'assets.equipment.view' },
           { title: 'Vehicles', href: '/administration/assets/vehicles', icon: Car, permission: 'assets.vehicles.view' },
           { title: 'Assignments', href: '/administration/assets/assignments', icon: UserCheck, permission: 'assets.assignment.view' },
           { title: 'Maintenance', href: '/administration/assets/maintenance', icon: Wrench, permission: 'assets.maintenance.view' },
+          { title: 'Movement History', href: '/administration/assets/movement-history', icon: TrendingUp, permission: 'assets.movement.view' },
         ]
       },
       { 
@@ -456,10 +533,12 @@ export const navigationConfig: NavItem[] = [
         icon: Building2,
         permission: 'vendors.view',
         children: [
-          { title: 'Cleaning', href: '/administration/vendors/cleaning', icon: SprayCan, permission: 'vendors.cleaning.view' },
-          { title: 'Maintenance', href: '/administration/vendors/maintenance', icon: Wrench, permission: 'vendors.maintenance.view' },
-          { title: 'Internet', href: '/administration/vendors/internet', icon: Globe, permission: 'vendors.internet.view' },
-          { title: 'Electricity', href: '/administration/vendors/electricity', icon: Zap, permission: 'vendors.electricity.view' },
+          { title: 'Cleaning', href: '/administration/vendor-management/cleaning-vendors', icon: SprayCan, permission: 'vendors.cleaning.view' },
+          { title: 'Maintenance', href: '/administration/vendor-management/maintenance-vendors', icon: Wrench, permission: 'vendors.maintenance.view' },
+          { title: 'Internet', href: '/administration/vendor-management/internet-providers', icon: Globe, permission: 'vendors.internet.view' },
+          { title: 'Electricity', href: '/administration/vendor-management/electricity-providers', icon: Zap, permission: 'vendors.electricity.view' },
+          { title: 'Quotations', href: '/administration/vendor-management/quotations', icon: FileText, permission: 'vendors.quotations.view' },
+          { title: 'Performance', href: '/administration/vendor-management/performance', icon: TrendingUp, permission: 'vendors.performance.view' },
         ]
       },
       { 
@@ -471,6 +550,77 @@ export const navigationConfig: NavItem[] = [
           { title: 'Letters', href: '/administration/documents/letters', icon: FileSignature, permission: 'documents.letters.view' },
           { title: 'Meeting Minutes', href: '/administration/documents/minutes', icon: Clipboard, permission: 'documents.minutes.view' },
           { title: 'Archive', href: '/administration/documents/archive', icon: Archive, permission: 'documents.archive.view' },
+        ]
+      },
+      { 
+        title: 'Staff Attendance', 
+        icon: Activity,
+        permission: 'attendance.view',
+        children: [
+          { title: 'Overview', href: '/administration/attendance', icon: LayoutDashboard, permission: 'attendance.view' },
+          { title: 'Daily Attendance', href: '/administration/attendance/daily', icon: Calendar, permission: 'attendance.daily.view' },
+          { title: 'Clock In/Out', href: '/administration/attendance/clock-in-out', icon: Clock, permission: 'attendance.clock_in_out.view' },
+          { title: 'Lateness', href: '/administration/attendance/lateness', icon: AlertTriangle, permission: 'attendance.lateness.view' },
+          { title: 'Absence', href: '/administration/attendance/absence', icon: UserCheck, permission: 'attendance.absence.view' },
+          { title: 'ID Compliance', href: '/administration/attendance/id-compliance', icon: IdCard, permission: 'attendance.id_compliance.view' },
+          { title: 'Reports', href: '/administration/attendance/reports', icon: FileText, permission: 'attendance.reports.view' },
+        ]
+      },
+      { 
+        title: 'Inspections', 
+        icon: ClipboardCheck,
+        permission: 'inspections.view',
+        children: [
+          { title: 'Overview', href: '/administration/inspections', icon: LayoutDashboard, permission: 'inspections.view' },
+          { title: 'Cleanliness', href: '/administration/inspections/cleanliness', icon: SprayCan, permission: 'inspections.cleanliness.view' },
+          { title: 'Restroom', href: '/administration/inspections/restroom', icon: UserCheck, permission: 'inspections.restroom.view' },
+          { title: 'Workspace', href: '/administration/inspections/workspace', icon: Monitor, permission: 'inspections.workspace.view' },
+          { title: 'Reception', href: '/administration/inspections/reception', icon: Building2, permission: 'inspections.reception.view' },
+          { title: 'Meeting Rooms', href: '/administration/inspections/meeting-rooms', icon: Monitor, permission: 'inspections.meeting_rooms.view' },
+          { title: 'Issues', href: '/administration/inspections/issues', icon: AlertTriangle, permission: 'inspections.issues.view' },
+        ]
+      },
+      { 
+        title: 'Fuel Management', 
+        icon: Fuel,
+        permission: 'fuel.view',
+        children: [
+          { title: 'Overview', href: '/administration/fuel', icon: LayoutDashboard, permission: 'fuel.view' },
+          { title: 'Fuel Records', href: '/administration/fuel/records', icon: FileText, permission: 'fuel.records.view' },
+          { title: 'Driver Usage', href: '/administration/fuel/drivers', icon: UserCheck, permission: 'fuel.drivers.view' },
+          { title: 'Vehicle History', href: '/administration/fuel/vehicles', icon: Car, permission: 'fuel.vehicles.view' },
+        ]
+      },
+      { 
+        title: 'Drivers', 
+        icon: Car,
+        permission: 'drivers.view',
+        children: [
+          { title: 'Overview', href: '/administration/drivers', icon: LayoutDashboard, permission: 'drivers.view' },
+          { title: 'Drivers List', href: '/administration/drivers/list', icon: Users, permission: 'drivers.list.view' },
+          { title: 'Trips', href: '/administration/drivers/trips', icon: MapPin, permission: 'drivers.trips.view' },
+          { title: 'Licenses', href: '/administration/drivers/licenses', icon: IdCard, permission: 'drivers.licenses.view' },
+        ]
+      },
+      { 
+        title: 'Purchase Requests', 
+        icon: Clipboard,
+        permission: 'purchase_requests.view',
+        children: [
+          { title: 'Overview', href: '/administration/purchase-requests', icon: LayoutDashboard, permission: 'purchase_requests.view' },
+          { title: 'All Requests', href: '/administration/purchase-requests/list', icon: FileText, permission: 'purchase_requests.list.view' },
+          { title: 'Pending', href: '/administration/purchase-requests/pending', icon: Clock, permission: 'purchase_requests.pending.view' },
+          { title: 'My Requests', href: '/administration/purchase-requests/my-requests', icon: UserCheck, permission: 'purchase_requests.my.view' },
+          { title: 'Approvals', href: '/administration/purchase-requests/approvals', icon: CheckSquare, permission: 'purchase_requests.approvals.view' },
+          { title: 'Reports', href: '/administration/purchase-requests/reports', icon: BarChart3, permission: 'purchase_requests.reports.view' },
+        ]
+      },
+      { 
+        title: 'Reports', 
+        icon: BarChart3,
+        permission: 'admin_reports.view',
+        children: [
+          { title: 'Overview', href: '/administration/reports', icon: LayoutDashboard, permission: 'admin_reports.view' },
         ]
       },
     ],

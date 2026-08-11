@@ -35,6 +35,7 @@ const vendorSchema = z.object({
   contract_end: z.string().optional(),
   monthly_cost: z.string().optional(),
   branch_id: z.string().optional(),
+  rating: z.string().optional(),
   notes: z.string().optional(),
 });
 type VendorForm = z.infer<typeof vendorSchema>;
@@ -86,6 +87,7 @@ export default function CleaningVendorsPage() {
       contract_end: vendor.contract_end ?? '',
       monthly_cost: vendor.monthly_cost?.toString() ?? '',
       branch_id: vendor.branch_id ?? undefined,
+      rating: vendor.rating?.toString() ?? '',
       notes: vendor.notes ?? '',
     });
     setDialogOpen(true);
@@ -105,6 +107,7 @@ export default function CleaningVendorsPage() {
       contract_end: data.contract_end || null,
       monthly_cost: data.monthly_cost ? parseFloat(data.monthly_cost) : null,
       branch_id: data.branch_id,
+      rating: data.rating ? parseInt(data.rating) : null,
       notes: data.notes,
     };
 
@@ -398,6 +401,21 @@ export default function CleaningVendorsPage() {
                     <div>
                       <Label>Monthly Cost</Label>
                       <Input className="mt-1" type="number" step="0.01" {...register('monthly_cost')} />
+                    </div>
+                    <div>
+                      <Label>Rating (1-5)</Label>
+                      <Controller name="rating" control={control} render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                          <SelectTrigger className="mt-1"><SelectValue placeholder="Select rating" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="5">5 - Excellent</SelectItem>
+                            <SelectItem value="4">4 - Good</SelectItem>
+                            <SelectItem value="3">3 - Average</SelectItem>
+                            <SelectItem value="2">2 - Fair</SelectItem>
+                            <SelectItem value="1">1 - Poor</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )} />
                     </div>
                     <div>
                       <Label>Branch</Label>

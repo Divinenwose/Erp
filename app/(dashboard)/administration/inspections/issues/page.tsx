@@ -19,13 +19,13 @@ export default function InspectionIssuesPage() {
   const [selectedStatus, setSelectedStatus] = useState('');
 
   const columns = [
-    { key: 'issue', label: 'Issue' },
-    { key: 'inspection', label: 'Inspection Type' },
-    { key: 'priority', label: 'Priority' },
-    { key: 'assignedTo', label: 'Assigned To' },
-    { key: 'dueDate', label: 'Due Date' },
-    { key: 'status', label: 'Status' },
-    { key: 'actions', label: 'Actions' },
+    { key: 'issue', header: 'Issue' },
+    { key: 'inspection', header: 'Inspection Type' },
+    { key: 'priority', header: 'Priority' },
+    { key: 'assignedTo', header: 'Assigned To' },
+    { key: 'dueDate', header: 'Due Date' },
+    { key: 'status', header: 'Status' },
+    { key: 'actions', header: 'Actions' },
   ];
 
   const mockData = [

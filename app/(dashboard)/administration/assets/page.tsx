@@ -105,8 +105,8 @@ export default function AssetsPage() {
   const onLifecycleSubmit = async (data: LifecycleForm) => {
     if (!company?.id || !selectedAsset) return;
     
-    const previousStatus = selectedAsset.status;
-    const newStatus = data.event_type === 'retired' ? 'retired' : data.event_type === 'disposed' ? 'disposed' : selectedAsset.status;
+    const previous_status = selectedAsset.status;
+    const new_status = data.event_type === 'retired' ? 'retired' : data.event_type === 'disposed' ? 'disposed' : selectedAsset.status;
     
     const { error } = await supabase.from('asset_lifecycle_events').insert({
       company_id: company.id,
@@ -127,7 +127,7 @@ export default function AssetsPage() {
     if (error) { toast.error('Failed to record lifecycle event'); return; }
 
     // Update asset if status changed
-    if (newStatus !== previousStatus) {
+    if (new_status !== previous_status) {
       await supabase.from('assets').update({ 
         status: new_status,
         location: data.new_location || selectedAsset.location,

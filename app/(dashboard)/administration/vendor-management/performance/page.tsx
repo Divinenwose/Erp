@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Search, Download, Star, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 export default function VendorPerformancePage() {
   const { company } = useAuth();
@@ -105,28 +106,6 @@ export default function VendorPerformancePage() {
     return matchesSearch && matchesType;
   });
 
-  const formattedData = filteredData.map((item) => {
-    const vendor = item.vendors;
-    const trend = calculateTrend(item);
-    return {
-      ...item,
-      vendor: vendor?.name || '-',
-      type: vendor?.vendor_type || '-',
-      rating: getRatingStars(item.rating || 0),
-      onTimeDelivery: item.total_orders > 0 ? `${Math.round(((item.total_orders - item.late_deliveries) / item.total_orders) * 100)}%` : 'N/A',
-      qualityScore: `${item.quality_score || 0}%`,
-      totalOrders: item.total_orders || 0,
-      trend: getTrendBadge(trend),
-      actions: (
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="h-8">
-            View Details
-          </Button>
-        </div>
-      ),
-    };
-  });
-
   const avgRating = vendorPerformance.length > 0 
     ? (vendorPerformance.reduce((sum, vp) => sum + (vp.rating || 0), 0) / vendorPerformance.length).toFixed(1)
     : '0.0';
@@ -182,20 +161,27 @@ export default function VendorPerformancePage() {
     );
   };
 
-  const formattedData = mockData.map((item) => ({
-    ...item,
-    rating: getRatingStars(item.rating),
-    onTimeDelivery: `${item.onTimeDelivery}%`,
-    qualityScore: `${item.qualityScore}%`,
-    trend: getTrendBadge(item.trend),
-    actions: (
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" className="h-8">
-          View Details
-        </Button>
-      </div>
-    ),
-  }));
+  const formattedData = filteredData.map((item) => {
+    const vendor = item.vendors;
+    const trend = calculateTrend(item);
+    return {
+      ...item,
+      vendor: vendor?.name || '-',
+      type: vendor?.vendor_type || '-',
+      rating: getRatingStars(item.rating || 0),
+      onTimeDelivery: item.total_orders > 0 ? `${Math.round(((item.total_orders - item.late_deliveries) / item.total_orders) * 100)}%` : 'N/A',
+      qualityScore: `${item.quality_score || 0}%`,
+      totalOrders: item.total_orders || 0,
+      trend: getTrendBadge(trend),
+      actions: (
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="h-8">
+            View Details
+          </Button>
+        </div>
+      ),
+    };
+  });
 
   return (
     <div className="space-y-6">

@@ -19,13 +19,13 @@ export default function IDCompliancePage() {
   const [selectedStatus, setSelectedStatus] = useState('');
 
   const columns = [
-    { key: 'employee', label: 'Employee' },
-    { key: 'department', label: 'Department' },
-    { key: 'idNumber', label: 'ID Number' },
-    { key: 'issueDate', label: 'Issue Date' },
-    { key: 'expiryDate', label: 'Expiry Date' },
-    { key: 'status', label: 'Status' },
-    { key: 'actions', label: 'Actions' },
+    { key: 'employee', header: 'Employee' },
+    { key: 'department', header: 'Department' },
+    { key: 'idNumber', header: 'ID Number' },
+    { key: 'issueDate', header: 'Issue Date' },
+    { key: 'expiryDate', header: 'Expiry Date' },
+    { key: 'status', header: 'Status' },
+    { key: 'actions', header: 'Actions' },
   ];
 
   const mockData = [

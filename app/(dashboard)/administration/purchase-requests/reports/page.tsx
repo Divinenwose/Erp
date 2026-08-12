@@ -48,6 +48,7 @@ export default function PurchaseRequestsReportsPage() {
   ];
 
   const selectedReport = reports.find(r => r.id === reportType);
+  const ReportIcon = selectedReport?.icon ?? Calendar;
 
   return (
     <div className="space-y-6">
@@ -91,7 +92,7 @@ export default function PurchaseRequestsReportsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <selectedReport.icon className={`h-5 w-5 ${selectedReport?.iconColor}`} />
+            <ReportIcon className={`h-5 w-5 ${selectedReport?.iconColor ?? 'text-blue-600'}`} />
             {selectedReport?.title}
           </CardTitle>
         </CardHeader>

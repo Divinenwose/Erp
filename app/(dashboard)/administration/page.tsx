@@ -66,9 +66,10 @@ export default function AdministrationOverviewPage() {
     ]);
 
     // Load audit logs separately to avoid breaking the dashboard if it fails
-    let auditResult = { data: [] };
+    let auditResult: { data: any[] } = { data: [] };
     try {
-      auditResult = await supabase.from('audit_logs').select('action, module, created_at').eq('company_id', company.id).order('created_at', { ascending: false }).limit(5);
+      const result = await supabase.from('audit_logs').select('action, module, created_at').eq('company_id', company.id).order('created_at', { ascending: false }).limit(5);
+      auditResult = { data: result.data ?? [] };
     } catch (error) {
       console.warn('Failed to load audit logs:', error);
     }

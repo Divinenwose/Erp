@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Edit, Trash2, Layers, CheckCircle, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ApprovalWorkflowsPage() {
   const { company } = useAuth();

@@ -5,8 +5,11 @@ interface AuditLogData {
   module: string;
   entity_type?: string;
   entity_id?: string;
+  record_id?: string;
   previous_value?: Record<string, unknown>;
+  previous_values?: Record<string, unknown>;
   new_value?: Record<string, unknown>;
+  new_values?: Record<string, unknown>;
   ip_address?: string;
 }
 
@@ -28,9 +31,9 @@ export async function logAuditEvent(
       action: data.action,
       module: data.module,
       entity_type: data.entity_type,
-      entity_id: data.entity_id,
-      previous_value: data.previous_value,
-      new_value: data.new_value,
+      entity_id: data.entity_id ?? data.record_id,
+      previous_value: data.previous_value ?? data.previous_values,
+      new_value: data.new_value ?? data.new_values,
       ip_address: data.ip_address,
     });
   } catch (error) {

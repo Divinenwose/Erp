@@ -18,13 +18,13 @@ export default function LatenessPage() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
 
   const columns = [
-    { key: 'employee', label: 'Employee' },
-    { key: 'department', label: 'Department' },
-    { key: 'date', label: 'Date' },
-    { key: 'scheduledTime', label: 'Scheduled Time' },
-    { key: 'actualTime', label: 'Actual Time' },
-    { key: 'lateMinutes', label: 'Late Minutes' },
-    { key: 'reason', label: 'Reason' },
+    { key: 'employee', header: 'Employee' },
+    { key: 'department', header: 'Department' },
+    { key: 'date', header: 'Date' },
+    { key: 'scheduledTime', header: 'Scheduled Time' },
+    { key: 'actualTime', header: 'Actual Time' },
+    { key: 'lateMinutes', header: 'Late Minutes' },
+    { key: 'reason', header: 'Reason' },
   ];
 
   const mockData = [

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download, FileText, Calendar, BarChart3, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
+import { Input } from '@/components/ui/input';
 
 export default function AttendanceReportsPage() {
   const [reportType, setReportType] = useState('daily');
@@ -49,6 +50,7 @@ export default function AttendanceReportsPage() {
   ];
 
   const selectedReport = reports.find(r => r.id === reportType);
+  const ReportIcon = selectedReport?.icon ?? Calendar;
 
   return (
     <div className="space-y-6">
@@ -92,7 +94,7 @@ export default function AttendanceReportsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <selectedReport.icon className={`h-5 w-5 ${selectedReport?.iconColor}`} />
+            <ReportIcon className={`h-5 w-5 ${selectedReport?.iconColor ?? 'text-blue-600'}`} />
             {selectedReport?.title}
           </CardTitle>
         </CardHeader>

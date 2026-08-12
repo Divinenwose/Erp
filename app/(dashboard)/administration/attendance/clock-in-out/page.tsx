@@ -17,12 +17,12 @@ export default function ClockInOutPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const columns = [
-    { key: 'employee', label: 'Employee' },
-    { key: 'department', label: 'Department' },
-    { key: 'clockIn', label: 'Clock In' },
-    { key: 'clockOut', label: 'Clock Out' },
-    { key: 'workingHours', label: 'Working Hours' },
-    { key: 'actions', label: 'Actions' },
+    { key: 'employee', header: 'Employee' },
+    { key: 'department', header: 'Department' },
+    { key: 'clockIn', header: 'Clock In' },
+    { key: 'clockOut', header: 'Clock Out' },
+    { key: 'workingHours', header: 'Working Hours' },
+    { key: 'actions', header: 'Actions' },
   ];
 
   const mockData = [

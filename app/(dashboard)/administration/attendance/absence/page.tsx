@@ -18,13 +18,13 @@ export default function AbsencePage() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
 
   const columns = [
-    { key: 'employee', label: 'Employee' },
-    { key: 'department', label: 'Department' },
-    { key: 'date', label: 'Date' },
-    { key: 'type', label: 'Absence Type' },
-    { key: 'duration', label: 'Duration' },
-    { key: 'reason', label: 'Reason' },
-    { key: 'status', label: 'Status' },
+    { key: 'employee', header: 'Employee' },
+    { key: 'department', header: 'Department' },
+    { key: 'date', header: 'Date' },
+    { key: 'type', header: 'Absence Type' },
+    { key: 'duration', header: 'Duration' },
+    { key: 'reason', header: 'Reason' },
+    { key: 'status', header: 'Status' },
   ];
 
   const mockData = [

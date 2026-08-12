@@ -152,7 +152,7 @@ export default function ApprovalWorkflowsPage() {
     ...wf,
     name: wf.workflow_name,
     type: wf.request_type.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
-    stages: `${stages.filter(s => s.company_id === company.id).length} stages`,
+    stages: `${stages.filter(s => s.company_id === company?.id).length} stages`,
     status: wf.is_active ? (
       <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Active</Badge>
     ) : (

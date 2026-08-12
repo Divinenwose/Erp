@@ -21,12 +21,12 @@ export default function WorkspaceInspectionPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const columns = [
-    { key: 'date', label: 'Date' },
-    { key: 'branch', label: 'Branch' },
-    { key: 'inspector', label: 'Inspector' },
-    { key: 'score', label: 'Score' },
-    { key: 'status', label: 'Status' },
-    { key: 'actions', label: 'Actions' },
+    { key: 'date', header: 'Date' },
+    { key: 'branch', header: 'Branch' },
+    { key: 'inspector', header: 'Inspector' },
+    { key: 'score', header: 'Score' },
+    { key: 'status', header: 'Status' },
+    { key: 'actions', header: 'Actions' },
   ];
 
   const mockData = [

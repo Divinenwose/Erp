@@ -22,6 +22,7 @@ interface DataTableProps<T extends object> {
   data: T[];
   columns: Column<T>[];
   loading?: boolean;
+  searchable?: boolean;
   searchPlaceholder?: string;
   searchKeys?: string[];
   pageSize?: number;
@@ -48,9 +49,21 @@ function SkeletonRow({ cols }: { cols: number }) {
 }
 
 export default function DataTable<T extends object>({
-  data, columns, loading, searchPlaceholder = 'Search...', searchKeys = [],
-  pageSize = 15, emptyTitle = 'No records found', emptyDescription = 'No data to display',
-  emptyIcon, emptyAction, toolbar, onExport, rowKey = 'id', onRowClick,
+  data,
+  columns,
+  loading,
+  searchable = true,
+  searchPlaceholder = 'Search...',
+  searchKeys = [],
+  pageSize = 15,
+  emptyTitle = 'No records found',
+  emptyDescription = 'No data to display',
+  emptyIcon,
+  emptyAction,
+  toolbar,
+  onExport,
+  rowKey = 'id',
+  onRowClick,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -61,21 +74,26 @@ export default function DataTable<T extends object>({
   const visibleColumns = columns.filter(c => !c.hidden);
 
   // Filter
-  const filtered = debouncedSearch
+  const filtered = searchable && debouncedSearch
     ? data.filter(row => {
-        const keys = searchKeys.length > 0 ? searchKeys : Object.keys(row);
-        return keys.some(k => String((row as any)[k] ?? '').toLowerCase().includes(debouncedSearch.toLowerCase()));
-      })
+      const keys = searchKeys.length > 0 ? searchKeys : Object.keys(row);
+
+      return keys.some(k =>
+        String((row as any)[k] ?? '')
+          .toLowerCase()
+          .includes(debouncedSearch.toLowerCase())
+      );
+    })
     : data;
 
   // Sort
   const sorted = sortKey
     ? [...filtered].sort((a, b) => {
-        const av = (a as any)[sortKey]; const bv = (b as any)[sortKey];
-        if (av == null) return 1; if (bv == null) return -1;
-        const cmp = av < bv ? -1 : av > bv ? 1 : 0;
-        return sortDir === 'asc' ? cmp : -cmp;
-      })
+      const av = (a as any)[sortKey]; const bv = (b as any)[sortKey];
+      if (av == null) return 1; if (bv == null) return -1;
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      return sortDir === 'asc' ? cmp : -cmp;
+    })
     : filtered;
 
   // Paginate
@@ -100,15 +118,20 @@ export default function DataTable<T extends object>({
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-        <div className="relative flex-1 min-w-[140px] sm:min-w-[180px] max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            className="pl-9 h-9"
-            placeholder={searchPlaceholder}
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
-          />
-        </div>
+        {searchable && (
+          <div className="relative flex-1 min-w-[140px] sm:min-w-[180px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              className="pl-9 h-9"
+              placeholder={searchPlaceholder}
+              value={search}
+              onChange={e => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+        )}
         {toolbar && <div className="flex items-center gap-2">{toolbar}</div>}
         {onExport && (
           <Button variant="outline" size="sm" className="ml-auto" onClick={onExport}>

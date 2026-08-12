@@ -213,7 +213,6 @@ export default function AbsencePage() {
           <DataTable
             columns={columns}
             data={formattedData}
-            searchable={false}
           />
         </CardContent>
       </Card>

@@ -21,13 +21,13 @@ export default function MeetingRoomInspectionPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const columns = [
-    { key: 'date', label: 'Date' },
-    { key: 'branch', label: 'Branch' },
-    { key: 'room', label: 'Meeting Room' },
-    { key: 'inspector', label: 'Inspector' },
-    { key: 'score', label: 'Score' },
-    { key: 'status', label: 'Status' },
-    { key: 'actions', label: 'Actions' },
+    { key: 'date', header: 'Date' },
+    { key: 'branch', header: 'Branch' },
+    { key: 'room', header: 'Meeting Room' },
+    { key: 'inspector', header: 'Inspector' },
+    { key: 'score', header: 'Score' },
+    { key: 'status', header: 'Status' },
+    { key: 'actions', header: 'Actions' },
   ];
 
   const mockData = [

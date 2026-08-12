@@ -626,6 +626,10 @@ CREATE POLICY "Users can update own company data" ON request_approvals
 CREATE POLICY "Users can delete own company data" ON request_approvals
   FOR DELETE USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
+-- Ensure `requester_id` exists on pre-existing `purchase_requests` tables
+ALTER TABLE purchase_requests
+  ADD COLUMN IF NOT EXISTS requester_id UUID REFERENCES profiles(id) ON DELETE SET NULL;
+
 -- Indexes
 CREATE INDEX idx_attendance_records_company ON attendance_records(company_id);
 CREATE INDEX idx_attendance_records_employee ON attendance_records(employee_id);
@@ -687,6 +691,13 @@ CREATE POLICY "Users can view own company audit logs" ON audit_logs
 
 CREATE POLICY "Users can insert own company audit logs" ON audit_logs
   FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+
+-- Ensure new audit log columns exist on pre-existing tables
+ALTER TABLE audit_logs
+  ADD COLUMN IF NOT EXISTS entity_type TEXT,
+  ADD COLUMN IF NOT EXISTS entity_id UUID,
+  ADD COLUMN IF NOT EXISTS previous_value JSONB,
+  ADD COLUMN IF NOT EXISTS new_value JSONB;
 
 -- Indexes for audit_logs
 CREATE INDEX idx_audit_logs_company ON audit_logs(company_id);

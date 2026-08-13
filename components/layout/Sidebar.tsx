@@ -92,9 +92,6 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, userDepar
     return filtered;
   }, [item.children, hasPermission, isSuperAdmin, isCompanyAdmin, userDepartmentName]);
 
-  // If no access and no visible children, don't render
-  if (!hasAccess && visibleChildren.length === 0) return null;
-
   const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + '/') : false;
   const isParentActive = visibleChildren.some(
     (child) => child.href && (pathname === child.href || pathname.startsWith(child.href + '/'))
@@ -103,6 +100,9 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, userDepar
   useEffect(() => {
     if (isParentActive) setOpen(true);
   }, [isParentActive]);
+
+  // If no access and no visible children, don't render
+  if (!hasAccess && visibleChildren.length === 0) return null;
 
   const Icon = item.icon;
 

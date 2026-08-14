@@ -12,6 +12,7 @@ interface AuthContextType {
   company: Company | null;
   roles: Role[];
   permissions: Permission[];
+  departmentName: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, data: { firstName: string; lastName: string; companyName: string }) => Promise<{ error: Error | null }>;
@@ -33,6 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [company, setCompany] = useState<Company | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [departmentName, setDepartmentName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const isInitialized = useRef(false);
 
@@ -55,6 +57,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (prof) {
         setProfile(prof as Profile);
+
+        // Fetch department name if the user has a department_id
+        if (prof.department_id) {
+          const { data: dept } = await supabase
+            .from('departments')
+            .select('name')
+            .eq('id', prof.department_id)
+            .maybeSingle();
+          setDepartmentName(dept?.name ?? null);
+        } else {
+          setDepartmentName(null);
+        }
+
         if (prof.company_id) {
           console.log('[AUTH] Fetching company for company_id:', prof.company_id);
           const { data: comp, error: compError } = await supabase
@@ -234,6 +249,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCompany(null);
           setRoles([]);
           setPermissions([]);
+          setDepartmentName(null);
         }
       })();
     });
@@ -414,6 +430,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCompany(null);
     setRoles([]);
     setPermissions([]);
+    setDepartmentName(null);
     
     // Log logout event
     if (userId && companyId) {
@@ -450,8 +467,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profile, 
       company, 
       roles, 
-      permissions, 
-      loading, 
+      permissions,
+      departmentName,
+      loading,
       signIn, 
       signUp, 
       signOut, 

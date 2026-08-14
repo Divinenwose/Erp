@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { NavItem } from '@/config/navigation';
 import { getNavigationConfig } from '@/lib/company-modules';
+import { isModuleAllowed } from '@/lib/department-access';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
 import { ChevronDown, ChevronRight, Building2, Zap, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -19,78 +19,36 @@ interface SidebarProps {
   onMobileClose: () => void;
 }
 
-function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, userDepartmentName }: { item: NavItem; collapsed: boolean; depth?: number; onMobileClose?: () => void; userDepartmentName?: string }) {
+function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmentName }: { item: NavItem; collapsed: boolean; depth?: number; onMobileClose?: () => void; departmentName: string | null }) {
   const pathname = usePathname();
-  const { hasPermission, isSuperAdmin, isCompanyAdmin, permissions, profile } = useAuth();
+  const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
   const [open, setOpen] = useState(false);
 
-  // Department to module mapping
-  const departmentModuleAccess: Record<string, string[]> = {
-    'Human Resources': ['hr'],
-    'Finance': ['finance'],
-    'Inventory': ['inventory'],
-    'Procurement': ['procurement'],
-    'Sales': ['crm'],
-    'Legal': ['legal'],
-    'Administration': ['facilities', 'assets', 'reception', 'supplies', 'vendors', 'documents'],
-    'Operations': ['operations'],
-    'IT': ['it'],
-    'Quality': ['qa_qc'],
-    'Logistics': ['logistics'],
-    'Marketing': ['client_marketing'],
-    'Customer Service': ['client_servicing'],
-    'Graphics': ['graphics'],
-    'Media': ['media'],
-    'Internal Control': ['internal_control'],
-    'Manufacturing': ['manufacturing'],
-  };
+  const isAdmin = isSuperAdmin() || isCompanyAdmin();
 
-  // Check if user has permission for this item
-  const hasAccess = useMemo(() => {
-    // Super Admin and Company Admin have access to everything
-    if (isSuperAdmin() || isCompanyAdmin()) return true;
-
-    // If no permission required, allow access
+  // Check if user has RBAC permission for this item
+  const hasItemPermission = useMemo(() => {
+    if (isAdmin) return true;
     if (!item.permission) return true;
-
-    // Check if user has the specific permission
-    if (!hasPermission(item.permission)) return false;
-
-    // Check department-based access
-    if (userDepartmentName && item.module) {
-      const allowedModules = departmentModuleAccess[userDepartmentName] || [];
-      // Allow access if the module is in the department's allowed modules
-      if (allowedModules.length > 0 && !allowedModules.includes(item.module)) {
-        return false;
-      }
-    }
-
     return hasPermission(item.permission);
-  }, [item.permission, item.module, hasPermission, isSuperAdmin, isCompanyAdmin, userDepartmentName]);
+  }, [item.permission, hasPermission, isAdmin]);
+
+  // Check if user's department allows this module
+  const hasDepartmentAccess = useMemo(() => {
+    if (isAdmin) return true;
+    return isModuleAllowed(item.module, departmentName ?? undefined);
+  }, [item.module, departmentName, isAdmin]);
 
   // Filter children based on permissions and department access
   const visibleChildren = useMemo(() => {
     if (!item.children) return [];
-    // Super Admin and Company Admin see all children
-    if (isSuperAdmin() || isCompanyAdmin()) {
-      return item.children;
-    }
-    const filtered = item.children.filter(child => {
-      if (!child.permission) return true;
-      if (!hasPermission(child.permission)) return false;
-      
-      // Check department-based access for children
-      if (userDepartmentName && child.module) {
-        const allowedModules = departmentModuleAccess[userDepartmentName] || [];
-        if (allowedModules.length > 0 && !allowedModules.includes(child.module)) {
-          return false;
-        }
-      }
-      
+    if (isAdmin) return item.children;
+    return item.children.filter(child => {
+      if (child.permission && !hasPermission(child.permission)) return false;
+      if (child.module && !isModuleAllowed(child.module, departmentName ?? undefined)) return false;
       return true;
     });
-    return filtered;
-  }, [item.children, hasPermission, isSuperAdmin, isCompanyAdmin, userDepartmentName]);
+  }, [item.children, hasPermission, isAdmin, departmentName]);
 
   const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + '/') : false;
   const isParentActive = visibleChildren.some(
@@ -101,8 +59,8 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, userDepar
     if (isParentActive) setOpen(true);
   }, [isParentActive]);
 
-  // If no access and no visible children, don't render
-  if (!hasAccess && visibleChildren.length === 0) return null;
+  // If no permission or no department access and no visible children, don't render
+  if ((!hasItemPermission || !hasDepartmentAccess) && visibleChildren.length === 0) return null;
 
   const Icon = item.icon;
 
@@ -138,7 +96,7 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, userDepar
         {open && !collapsed && (
           <div className="mt-1 space-y-0.5 pl-4 border-l border-gray-200 dark:border-gray-700 ml-5">
             {visibleChildren.map((child) => (
-              <NavItemComponent key={child.href ?? child.title} item={child} collapsed={false} depth={depth + 1} onMobileClose={onMobileClose} userDepartmentName={userDepartmentName} />
+              <NavItemComponent key={child.href ?? child.title} item={child} collapsed={false} depth={depth + 1} onMobileClose={onMobileClose} departmentName={departmentName} />
             ))}
           </div>
         )}
@@ -178,49 +136,7 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, userDepar
 }
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
-  const { company, profile } = useAuth();
-  const [userDepartmentName, setUserDepartmentName] = useState<string | undefined>();
-  const [isFetchingDepartment, setIsFetchingDepartment] = useState(false);
-
-  // Fetch user's department name
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchDepartmentName = async () => {
-      if (!profile?.department_id) {
-        setUserDepartmentName(undefined);
-        return;
-      }
-
-      if (isFetchingDepartment) return;
-
-      setIsFetchingDepartment(true);
-
-      try {
-        const { data: dept } = await supabase
-          .from('departments')
-          .select('name')
-          .eq('id', profile.department_id)
-          .maybeSingle();
-
-        if (isMounted) {
-          setUserDepartmentName(dept?.name);
-        }
-      } catch (error) {
-        console.error('[Sidebar] Error fetching department:', error);
-      } finally {
-        if (isMounted) {
-          setIsFetchingDepartment(false);
-        }
-      }
-    };
-
-    fetchDepartmentName();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [profile?.department_id]);
+  const { company, departmentName } = useAuth();
 
   // Get navigation config using shared helper
   const navigationItems = useMemo(() => {
@@ -237,7 +153,6 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     
     if (mobileOpen) {
       document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll when mobile drawer is open
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -263,10 +178,8 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
       <aside
         className={cn(
           'flex flex-col h-full bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out fixed lg:relative z-50',
-          // Desktop behavior
           'lg:translate-x-0',
           collapsed ? 'lg:w-16' : 'lg:w-64',
-          // Mobile behavior
           'w-64 -translate-x-full',
           mobileOpen && 'translate-x-0'
         )}
@@ -299,7 +212,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         <ScrollArea className="flex-1 px-3 py-3">
           <nav className="space-y-0.5">
             {navigationItems.map((item) => (
-              <NavItemComponent key={item.href ?? item.title} item={item} collapsed={collapsed} onMobileClose={onMobileClose} userDepartmentName={userDepartmentName} />
+              <NavItemComponent key={item.href ?? item.title} item={item} collapsed={collapsed} onMobileClose={onMobileClose} departmentName={departmentName} />
             ))}
           </nav>
         </ScrollArea>

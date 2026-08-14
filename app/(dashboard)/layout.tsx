@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
+import { isRouteAllowedForDepartment } from '@/lib/department-access';
 
 // Route to permission mapping
 const routePermissions: Record<string, string> = {
@@ -119,7 +120,7 @@ function getRequiredPermission(pathname: string): string | null {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, hasPermission, isSuperAdmin, isCompanyAdmin, permissions } = useAuth();
+  const { user, loading, hasPermission, isSuperAdmin, isCompanyAdmin, permissions, departmentName } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -131,6 +132,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     // Only check permissions after loading is complete and user is authenticated
     if (!loading && user && pathname !== '/unauthorized') {
+      // Department check: non-admin users can only access routes within their department
+      if (!isCompanyAdmin() && permissions.length > 0 && !isRouteAllowedForDepartment(pathname, departmentName ?? undefined)) {
+        router.replace('/unauthorized');
+        return;
+      }
+
       const requiredPermission = getRequiredPermission(pathname);
       
       // Super Admin and Company Admin bypass all permission checks
@@ -139,7 +146,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         router.replace('/unauthorized');
       }
     }
-  }, [user, loading, router, pathname, hasPermission, isCompanyAdmin, permissions]);
+  }, [user, loading, router, pathname, hasPermission, isCompanyAdmin, permissions, departmentName]);
 
   if (loading) {
     return (

@@ -59,8 +59,13 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
     if (isParentActive) setOpen(true);
   }, [isParentActive]);
 
-  // If no permission or no department access and no visible children, don't render
-  if ((!hasItemPermission || !hasDepartmentAccess) && visibleChildren.length === 0) return null;
+  // Department is the outer gate: if this module isn't allowed for the user's
+  // department, hide the entire node and its subtree, regardless of whether
+  // any individual child's RBAC permission would otherwise pass.
+  if (!hasDepartmentAccess) return null;
+
+  // Within an allowed department, RBAC permissions control page/action visibility.
+  if (!hasItemPermission && visibleChildren.length === 0) return null;
 
   const Icon = item.icon;
 

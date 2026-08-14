@@ -91,3 +91,4 @@ export function Can({ resource, action, children, fallback = null }: CanProps) {
 
   return <>{fallback}</>;
 }
+

@@ -42,7 +42,10 @@ export function getDepartmentModules(departmentName?: string): Set<string> | nul
   if (!departmentName) return null;
   const modules = DEPARTMENT_MODULE_ACCESS[departmentName];
   if (!modules) return null;
-  return new Set([...modules, ...UNIVERSAL_MODULES]);
+  return new Set([
+    ...Array.from(modules),
+    ...Array.from(UNIVERSAL_MODULES),
+  ]);
 }
 
 /**

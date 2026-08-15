@@ -180,9 +180,10 @@ export const defaultNavigationConfig: NavItem[] = [
         icon: Package,
         permission: 'supplies.view',
         children: [
-          { title: 'Inventory', href: '/administration/supplies/inventory', icon: Package, permission: 'supplies.inventory.view' },
-          { title: 'Requests', href: '/administration/supplies/requests', icon: Clipboard, permission: 'supplies.requests.view' },
-          { title: 'Issuance', href: '/administration/supplies/issuance', icon: Printer, permission: 'supplies.issuance.view' },
+          { title: 'Inventory', href: '/administration/office-supplies/inventory', icon: Package, permission: 'supplies.inventory.view' },
+          { title: 'Requests', href: '/administration/office-supplies/requests', icon: Clipboard, permission: 'supplies.requests.view' },
+          { title: 'Issuance', href: '/administration/office-supplies/issuance', icon: Printer, permission: 'supplies.issuance.view' },
+          { title: 'Low Stock', href: '/administration/office-supplies/low-stock', icon: AlertTriangle, permission: 'supplies.low_stock.view' },
         ]
       },
       { 
@@ -203,9 +204,9 @@ export const defaultNavigationConfig: NavItem[] = [
         icon: FileText,
         permission: 'documents.view',
         children: [
-          { title: 'Policies', href: '/administration/documents/policies', icon: FileCheck, permission: 'documents.policies.view' },
+          { title: 'Policies', href: '/administration/documents/company-policies', icon: FileCheck, permission: 'documents.policies.view' },
           { title: 'Letters', href: '/administration/documents/letters', icon: FileSignature, permission: 'documents.letters.view' },
-          { title: 'Meeting Minutes', href: '/administration/documents/minutes', icon: Clipboard, permission: 'documents.minutes.view' },
+          { title: 'Meeting Minutes', href: '/administration/documents/meeting-minutes', icon: Clipboard, permission: 'documents.minutes.view' },
           { title: 'Archive', href: '/administration/documents/archive', icon: Archive, permission: 'documents.archive.view' },
         ]
       },
@@ -278,6 +279,71 @@ export const defaultNavigationConfig: NavItem[] = [
         permission: 'admin_reports.view',
         children: [
           { title: 'Overview', href: '/administration/reports', icon: LayoutDashboard, permission: 'admin_reports.view' },
+        ]
+      },
+      { 
+        title: 'Approvals', 
+        icon: CheckSquare,
+        permission: 'approvals.view',
+        children: [
+          { title: 'Overview', href: '/administration/approvals', icon: LayoutDashboard, permission: 'approvals.view' },
+          { title: 'Workflows', href: '/administration/approvals/workflows', icon: Layers, permission: 'approvals.workflows.view' },
+        ]
+      },
+      { 
+        title: 'Audit Logs', 
+        icon: ShieldCheck,
+        permission: 'audit_logs.view',
+        children: [
+          { title: 'Overview', href: '/administration/audit-logs', icon: LayoutDashboard, permission: 'audit_logs.view' },
+        ]
+      },
+      { 
+        title: 'Birthdays', 
+        icon: Award,
+        permission: 'birthdays.view',
+        children: [
+          { title: 'Overview', href: '/administration/birthdays', icon: LayoutDashboard, permission: 'birthdays.view' },
+        ]
+      },
+      { 
+        title: 'Calendar', 
+        icon: Calendar,
+        permission: 'calendar.view',
+        children: [
+          { title: 'Overview', href: '/administration/calendar', icon: LayoutDashboard, permission: 'calendar.view' },
+        ]
+      },
+      { 
+        title: 'Fleet', 
+        icon: Truck,
+        permission: 'assets.vehicles.view',
+        children: [
+          { title: 'Overview', href: '/administration/fleet', icon: LayoutDashboard, permission: 'assets.vehicles.view' },
+        ]
+      },
+      { 
+        title: 'Meetings', 
+        icon: Users,
+        permission: 'meetings.view',
+        children: [
+          { title: 'Overview', href: '/administration/meetings', icon: LayoutDashboard, permission: 'meetings.view' },
+        ]
+      },
+      { 
+        title: 'Notifications', 
+        icon: Bell,
+        permission: 'notifications.view',
+        children: [
+          { title: 'Overview', href: '/administration/notifications', icon: LayoutDashboard, permission: 'notifications.view' },
+        ]
+      },
+      { 
+        title: 'Work Orders', 
+        icon: Wrench,
+        permission: 'facilities.maintenance.view',
+        children: [
+          { title: 'Overview', href: '/administration/work-orders', icon: LayoutDashboard, permission: 'facilities.maintenance.view' },
         ]
       },
     ],
@@ -523,9 +589,10 @@ export const navigationConfig: NavItem[] = [
         icon: Package,
         permission: 'supplies.view',
         children: [
-          { title: 'Inventory', href: '/administration/supplies/inventory', icon: Package, permission: 'supplies.inventory.view' },
-          { title: 'Requests', href: '/administration/supplies/requests', icon: Clipboard, permission: 'supplies.requests.view' },
-          { title: 'Issuance', href: '/administration/supplies/issuance', icon: Printer, permission: 'supplies.issuance.view' },
+          { title: 'Inventory', href: '/administration/office-supplies/inventory', icon: Package, permission: 'supplies.inventory.view' },
+          { title: 'Requests', href: '/administration/office-supplies/requests', icon: Clipboard, permission: 'supplies.requests.view' },
+          { title: 'Issuance', href: '/administration/office-supplies/issuance', icon: Printer, permission: 'supplies.issuance.view' },
+          { title: 'Low Stock', href: '/administration/office-supplies/low-stock', icon: AlertTriangle, permission: 'supplies.low_stock.view' },
         ]
       },
       { 
@@ -546,9 +613,9 @@ export const navigationConfig: NavItem[] = [
         icon: FileText,
         permission: 'documents.view',
         children: [
-          { title: 'Policies', href: '/administration/documents/policies', icon: FileCheck, permission: 'documents.policies.view' },
+          { title: 'Policies', href: '/administration/documents/company-policies', icon: FileCheck, permission: 'documents.policies.view' },
           { title: 'Letters', href: '/administration/documents/letters', icon: FileSignature, permission: 'documents.letters.view' },
-          { title: 'Meeting Minutes', href: '/administration/documents/minutes', icon: Clipboard, permission: 'documents.minutes.view' },
+          { title: 'Meeting Minutes', href: '/administration/documents/meeting-minutes', icon: Clipboard, permission: 'documents.minutes.view' },
           { title: 'Archive', href: '/administration/documents/archive', icon: Archive, permission: 'documents.archive.view' },
         ]
       },
@@ -621,6 +688,71 @@ export const navigationConfig: NavItem[] = [
         permission: 'admin_reports.view',
         children: [
           { title: 'Overview', href: '/administration/reports', icon: LayoutDashboard, permission: 'admin_reports.view' },
+        ]
+      },
+      { 
+        title: 'Approvals', 
+        icon: CheckSquare,
+        permission: 'approvals.view',
+        children: [
+          { title: 'Overview', href: '/administration/approvals', icon: LayoutDashboard, permission: 'approvals.view' },
+          { title: 'Workflows', href: '/administration/approvals/workflows', icon: Layers, permission: 'approvals.workflows.view' },
+        ]
+      },
+      { 
+        title: 'Audit Logs', 
+        icon: ShieldCheck,
+        permission: 'audit_logs.view',
+        children: [
+          { title: 'Overview', href: '/administration/audit-logs', icon: LayoutDashboard, permission: 'audit_logs.view' },
+        ]
+      },
+      { 
+        title: 'Birthdays', 
+        icon: Award,
+        permission: 'birthdays.view',
+        children: [
+          { title: 'Overview', href: '/administration/birthdays', icon: LayoutDashboard, permission: 'birthdays.view' },
+        ]
+      },
+      { 
+        title: 'Calendar', 
+        icon: Calendar,
+        permission: 'calendar.view',
+        children: [
+          { title: 'Overview', href: '/administration/calendar', icon: LayoutDashboard, permission: 'calendar.view' },
+        ]
+      },
+      { 
+        title: 'Fleet', 
+        icon: Truck,
+        permission: 'assets.vehicles.view',
+        children: [
+          { title: 'Overview', href: '/administration/fleet', icon: LayoutDashboard, permission: 'assets.vehicles.view' },
+        ]
+      },
+      { 
+        title: 'Meetings', 
+        icon: Users,
+        permission: 'meetings.view',
+        children: [
+          { title: 'Overview', href: '/administration/meetings', icon: LayoutDashboard, permission: 'meetings.view' },
+        ]
+      },
+      { 
+        title: 'Notifications', 
+        icon: Bell,
+        permission: 'notifications.view',
+        children: [
+          { title: 'Overview', href: '/administration/notifications', icon: LayoutDashboard, permission: 'notifications.view' },
+        ]
+      },
+      { 
+        title: 'Work Orders', 
+        icon: Wrench,
+        permission: 'facilities.maintenance.view',
+        children: [
+          { title: 'Overview', href: '/administration/work-orders', icon: LayoutDashboard, permission: 'facilities.maintenance.view' },
         ]
       },
     ],

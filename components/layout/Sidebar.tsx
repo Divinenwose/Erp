@@ -198,17 +198,21 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
 }
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
-  const { company, departmentName } = useAuth();
+  const { company, departmentName, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const isAdmin = isSuperAdmin() || isCompanyAdmin();
 
-  // Get navigation config using shared helper. The Administration group is
-  // presented as independent top-level items rather than a nested dropdown —
-  // its sections come straight from config/navigation.ts's existing
-  // Administration children, not a manually maintained list, so any future
-  // addition/removal there is picked up automatically.
+  // Get navigation config using shared helper. For a regular department user,
+  // the Administration group is presented as independent top-level items
+  // rather than a nested dropdown — its sections come straight from
+  // config/navigation.ts's existing Administration children, not a manually
+  // maintained list, so any future addition/removal there is picked up
+  // automatically. Company Admin / Super Admin keep the nested "Administration"
+  // dropdown as-is, since they retain company-wide access across every
+  // department's module, not just Administration's.
   const navigationItems = useMemo(() => {
     const config = getNavigationConfig(company?.name);
-    return flattenTopLevelGroup(config, 'admin');
-  }, [company?.name]);
+    return isAdmin ? config : flattenTopLevelGroup(config, 'admin');
+  }, [company?.name, isAdmin]);
 
   // Handle escape key to close mobile drawer
   useEffect(() => {

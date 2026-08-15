@@ -19,6 +19,36 @@ interface SidebarProps {
   onMobileClose: () => void;
 }
 
+/**
+ * Pure helper (not a hook — safe to call from .filter()/.map()) that determines
+ * whether a nav node would render anything at all: either the node itself is a
+ * directly-accessible page (has an href and its own permission passes), or it
+ * has at least one recursively-accessible child. This mirrors the same
+ * department + RBAC rules used for rendering, but applied recursively so a
+ * multi-level group (e.g. Administration > Facilities > Maintenance) doesn't
+ * get judged only on its immediate children's own permission field.
+ */
+function isNavItemAccessible(
+  item: NavItem,
+  departmentName: string | null,
+  hasPermission: (permission: string) => boolean,
+  isAdmin: boolean
+): boolean {
+  if (isAdmin) return true;
+  if (!isModuleAllowed(item.module, departmentName ?? undefined)) return false;
+
+  const ownPermissionOk = !item.permission || hasPermission(item.permission);
+
+  if (item.children && item.children.length > 0) {
+    const hasAccessibleChild = item.children.some(child =>
+      isNavItemAccessible(child, departmentName, hasPermission, isAdmin)
+    );
+    return ownPermissionOk && hasAccessibleChild;
+  }
+
+  return ownPermissionOk;
+}
+
 function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmentName }: { item: NavItem; collapsed: boolean; depth?: number; onMobileClose?: () => void; departmentName: string | null }) {
   const pathname = usePathname();
   const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
@@ -39,15 +69,16 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
     return isModuleAllowed(item.module, departmentName ?? undefined);
   }, [item.module, departmentName, isAdmin]);
 
-  // Filter children based on permissions and department access
+  // Filter children based on permissions and department access. A child is
+  // kept only if it (or something underneath it) is actually reachable, so a
+  // sub-group with its own permission granted but zero permitted pages inside
+  // it doesn't show up as an empty, dead-end dropdown entry.
   const visibleChildren = useMemo(() => {
     if (!item.children) return [];
     if (isAdmin) return item.children;
-    return item.children.filter(child => {
-      if (child.permission && !hasPermission(child.permission)) return false;
-      if (child.module && !isModuleAllowed(child.module, departmentName ?? undefined)) return false;
-      return true;
-    });
+    return item.children.filter(child =>
+      isNavItemAccessible(child, departmentName, hasPermission, isAdmin)
+    );
   }, [item.children, hasPermission, isAdmin, departmentName]);
 
   const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + '/') : false;
@@ -65,7 +96,15 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
   if (!hasDepartmentAccess) return null;
 
   // Within an allowed department, RBAC permissions control page/action visibility.
-  if (!hasItemPermission && visibleChildren.length === 0) return null;
+  // Group nodes (declared with children) additionally require at least one
+  // accessible child — an empty group is hidden even if its own coarse
+  // permission happens to be granted, per "hide sections with no accessible
+  // children". Leaf nodes are governed by their own permission alone.
+  if (item.children && item.children.length > 0) {
+    if (!hasItemPermission || visibleChildren.length === 0) return null;
+  } else if (!hasItemPermission) {
+    return null;
+  }
 
   const Icon = item.icon;
 

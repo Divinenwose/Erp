@@ -1,5 +1,6 @@
 'use client';
 
+import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,12 +19,18 @@ const stockData = [
 ];
 
 export default function InventoryOverviewPage() {
+  const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const isAdmin = isSuperAdmin() || isCompanyAdmin();
+  const canProducts = isAdmin || hasPermission('inventory.products.view');
+  const canWarehouses = isAdmin || hasPermission('inventory.warehouses.view');
+  const canMovements = isAdmin || hasPermission('inventory.movements.view');
+
   const modules = [
-    { title: 'Products', description: 'Product catalog', icon: Package, href: '/inventory/products', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600' },
-    { title: 'Categories', description: 'Product categories', icon: Layers, href: '/inventory/categories', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600' },
-    { title: 'Warehouses', description: 'Storage locations', icon: Warehouse, href: '/inventory/warehouses', color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600' },
-    { title: 'Stock Movements', description: 'In/out tracking', icon: Activity, href: '/inventory/movements', color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600' },
-  ];
+    { title: 'Products', description: 'Product catalog', icon: Package, href: '/inventory/products', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600', permission: 'inventory.products.view' },
+    { title: 'Categories', description: 'Product categories', icon: Layers, href: '/inventory/categories', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600', permission: 'inventory.categories.view' },
+    { title: 'Warehouses', description: 'Storage locations', icon: Warehouse, href: '/inventory/warehouses', color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600', permission: 'inventory.warehouses.view' },
+    { title: 'Stock Movements', description: 'In/out tracking', icon: Activity, href: '/inventory/movements', color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600', permission: 'inventory.movements.view' },
+  ].filter(m => isAdmin || hasPermission(m.permission));
 
   return (
     <div className="space-y-6">
@@ -32,10 +39,10 @@ export default function InventoryOverviewPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Products" value={284} icon={<Package className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" />
-        <KPICard title="Total Stock Value" value={formatCurrency(2840000)} change={3.4} changeLabel="vs last month" icon={<TrendingDown className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" />
-        <KPICard title="Low Stock Items" value={12} icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" />
-        <KPICard title="Warehouses" value={4} icon={<Warehouse className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" />
+        {canProducts && <KPICard title="Total Products" value={284} icon={<Package className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" />}
+        {canProducts && <KPICard title="Total Stock Value" value={formatCurrency(2840000)} change={3.4} changeLabel="vs last month" icon={<TrendingDown className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" />}
+        {canMovements && <KPICard title="Low Stock Items" value={12} icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" />}
+        {canWarehouses && <KPICard title="Warehouses" value={4} icon={<Warehouse className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" />}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -50,7 +57,7 @@ export default function InventoryOverviewPage() {
         ))}
       </div>
 
-      <Card className="dark:bg-gray-900 dark:border-gray-800">
+      {canProducts && <Card className="dark:bg-gray-900 dark:border-gray-800">
         <CardHeader><CardTitle className="text-sm font-semibold">Stock Levels by Category</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={220}>
@@ -64,7 +71,7 @@ export default function InventoryOverviewPage() {
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
-      </Card>
+      </Card>}
     </div>
   );
 }

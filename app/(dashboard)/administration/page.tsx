@@ -13,7 +13,8 @@ import { useRouter } from 'next/navigation';
 import { format, subMonths, isToday, isThisWeek } from 'date-fns';
 
 export default function AdministrationOverviewPage() {
-  const { company } = useAuth();
+  const { company, hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const isAdmin = isSuperAdmin() || isCompanyAdmin();
   const router = useRouter();
   const [totalAssets, setTotalAssets] = useState(0);
   const [fleetVehicles, setFleetVehicles] = useState(0);
@@ -32,17 +33,19 @@ export default function AdministrationOverviewPage() {
   const currentMonth = format(new Date(), 'yyyy-MM');
   const previousMonth = format(subMonths(new Date(), 1), 'yyyy-MM');
 
+  // Each quick-action card requires the RBAC permission for the page it links
+  // to, reusing the same permission strings already defined in navigation.ts.
   const modules = [
-    { title: 'Assets', description: 'Fixed asset management', icon: Briefcase, href: '/administration/assets', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600', count: loading ? '...' : `${totalAssets} assets` },
-    { title: 'Fleet', description: 'Vehicle management', icon: Car, href: '/administration/fleet', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600', count: loading ? '...' : `${fleetVehicles} vehicles` },
-    { title: 'Attendance', description: 'Staff attendance tracking', icon: Users, href: '/administration/attendance', color: 'bg-purple-50 dark:bg-purple-950/30', iconColor: 'text-purple-600', count: loading ? '...' : `${presentToday}/${totalEmployees} present` },
-    { title: 'Fuel', description: 'Fuel management', icon: Fuel, href: '/administration/fuel', color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600', count: loading ? '...' : `$${fuelCost.toFixed(0)} this month` },
-    { title: 'Purchase Requests', description: 'Purchase request workflow', icon: Clipboard, href: '/administration/purchase-requests', color: 'bg-rose-50 dark:bg-rose-950/30', iconColor: 'text-rose-600', count: loading ? '...' : `${pendingRequests} pending` },
-    { title: 'Inspections', description: 'Office inspections', icon: Search, href: '/administration/inspections', color: 'bg-cyan-50 dark:bg-cyan-950/30', iconColor: 'text-cyan-600', count: 'View inspections' },
-    { title: 'Meetings', description: 'Meeting management', icon: Calendar, href: '/administration/meetings', color: 'bg-indigo-50 dark:bg-indigo-950/30', iconColor: 'text-indigo-600', count: loading ? '...' : `${upcomingMeetings} upcoming` },
-    { title: 'Birthdays', description: 'Birthday celebrations', icon: Bell, href: '/administration/birthdays', color: 'bg-pink-50 dark:bg-pink-950/30', iconColor: 'text-pink-600', count: loading ? '...' : `${todayBirthdays} today` },
-    { title: 'Office Supplies', description: 'Inventory management', icon: Package, href: '/administration/office-supplies', color: 'bg-orange-50 dark:bg-orange-950/30', iconColor: 'text-orange-600', count: loading ? '...' : `${lowStockItems} low stock` },
-  ];
+    { title: 'Assets', description: 'Fixed asset management', icon: Briefcase, href: '/administration/assets', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600', count: loading ? '...' : `${totalAssets} assets`, permission: 'assets.view' },
+    { title: 'Fleet', description: 'Vehicle management', icon: Car, href: '/administration/fleet', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600', count: loading ? '...' : `${fleetVehicles} vehicles`, permission: 'assets.vehicles.view' },
+    { title: 'Attendance', description: 'Staff attendance tracking', icon: Users, href: '/administration/attendance', color: 'bg-purple-50 dark:bg-purple-950/30', iconColor: 'text-purple-600', count: loading ? '...' : `${presentToday}/${totalEmployees} present`, permission: 'attendance.view' },
+    { title: 'Fuel', description: 'Fuel management', icon: Fuel, href: '/administration/fuel', color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600', count: loading ? '...' : `$${fuelCost.toFixed(0)} this month`, permission: 'fuel.view' },
+    { title: 'Purchase Requests', description: 'Purchase request workflow', icon: Clipboard, href: '/administration/purchase-requests', color: 'bg-rose-50 dark:bg-rose-950/30', iconColor: 'text-rose-600', count: loading ? '...' : `${pendingRequests} pending`, permission: 'purchase_requests.view' },
+    { title: 'Inspections', description: 'Office inspections', icon: Search, href: '/administration/inspections', color: 'bg-cyan-50 dark:bg-cyan-950/30', iconColor: 'text-cyan-600', count: 'View inspections', permission: 'inspections.view' },
+    { title: 'Meetings', description: 'Meeting management', icon: Calendar, href: '/administration/meetings', color: 'bg-indigo-50 dark:bg-indigo-950/30', iconColor: 'text-indigo-600', count: loading ? '...' : `${upcomingMeetings} upcoming`, permission: 'reception.view' },
+    { title: 'Birthdays', description: 'Birthday celebrations', icon: Bell, href: '/administration/birthdays', color: 'bg-pink-50 dark:bg-pink-950/30', iconColor: 'text-pink-600', count: loading ? '...' : `${todayBirthdays} today`, permission: 'attendance.view' },
+    { title: 'Office Supplies', description: 'Inventory management', icon: Package, href: '/administration/office-supplies', color: 'bg-orange-50 dark:bg-orange-950/30', iconColor: 'text-orange-600', count: loading ? '...' : `${lowStockItems} low stock`, permission: 'supplies.view' },
+  ].filter(m => isAdmin || hasPermission(m.permission));
 
   useEffect(() => {
     loadStats();
@@ -111,10 +114,10 @@ export default function AdministrationOverviewPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Assets" value={loading ? 0 : totalAssets} icon={<Briefcase className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-        <KPICard title="Fleet Vehicles" value={loading ? 0 : fleetVehicles} icon={<Car className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-        <KPICard title="Present Today" value={loading ? 0 : presentToday} icon={<Users className="h-4 w-4 text-purple-600" />} iconBg="bg-purple-50 dark:bg-purple-950/50" loading={loading} />
-        <KPICard title="Pending Requests" value={loading ? 0 : pendingRequests} icon={<Clipboard className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
+        {(isAdmin || hasPermission('assets.view')) && <KPICard title="Total Assets" value={loading ? 0 : totalAssets} icon={<Briefcase className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
+        {(isAdmin || hasPermission('assets.vehicles.view')) && <KPICard title="Fleet Vehicles" value={loading ? 0 : fleetVehicles} icon={<Car className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
+        {(isAdmin || hasPermission('attendance.view')) && <KPICard title="Present Today" value={loading ? 0 : presentToday} icon={<Users className="h-4 w-4 text-purple-600" />} iconBg="bg-purple-50 dark:bg-purple-950/50" loading={loading} />}
+        {(isAdmin || hasPermission('purchase_requests.view')) && <KPICard title="Pending Requests" value={loading ? 0 : pendingRequests} icon={<Clipboard className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

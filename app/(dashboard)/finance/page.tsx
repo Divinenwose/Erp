@@ -1,5 +1,6 @@
 'use client';
 
+import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,15 +20,21 @@ const cashFlowData = [
 ];
 
 export default function FinanceOverviewPage() {
+  const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const isAdmin = isSuperAdmin() || isCompanyAdmin();
+  const canInvoices = isAdmin || hasPermission('finance.invoices.view');
+  const canExpenses = isAdmin || hasPermission('finance.expenses.view');
+  const canReceivables = isAdmin || hasPermission('finance.receivables.view');
+
   const modules = [
-    { title: 'General Ledger', description: 'Chart of accounts & journals', icon: Database, href: '/finance/ledger', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600' },
-    { title: 'Invoices', description: 'Billing and collections', icon: FileText, href: '/finance/invoices', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600' },
-    { title: 'Expenses', description: 'Expense management', icon: CreditCard, href: '/finance/expenses', color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600' },
-    { title: 'Budgets', description: 'Budget planning & tracking', icon: PieChart, href: '/finance/budgets', color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600' },
-    { title: 'Accounts Receivable', description: 'Customer payments', icon: TrendingUp, href: '/finance/receivables', color: 'bg-pink-50 dark:bg-pink-950/30', iconColor: 'text-pink-600' },
-    { title: 'Accounts Payable', description: 'Vendor payments', icon: TrendingDown, href: '/finance/payables', color: 'bg-orange-50 dark:bg-orange-950/30', iconColor: 'text-orange-600' },
-    { title: 'Reports', description: 'Financial statements', icon: BarChart3, href: '/finance/reports', color: 'bg-teal-50 dark:bg-teal-950/30', iconColor: 'text-teal-600' },
-  ];
+    { title: 'General Ledger', description: 'Chart of accounts & journals', icon: Database, href: '/finance/ledger', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600', permission: 'finance.ledger.view' },
+    { title: 'Invoices', description: 'Billing and collections', icon: FileText, href: '/finance/invoices', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600', permission: 'finance.invoices.view' },
+    { title: 'Expenses', description: 'Expense management', icon: CreditCard, href: '/finance/expenses', color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600', permission: 'finance.expenses.view' },
+    { title: 'Budgets', description: 'Budget planning & tracking', icon: PieChart, href: '/finance/budgets', color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600', permission: 'finance.budgets.view' },
+    { title: 'Accounts Receivable', description: 'Customer payments', icon: TrendingUp, href: '/finance/receivables', color: 'bg-pink-50 dark:bg-pink-950/30', iconColor: 'text-pink-600', permission: 'finance.receivables.view' },
+    { title: 'Accounts Payable', description: 'Vendor payments', icon: TrendingDown, href: '/finance/payables', color: 'bg-orange-50 dark:bg-orange-950/30', iconColor: 'text-orange-600', permission: 'finance.payables.view' },
+    { title: 'Reports', description: 'Financial statements', icon: BarChart3, href: '/finance/reports', color: 'bg-teal-50 dark:bg-teal-950/30', iconColor: 'text-teal-600', permission: 'finance.reports.view' },
+  ].filter(m => isAdmin || hasPermission(m.permission));
 
   return (
     <div className="space-y-6">
@@ -36,10 +43,10 @@ export default function FinanceOverviewPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Revenue" value={formatCurrency(4800000)} change={12.4} changeLabel="vs last month" icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" />
-        <KPICard title="Total Expenses" value={formatCurrency(3200000)} change={-4.2} changeLabel="vs last month" icon={<TrendingDown className="h-4 w-4 text-red-600" />} iconBg="bg-red-50 dark:bg-red-950/50" />
-        <KPICard title="Net Profit" value={formatCurrency(1600000)} change={8.7} changeLabel="vs last month" icon={<TrendingUp className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" />
-        <KPICard title="Outstanding AR" value={formatCurrency(285000)} icon={<CreditCard className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" />
+        {canInvoices && <KPICard title="Total Revenue" value={formatCurrency(4800000)} change={12.4} changeLabel="vs last month" icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" />}
+        {canExpenses && <KPICard title="Total Expenses" value={formatCurrency(3200000)} change={-4.2} changeLabel="vs last month" icon={<TrendingDown className="h-4 w-4 text-red-600" />} iconBg="bg-red-50 dark:bg-red-950/50" />}
+        {canInvoices && canExpenses && <KPICard title="Net Profit" value={formatCurrency(1600000)} change={8.7} changeLabel="vs last month" icon={<TrendingUp className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" />}
+        {canReceivables && <KPICard title="Outstanding AR" value={formatCurrency(285000)} icon={<CreditCard className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" />}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -54,7 +61,7 @@ export default function FinanceOverviewPage() {
         ))}
       </div>
 
-      <Card className="dark:bg-gray-900 dark:border-gray-800">
+      {(canInvoices || canExpenses) && <Card className="dark:bg-gray-900 dark:border-gray-800">
         <CardHeader><CardTitle className="text-sm font-semibold">Cash Flow (Last 6 Months)</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={220}>
@@ -68,7 +75,7 @@ export default function FinanceOverviewPage() {
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
-      </Card>
+      </Card>}
     </div>
   );
 }

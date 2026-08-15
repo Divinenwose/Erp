@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { getDepartmentLandingPath } from '@/lib/department-access';
 import { formatCurrency, formatDate, formatDateRelative } from '@/lib/utils';
 import KPICard from '@/components/common/KPICard';
 import PageHeader from '@/components/common/PageHeader';
@@ -47,7 +49,35 @@ const pipelineData = [
 ];
 
 export default function DashboardPage() {
-  const { profile, company } = useAuth();
+  const { profile, company, departmentName, hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const router = useRouter();
+  const isAdmin = isSuperAdmin() || isCompanyAdmin();
+
+  // Company-wide, cross-department data below is only appropriate for
+  // admins or for users whose department has no dedicated overview page.
+  // Everyone else gets redirected to their department's own landing page
+  // (reusing the existing pages — no new queries, no duplicated dashboards).
+  const departmentLandingPath = isAdmin ? null : getDepartmentLandingPath(departmentName);
+
+  useEffect(() => {
+    if (departmentLandingPath) {
+      router.replace(departmentLandingPath);
+    }
+  }, [departmentLandingPath, router]);
+
+  // Section-level RBAC: only fetch/display data the current user is actually
+  // permitted to see, reusing the same permission strings already defined in
+  // config/navigation.ts for the corresponding pages.
+  const canHR = isAdmin || hasPermission('hr.employees.view');
+  const canLeave = isAdmin || hasPermission('hr.leave.view');
+  const canFinance = isAdmin || hasPermission('finance.invoices.view');
+  const canCRM = isAdmin || hasPermission('crm.customers.view');
+  const canLeads = isAdmin || hasPermission('crm.leads.view');
+  const canPipeline = isAdmin || hasPermission('crm.pipeline.view');
+  const canProjects = isAdmin || hasPermission('projects.view');
+  const canProcurement = isAdmin || hasPermission('procurement.vendors.view');
+  const canPurchaseRequests = isAdmin || hasPermission('procurement.requests.view');
+
   const [stats, setStats] = useState<DashboardStats>({
     employees: 0, customers: 0, projects: 0, vendors: 0,
     pendingLeaves: 0, openInvoices: 0, pendingPOs: 0, lowStock: 0,
@@ -59,7 +89,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!company?.id) return;
+    // Skip the company-wide data load entirely for users being redirected to
+    // their department's own page — avoids firing queries whose results will
+    // never be shown.
+    if (!company?.id || departmentLandingPath) return;
     const id = company.id;
 
     const loadAll = async () => {
@@ -69,17 +102,17 @@ export default function DashboardPage() {
         revenueRes, expenseRes, leadRes,
         recentEmpRes,
       ] = await Promise.all([
-        supabase.from('employees').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('employment_status', 'active'),
-        supabase.from('customers').select('id', { count: 'exact', head: true }).eq('company_id', id),
-        supabase.from('projects').select('id', { count: 'exact', head: true }).eq('company_id', id).in('status', ['in_progress', 'planning']),
-        supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'active'),
-        supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending'),
-        supabase.from('invoices').select('id, total_amount, status', { count: 'exact' }).eq('company_id', id).in('status', ['pending', 'overdue']),
-        supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending'),
-        supabase.from('invoices').select('total_amount').eq('company_id', id).eq('status', 'paid'),
-        supabase.from('expenses').select('amount').eq('company_id', id).eq('status', 'approved'),
-        supabase.from('leads').select('id', { count: 'exact', head: true }).eq('company_id', id).in('status', ['new', 'contacted', 'qualified']),
-        supabase.from('employees').select('id, first_name, last_name, job_title, hire_date, avatar_url').eq('company_id', id).eq('employment_status', 'active').order('hire_date', { ascending: false }).limit(4),
+        canHR ? supabase.from('employees').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('employment_status', 'active') : Promise.resolve({ count: 0 } as any),
+        canCRM ? supabase.from('customers').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canProjects ? supabase.from('projects').select('id', { count: 'exact', head: true }).eq('company_id', id).in('status', ['in_progress', 'planning']) : Promise.resolve({ count: 0 } as any),
+        canProcurement ? supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'active') : Promise.resolve({ count: 0 } as any),
+        canLeave ? supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending') : Promise.resolve({ count: 0 } as any),
+        canFinance ? supabase.from('invoices').select('id, total_amount, status', { count: 'exact' }).eq('company_id', id).in('status', ['pending', 'overdue']) : Promise.resolve({ data: [] } as any),
+        canPurchaseRequests ? supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending') : Promise.resolve({ count: 0 } as any),
+        canFinance ? supabase.from('invoices').select('total_amount').eq('company_id', id).eq('status', 'paid') : Promise.resolve({ data: [] } as any),
+        canFinance ? supabase.from('expenses').select('amount').eq('company_id', id).eq('status', 'approved') : Promise.resolve({ data: [] } as any),
+        canLeads ? supabase.from('leads').select('id', { count: 'exact', head: true }).eq('company_id', id).in('status', ['new', 'contacted', 'qualified']) : Promise.resolve({ count: 0 } as any),
+        canHR ? supabase.from('employees').select('id, first_name, last_name, job_title, hire_date, avatar_url').eq('company_id', id).eq('employment_status', 'active').order('hire_date', { ascending: false }).limit(4) : Promise.resolve({ data: [] } as any),
       ]);
 
       const totalRevenue = (revenueRes.data ?? []).reduce((a: number, i: any) => a + (i.total_amount ?? 0), 0);
@@ -103,18 +136,21 @@ export default function DashboardPage() {
       setRecentEmployees(recentEmpRes.data ?? []);
 
       // Recent invoices
-      const { data: invData } = await supabase.from('invoices')
-        .select('*, customers(name)')
-        .eq('company_id', id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      setRecentInvoices(invData ?? []);
+      if (canFinance) {
+        const { data: invData } = await supabase.from('invoices')
+          .select('*, customers(name)')
+          .eq('company_id', id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+        setRecentInvoices(invData ?? []);
+      }
 
-      // Build activity feed from multiple sources
+      // Build activity feed from multiple sources — each only queried/included
+      // if the viewer is permitted to see that department's activity.
       const [leavesData, projectsData, prsData] = await Promise.all([
-        supabase.from('leave_requests').select('id, status, created_at, employees(first_name, last_name)').eq('company_id', id).order('created_at', { ascending: false }).limit(3),
-        supabase.from('projects').select('id, name, status, updated_at').eq('company_id', id).order('updated_at', { ascending: false }).limit(3),
-        supabase.from('purchase_requests').select('id, title, status, created_at').eq('company_id', id).order('created_at', { ascending: false }).limit(3),
+        canLeave ? supabase.from('leave_requests').select('id, status, created_at, employees(first_name, last_name)').eq('company_id', id).order('created_at', { ascending: false }).limit(3) : Promise.resolve({ data: [] } as any),
+        canProjects ? supabase.from('projects').select('id, name, status, updated_at').eq('company_id', id).order('updated_at', { ascending: false }).limit(3) : Promise.resolve({ data: [] } as any),
+        canPurchaseRequests ? supabase.from('purchase_requests').select('id, title, status, created_at').eq('company_id', id).order('created_at', { ascending: false }).limit(3) : Promise.resolve({ data: [] } as any),
       ]);
 
       const feed: RecentActivity[] = [
@@ -140,7 +176,7 @@ export default function DashboardPage() {
     };
 
     loadAll();
-  }, [company?.id]);
+  }, [company?.id, departmentLandingPath, canHR, canLeave, canFinance, canCRM, canLeads, canProjects, canProcurement, canPurchaseRequests]);
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -156,6 +192,10 @@ export default function DashboardPage() {
     { dept: 'Operations', budget: 200000, spent: 168000 },
   ];
 
+  // Being redirected to a department-specific landing page — render nothing
+  // rather than flashing this company-wide view first.
+  if (departmentLandingPath) return null;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -169,22 +209,22 @@ export default function DashboardPage() {
         </div>
       </PageHeader>
 
-      {/* Primary KPIs */}
+      {/* Primary KPIs — each card only shown if the viewer has the underlying permission */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Revenue (YTD)" value={formatCurrency(stats.totalRevenue + 2010000)} change={12.4} changeLabel="vs last year" icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-        <KPICard title="Active Employees" value={stats.employees} change={3.2} changeLabel="this month" icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-        <KPICard title="Active Customers" value={stats.customers} change={8.1} changeLabel="this month" icon={<Building2 className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
-        <KPICard title="Active Projects" value={stats.projects} icon={<FolderKanban className="h-4 w-4 text-orange-600" />} iconBg="bg-orange-50 dark:bg-orange-950/50" loading={loading} />
+        {canFinance && <KPICard title="Total Revenue (YTD)" value={formatCurrency(stats.totalRevenue + 2010000)} change={12.4} changeLabel="vs last year" icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
+        {canHR && <KPICard title="Active Employees" value={stats.employees} change={3.2} changeLabel="this month" icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
+        {canCRM && <KPICard title="Active Customers" value={stats.customers} change={8.1} changeLabel="this month" icon={<Building2 className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />}
+        {canProjects && <KPICard title="Active Projects" value={stats.projects} icon={<FolderKanban className="h-4 w-4 text-orange-600" />} iconBg="bg-orange-50 dark:bg-orange-950/50" loading={loading} />}
       </div>
 
       {/* Alert counters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Pending Leaves', count: stats.pendingLeaves, icon: Clock, color: 'amber', href: '/hr/leave' },
-          { label: 'Open Invoices', count: stats.openInvoices, icon: FileText, color: 'blue', href: '/finance/invoices' },
-          { label: 'Pending POs', count: stats.pendingPOs, icon: ShoppingCart, color: 'violet', href: '/procurement/requests' },
-          { label: 'Active Leads', count: stats.activeLeads, icon: Target, color: 'emerald', href: '/crm/leads' },
-        ].map(item => (
+          { label: 'Pending Leaves', count: stats.pendingLeaves, icon: Clock, color: 'amber', href: '/hr/leave', visible: canLeave },
+          { label: 'Open Invoices', count: stats.openInvoices, icon: FileText, color: 'blue', href: '/finance/invoices', visible: canFinance },
+          { label: 'Pending POs', count: stats.pendingPOs, icon: ShoppingCart, color: 'violet', href: '/procurement/requests', visible: canPurchaseRequests },
+          { label: 'Active Leads', count: stats.activeLeads, icon: Target, color: 'emerald', href: '/crm/leads', visible: canLeads },
+        ].filter(item => item.visible).map(item => (
           <Link key={item.label} href={item.href}
             className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-3 hover:shadow-md transition-all group">
             <div className={`p-2.5 rounded-xl bg-${item.color}-50 dark:bg-${item.color}-950/30 group-hover:scale-110 transition-transform`}>
@@ -200,7 +240,7 @@ export default function DashboardPage() {
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2 dark:bg-gray-900 dark:border-gray-800">
+        {canFinance && <Card className="lg:col-span-2 dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Revenue vs Expenses (Last 6 Months)</CardTitle>
           </CardHeader>
@@ -227,9 +267,9 @@ export default function DashboardPage() {
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
-        </Card>
+        </Card>}
 
-        <Card className="dark:bg-gray-900 dark:border-gray-800">
+        {canPipeline && <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Sales Pipeline</CardTitle>
             <CardDescription>{pipelineData.reduce((a, d) => a + d.value, 0)} total opportunities</CardDescription>
@@ -255,13 +295,13 @@ export default function DashboardPage() {
               ))}
             </div>
           </CardContent>
-        </Card>
+        </Card>}
       </div>
 
       {/* Bottom row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Dept spend */}
-        <Card className="dark:bg-gray-900 dark:border-gray-800">
+        {/* Dept spend — cross-department by nature, admin-only */}
+        {isAdmin && <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Department Budget Utilization</CardTitle>
           </CardHeader>
@@ -286,10 +326,10 @@ export default function DashboardPage() {
               );
             })}
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Recent invoices */}
-        <Card className="dark:bg-gray-900 dark:border-gray-800">
+        {canFinance && <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold">Recent Invoices</CardTitle>
@@ -317,7 +357,7 @@ export default function DashboardPage() {
               ))
             )}
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Activity feed */}
         <Card className="dark:bg-gray-900 dark:border-gray-800">

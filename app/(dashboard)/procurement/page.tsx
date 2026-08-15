@@ -1,5 +1,6 @@
 'use client';
 
+import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,12 +20,18 @@ const spendData = [
 ];
 
 export default function ProcurementOverviewPage() {
+  const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const isAdmin = isSuperAdmin() || isCompanyAdmin();
+  const canVendors = isAdmin || hasPermission('procurement.vendors.view');
+  const canRequests = isAdmin || hasPermission('procurement.requests.view');
+  const canOrders = isAdmin || hasPermission('procurement.orders.view');
+
   const modules = [
-    { title: 'Vendors', description: 'Supplier directory', icon: Building2, href: '/procurement/vendors', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600' },
-    { title: 'Purchase Requests', description: 'Internal requests', icon: Clipboard, href: '/procurement/requests', color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600' },
-    { title: 'Purchase Orders', description: 'Formal POs to vendors', icon: ShoppingCart, href: '/procurement/orders', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600' },
-    { title: 'Contracts', description: 'Vendor agreements', icon: FileText, href: '/procurement/contracts', color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600' },
-  ];
+    { title: 'Vendors', description: 'Supplier directory', icon: Building2, href: '/procurement/vendors', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600', permission: 'procurement.vendors.view' },
+    { title: 'Purchase Requests', description: 'Internal requests', icon: Clipboard, href: '/procurement/requests', color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600', permission: 'procurement.requests.view' },
+    { title: 'Purchase Orders', description: 'Formal POs to vendors', icon: ShoppingCart, href: '/procurement/orders', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600', permission: 'procurement.orders.view' },
+    { title: 'Contracts', description: 'Vendor agreements', icon: FileText, href: '/procurement/contracts', color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600', permission: 'procurement.contracts.view' },
+  ].filter(m => isAdmin || hasPermission(m.permission));
 
   return (
     <div className="space-y-6">
@@ -33,10 +40,10 @@ export default function ProcurementOverviewPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Spend (YTD)" value={formatCurrency(584000)} change={8.2} changeLabel="vs last year" icon={<TrendingDown className="h-4 w-4 text-red-600" />} iconBg="bg-red-50 dark:bg-red-950/50" />
-        <KPICard title="Active Vendors" value={34} icon={<Building2 className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" />
-        <KPICard title="Pending POs" value={8} icon={<ShoppingCart className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" />
-        <KPICard title="Approved Requests" value={23} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" />
+        {canOrders && <KPICard title="Total Spend (YTD)" value={formatCurrency(584000)} change={8.2} changeLabel="vs last year" icon={<TrendingDown className="h-4 w-4 text-red-600" />} iconBg="bg-red-50 dark:bg-red-950/50" />}
+        {canVendors && <KPICard title="Active Vendors" value={34} icon={<Building2 className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" />}
+        {canOrders && <KPICard title="Pending POs" value={8} icon={<ShoppingCart className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" />}
+        {canRequests && <KPICard title="Approved Requests" value={23} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" />}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -51,7 +58,7 @@ export default function ProcurementOverviewPage() {
         ))}
       </div>
 
-      <Card className="dark:bg-gray-900 dark:border-gray-800">
+      {canOrders && <Card className="dark:bg-gray-900 dark:border-gray-800">
         <CardHeader><CardTitle className="text-sm font-semibold">Monthly Procurement Spend</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={220}>
@@ -64,7 +71,7 @@ export default function ProcurementOverviewPage() {
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
-      </Card>
+      </Card>}
     </div>
   );
 }

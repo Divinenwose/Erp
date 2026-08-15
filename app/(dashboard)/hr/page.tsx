@@ -1,5 +1,6 @@
 'use client';
 
+import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,14 +28,17 @@ const leaveData = [
 ];
 
 export default function HROverviewPage() {
+  const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const isAdmin = isSuperAdmin() || isCompanyAdmin();
+
   const modules = [
-    { title: 'Employees', description: 'Manage workforce records', icon: Users, href: '/hr/employees', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600' },
-    { title: 'Leave Management', description: 'Track leave requests', icon: Calendar, href: '/hr/leave', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600' },
-    { title: 'Attendance', description: 'Monitor attendance records', icon: UserCheck, href: '/hr/attendance', color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600' },
-    { title: 'Payroll', description: 'Process employee payroll', icon: CreditCard, href: '/hr/payroll', color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600' },
-    { title: 'Performance', description: 'Reviews and appraisals', icon: Award, href: '/hr/performance', color: 'bg-pink-50 dark:bg-pink-950/30', iconColor: 'text-pink-600' },
-    { title: 'Training', description: 'Learning and development', icon: BookOpen, href: '/hr/training', color: 'bg-orange-50 dark:bg-orange-950/30', iconColor: 'text-orange-600' },
-  ];
+    { title: 'Employees', description: 'Manage workforce records', icon: Users, href: '/hr/employees', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600', permission: 'hr.employees.view' },
+    { title: 'Leave Management', description: 'Track leave requests', icon: Calendar, href: '/hr/leave', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600', permission: 'hr.leave.view' },
+    { title: 'Attendance', description: 'Monitor attendance records', icon: UserCheck, href: '/hr/attendance', color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600', permission: 'hr.attendance.view' },
+    { title: 'Payroll', description: 'Process employee payroll', icon: CreditCard, href: '/hr/payroll', color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600', permission: 'hr.payroll.view' },
+    { title: 'Performance', description: 'Reviews and appraisals', icon: Award, href: '/hr/performance', color: 'bg-pink-50 dark:bg-pink-950/30', iconColor: 'text-pink-600', permission: 'hr.performance.view' },
+    { title: 'Training', description: 'Learning and development', icon: BookOpen, href: '/hr/training', color: 'bg-orange-50 dark:bg-orange-950/30', iconColor: 'text-orange-600', permission: 'hr.training.view' },
+  ].filter(m => isAdmin || hasPermission(m.permission));
 
   return (
     <div className="space-y-6">

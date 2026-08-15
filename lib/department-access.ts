@@ -106,3 +106,24 @@ export function isRouteAllowedForDepartment(pathname: string, departmentName?: s
   if (!module) return true; // unknown routes are not department-restricted
   return isModuleAllowed(module, departmentName);
 }
+
+/** Map department name → its dedicated overview/landing page, where one exists. */
+const DEPARTMENT_LANDING_ROUTE: Record<string, string> = {
+  'Administration': '/administration',
+  'Human Resources': '/hr',
+  'Finance & Accounts': '/finance',
+  'Inventory': '/inventory',
+  'Procurement': '/procurement',
+  'Sales & CRM': '/crm',
+  'Manufacturing': '/manufacturing',
+};
+
+/**
+ * Returns the department-specific landing page for the given department name,
+ * or null when the department has no dedicated overview page (in which case
+ * the caller should fall back to the general dashboard).
+ */
+export function getDepartmentLandingPath(departmentName?: string | null): string | null {
+  if (!departmentName) return null;
+  return DEPARTMENT_LANDING_ROUTE[departmentName] ?? null;
+}

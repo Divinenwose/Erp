@@ -30,13 +30,23 @@ const mockNotifications = [
 
 export default function Topbar({ onMenuToggle, sidebarCollapsed, mobileOpen, onMobileClose }: TopbarProps) {
   const { theme, setTheme } = useTheme();
-  const { user, profile, company, signOut } = useAuth();
+  const { user, profile, company, roles, signOut } = useAuth();
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const unreadCount = mockNotifications.filter(n => !n.read).length;
   const displayName = profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() : user?.email ?? '';
+  // Show the user's actual RBAC role(s) rather than the legacy profile.role
+  // field, which may just hold "employee" regardless of assigned role.
+  // Mirrors the same "first few + N more" convention used for role badges
+  // in Settings > Users, since there's no existing single-role precedence
+  // rule to reuse for users with multiple roles.
+  const roleDisplay = roles.length === 0
+    ? 'User'
+    : roles.length <= 2
+      ? roles.map(r => r.name).join(', ')
+      : `${roles.slice(0, 2).map(r => r.name).join(', ')} +${roles.length - 2} more`;
 
   const handleSignOut = async () => {
     await signOut();
@@ -162,7 +172,7 @@ export default function Topbar({ onMenuToggle, sidebarCollapsed, mobileOpen, onM
               </Avatar>
               <div className="hidden md:block text-left">
                 <p className="text-xs font-medium text-gray-900 dark:text-white leading-tight">{displayName}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight capitalize">{profile?.role ?? 'User'}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{roleDisplay}</p>
               </div>
               <ChevronDown className="h-3.5 w-3.5 text-gray-400 hidden md:block" />
             </button>

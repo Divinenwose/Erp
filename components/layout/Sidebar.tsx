@@ -20,6 +20,24 @@ interface SidebarProps {
 }
 
 /**
+ * Pure helper (not a hook) that promotes the children of a top-level group
+ * matching the given module id into independent top-level items, instead of
+ * leaving them nested under that group's own dropdown. Each promoted child
+ * inherits the parent's module (unless it already declares its own), so
+ * department-based filtering continues to apply to it exactly as before —
+ * only the presentation (nested vs. flat) changes, not the underlying
+ * route/icon/permission/RBAC data, which is read as-is from config/navigation.ts.
+ */
+function flattenTopLevelGroup(items: NavItem[], moduleId: string): NavItem[] {
+  return items.flatMap(item => {
+    if (item.module === moduleId && item.children && item.children.length > 0) {
+      return item.children.map(child => ({ ...child, module: child.module ?? item.module }));
+    }
+    return [item];
+  });
+}
+
+/**
  * Pure helper (not a hook — safe to call from .filter()/.map()) that determines
  * whether a nav node would render anything at all: either the node itself is a
  * directly-accessible page (has an href and its own permission passes), or it
@@ -182,9 +200,14 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const { company, departmentName } = useAuth();
 
-  // Get navigation config using shared helper
+  // Get navigation config using shared helper. The Administration group is
+  // presented as independent top-level items rather than a nested dropdown —
+  // its sections come straight from config/navigation.ts's existing
+  // Administration children, not a manually maintained list, so any future
+  // addition/removal there is picked up automatically.
   const navigationItems = useMemo(() => {
-    return getNavigationConfig(company?.name);
+    const config = getNavigationConfig(company?.name);
+    return flattenTopLevelGroup(config, 'admin');
   }, [company?.name]);
 
   // Handle escape key to close mobile drawer

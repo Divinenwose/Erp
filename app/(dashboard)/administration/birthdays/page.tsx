@@ -30,7 +30,7 @@ export default function BirthdaysPage() {
 
     const [empRes, deptRes] = await Promise.all([
       supabase
-        .from('profiles')
+        .from('employees')
         .select('*, departments(name), branches(name)')
         .eq('company_id', company.id)
         .not('date_of_birth', 'is', null),

@@ -93,12 +93,12 @@ export default function AdministrationReportsPage() {
     const [employeesResult, assetsResult, spendResult, attendanceResult, approvalsResult] = await Promise.all([
       supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('company_id', company.id),
       supabase.from('assets').select('id', { count: 'exact', head: true }).eq('company_id', company.id),
-      supabase.from('purchase_requests').select('amount').eq('company_id', company.id).gte('created_at', `${selectedMonth}-01`).lte('created_at', `${selectedMonth}-31`),
+      supabase.from('purchase_requests').select('estimated_cost').eq('company_id', company.id).gte('created_at', `${selectedMonth}-01`).lte('created_at', `${selectedMonth}-31`),
       supabase.from('attendance_records').select('status').eq('company_id', company.id).gte('attendance_date', `${selectedMonth}-01`).lte('attendance_date', `${selectedMonth}-31`),
       supabase.from('request_approvals').select('id', { count: 'exact', head: true }).eq('company_id', company.id).eq('status', 'pending'),
     ]);
 
-    const spendSum = (spendResult.data || []).reduce((sum, item) => sum + (item.amount || 0), 0);
+    const spendSum = (spendResult.data || []).reduce((sum, item) => sum + (item.estimated_cost || 0), 0);
     const attendanceRecords = attendanceResult.data || [];
     const presentCount = attendanceRecords.filter(r => r.status === 'present').length;
     const attendanceRate = attendanceRecords.length > 0 ? (presentCount / attendanceRecords.length) * 100 : 0;

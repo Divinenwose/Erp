@@ -45,7 +45,7 @@ export default function AuditLogsPage() {
 
     let query = supabase
       .from('audit_logs')
-      .select('*, profiles(first_name, last_name)')
+      .select('*')
       .eq('company_id', company.id);
 
     if (selectedModule) {
@@ -65,7 +65,24 @@ export default function AuditLogsPage() {
     }
 
     const { data } = await query.order('created_at', { ascending: false }).limit(100);
-    setAuditLogs(data || []);
+    const logs = data || [];
+
+    // audit_logs.user_id references auth.users, not profiles, so there is no
+    // foreign key PostgREST can use to embed profiles(...) directly. Look up
+    // the involved users' names separately instead.
+    const userIds = Array.from(new Set(logs.map((l: any) => l.user_id).filter(Boolean)));
+    let namesByUserId: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', userIds);
+      namesByUserId = Object.fromEntries(
+        (profilesData ?? []).map((p: any) => [p.id, `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim()])
+      );
+    }
+
+    setAuditLogs(logs.map((l: any) => ({ ...l, userName: namesByUserId[l.user_id] || null })));
     setLoading(false);
   };
 
@@ -138,11 +155,11 @@ export default function AuditLogsPage() {
   const formattedData = auditLogs.map((log) => ({
     ...log,
     timestamp: log.created_at ? format(new Date(log.created_at), 'MMM dd, yyyy HH:mm') : '-',
-    user: log.profiles ? `${log.profiles.first_name} ${log.profiles.last_name}` : '-',
+    user: log.userName || '-',
     module: getModuleBadge(log.module),
     action: getActionBadge(log.action),
-    entity: log.entity_type ? `${log.entity_type} ${log.entity_id?.slice(0, 8)}...` : '-',
-    changes: formatChanges(log.previous_value, log.new_value),
+    entity: log.record_id ? `${log.record_id.slice(0, 8)}...` : '-',
+    changes: formatChanges(log.old_values, log.new_values),
     ip: log.ip_address || '-',
   }));
 
@@ -150,11 +167,11 @@ export default function AuditLogsPage() {
     const headers = ['Timestamp', 'User', 'Module', 'Action', 'Entity', 'Changes', 'IP Address'];
     const rows = auditLogs.map(log => [
       log.created_at,
-      log.profiles ? `${log.profiles.first_name} ${log.profiles.last_name}` : '',
+      log.userName || '',
       log.module,
       log.action,
-      log.entity_type,
-      JSON.stringify({ previous: log.previous_value, new: log.new_value }),
+      log.record_id,
+      JSON.stringify({ previous: log.old_values, new: log.new_values }),
       log.ip_address,
     ]);
     

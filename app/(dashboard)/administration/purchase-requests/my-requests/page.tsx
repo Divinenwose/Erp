@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import DataTable from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,150 +13,202 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Plus, Download, DollarSign } from 'lucide-react';
+import { Search, Plus, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 export default function MyPurchaseRequestsPage() {
+  const { company, user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [departmentId, setDepartmentId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [title, setTitle] = useState('');
+  const [amount, setAmount] = useState('');
+  const [justification, setJustification] = useState('');
+  const [priority, setPriority] = useState('medium');
+  const [requiredDate, setRequiredDate] = useState('');
 
   const columns = [
     { key: 'requestNumber', header: 'Request #' },
     { key: 'description', header: 'Description' },
     { key: 'amount', header: 'Amount' },
-    { key: 'requestedDate', header: 'Requested Date' },
+    { key: 'requestedDate', header: 'Required By' },
     { key: 'status', header: 'Status' },
-    { key: 'actions', header: 'Actions' },
   ];
 
-  const mockData = [
-    {
-      id: '1',
-      requestNumber: 'PR-2024-001',
-      description: 'Laptops for new employees',
-      amount: 4500.00,
-      requestedDate: '2024-01-15',
+  useEffect(() => {
+    loadEmployeeAndRequests();
+  }, [company?.id, currentUser?.id]);
+
+  const loadEmployeeAndRequests = async () => {
+    if (!company?.id || !currentUser?.id) return;
+    setLoading(true);
+
+    const { data: employeeRecord } = await supabase
+      .from('employees')
+      .select('id, department_id')
+      .eq('user_id', currentUser.id)
+      .eq('company_id', company.id)
+      .maybeSingle();
+
+    setEmployeeId(employeeRecord?.id ?? null);
+    setDepartmentId(employeeRecord?.department_id ?? null);
+
+    if (employeeRecord?.id) {
+      const { data } = await supabase
+        .from('purchase_requests')
+        .select('*')
+        .eq('company_id', company.id)
+        .eq('requested_by', employeeRecord.id)
+        .order('created_at', { ascending: false });
+      setRequests(data ?? []);
+    } else {
+      setRequests([]);
+    }
+    setLoading(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!company?.id || !employeeId) {
+      toast.error('Could not find your employee record');
+      return;
+    }
+    if (!title.trim() || !amount) {
+      toast.error('Description and estimated amount are required');
+      return;
+    }
+
+    setSubmitting(true);
+    const { error } = await supabase.from('purchase_requests').insert({
+      company_id: company.id,
+      title: title.trim(),
+      estimated_cost: parseFloat(amount),
+      justification: justification.trim() || null,
+      priority,
+      required_date: requiredDate || null,
+      department_id: departmentId,
+      requested_by: employeeId,
       status: 'pending',
-    },
-    {
-      id: '2',
-      requestNumber: 'PR-2024-003',
-      description: 'Warehouse equipment',
-      amount: 6500.00,
-      requestedDate: '2024-01-13',
-      status: 'rejected',
-    },
-    {
-      id: '3',
-      requestNumber: 'PR-2024-006',
-      description: 'Office chairs',
-      amount: 1200.00,
-      requestedDate: '2024-01-10',
-      status: 'approved',
-    },
-  ];
+    });
+    setSubmitting(false);
+
+    if (error) {
+      toast.error('Failed to submit request');
+      return;
+    }
+
+    toast.success('Purchase request submitted');
+    setTitle(''); setAmount(''); setJustification(''); setPriority('medium'); setRequiredDate('');
+    setDialogOpen(false);
+    loadEmployeeAndRequests();
+  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
+      draft: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
       pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-      approved: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
-      rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-      in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      md_approval: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      accounts_review: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+      vendor_assigned: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
       completed: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+      rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+      cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
     };
-    return <Badge className={variants[status] || variants.pending}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
+    const s = status || 'draft';
+    return <Badge className={variants[s] || variants.draft}>{s.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</Badge>;
   };
 
-  const formattedData = mockData.map((item) => ({
+  const filtered = requests.filter(r => {
+    const matchesSearch = !searchTerm ||
+      r.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.request_number?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = !selectedStatus || r.status === selectedStatus;
+    const matchesMonth = !selectedMonth || (r.created_at && r.created_at.startsWith(selectedMonth));
+    return matchesSearch && matchesStatus && matchesMonth;
+  });
+
+  const formattedData = filtered.map((item) => ({
     ...item,
-    amount: `$${item.amount.toFixed(2)}`,
+    requestNumber: item.request_number || '-',
+    description: item.title || '-',
+    amount: item.estimated_cost ? `$${item.estimated_cost.toFixed(2)}` : '-',
+    requestedDate: item.required_date ? format(new Date(item.required_date), 'MMM dd, yyyy') : '-',
     status: getStatusBadge(item.status),
-    actions: (
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" className="h-8">
-          View
-        </Button>
-      </div>
-    ),
   }));
+
+  const totalCount = requests.length;
+  const pendingCount = requests.filter(r => ['pending', 'md_approval', 'accounts_review'].includes(r.status)).length;
+  const approvedCount = requests.filter(r => ['vendor_assigned', 'completed'].includes(r.status)).length;
+  const totalSpent = requests.filter(r => r.status === 'completed').reduce((sum, r) => sum + (r.actual_cost || r.estimated_cost || 0), 0);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="My Purchase Requests"
-        description="View your purchase requests"
+        description="View and submit your purchase requests"
         breadcrumbs={[
           { label: 'Administration', href: '/administration' },
           { label: 'Purchase Requests', href: '/administration/purchase-requests' },
           { label: 'My Requests' },
         ]}
       >
-        <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                New Request
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>New Purchase Request</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea id="description" placeholder="Describe what you need to purchase..." />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Estimated Amount *</Label>
-                    <Input id="amount" type="number" step="0.01" placeholder="0.00" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="it">IT Equipment</SelectItem>
-                        <SelectItem value="office">Office Supplies</SelectItem>
-                        <SelectItem value="furniture">Furniture</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="justification">Justification</Label>
-                  <Textarea id="justification" placeholder="Why is this purchase needed?" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="urgency">Urgency</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select urgency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button className="w-full">Submit Request</Button>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              New Request
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>New Purchase Request</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="description">Description *</Label>
+                <Textarea id="description" placeholder="Describe what you need to purchase..." value={title} onChange={(e) => setTitle(e.target.value)} />
               </div>
-            </DialogContent>
-          </Dialog>
-          <Button size="sm" variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Estimated Amount *</Label>
+                  <Input id="amount" type="number" step="0.01" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="requiredDate">Required By</Label>
+                  <Input id="requiredDate" type="date" value={requiredDate} onChange={(e) => setRequiredDate(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="justification">Justification</Label>
+                <Textarea id="justification" placeholder="Why is this purchase needed?" value={justification} onChange={(e) => setJustification(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="priority">Priority</Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button className="w-full" onClick={handleSubmit} disabled={submitting}>
+                {submitting ? 'Submitting…' : 'Submit Request'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -166,7 +220,7 @@ export default function MyPurchaseRequestsPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Total Requests</p>
-                <p className="text-2xl font-bold">15</p>
+                <p className="text-2xl font-bold">{loading ? '—' : totalCount}</p>
               </div>
             </div>
           </CardContent>
@@ -179,7 +233,7 @@ export default function MyPurchaseRequestsPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Pending</p>
-                <p className="text-2xl font-bold">3</p>
+                <p className="text-2xl font-bold">{loading ? '—' : pendingCount}</p>
               </div>
             </div>
           </CardContent>
@@ -192,7 +246,7 @@ export default function MyPurchaseRequestsPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Approved</p>
-                <p className="text-2xl font-bold">10</p>
+                <p className="text-2xl font-bold">{loading ? '—' : approvedCount}</p>
               </div>
             </div>
           </CardContent>
@@ -205,7 +259,7 @@ export default function MyPurchaseRequestsPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Total Spent</p>
-                <p className="text-2xl font-bold">$12,200</p>
+                <p className="text-2xl font-bold">{loading ? '—' : `$${totalSpent.toLocaleString()}`}</p>
               </div>
             </div>
           </CardContent>
@@ -234,16 +288,17 @@ export default function MyPurchaseRequestsPage() {
                 className="w-auto"
               />
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-[170px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="md_approval">MD Approval</SelectItem>
+                  <SelectItem value="accounts_review">Accounts Review</SelectItem>
+                  <SelectItem value="vendor_assigned">Vendor Assigned</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -252,6 +307,9 @@ export default function MyPurchaseRequestsPage() {
           <DataTable
             columns={columns}
             data={formattedData}
+            loading={loading}
+            emptyTitle="No purchase requests yet"
+            emptyDescription="Requests you submit will appear here."
           />
         </CardContent>
       </Card>

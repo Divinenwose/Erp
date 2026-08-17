@@ -57,11 +57,11 @@ export default function PurchaseRequestsListPage() {
 
     let query = supabase
       .from('purchase_requests')
-      .select('*, profiles(first_name, last_name), departments(name), vendors(name)')
+      .select('*, employees:requested_by(first_name, last_name), departments(name)')
       .eq('company_id', company.id);
 
     if (selectedMonth) {
-      query = query.gte('requested_date', `${selectedMonth}-01`).lte('requested_date', `${selectedMonth}-31`);
+      query = query.gte('required_date', `${selectedMonth}-01`).lte('required_date', `${selectedMonth}-31`);
     }
     if (selectedStatus) {
       query = query.eq('status', selectedStatus);
@@ -70,7 +70,7 @@ export default function PurchaseRequestsListPage() {
       query = query.eq('department_id', selectedDepartment);
     }
 
-    const { data } = await query.order('requested_date', { ascending: false });
+    const { data } = await query.order('required_date', { ascending: false });
     setRequestData(data || []);
     setLoading(false);
   };
@@ -90,21 +90,34 @@ export default function PurchaseRequestsListPage() {
   const handleWorkflowAction = async () => {
     if (!company?.id || !selectedRequest) return;
 
+    // purchase_requests.approved_by references employees(id), not the auth
+    // user id — resolve the current user's employee record first.
+    let approverEmployeeId: string | null = null;
+    if (currentUser?.id && actionType.includes('approve')) {
+      const { data: employeeRecord } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .eq('company_id', company.id)
+        .maybeSingle();
+      approverEmployeeId = employeeRecord?.id ?? null;
+    }
+
     let newStatus = selectedRequest.status;
     let updateData: any = {};
 
     switch (actionType) {
       case 'approve_admin':
         newStatus = 'md_approval';
-        updateData = { approved_by: currentUser?.id, approved_at: new Date().toISOString() };
+        updateData = { approved_by: approverEmployeeId, approved_at: new Date().toISOString() };
         break;
       case 'approve_md':
         newStatus = 'accounts_review';
-        updateData = { approved_by: currentUser?.id, approved_at: new Date().toISOString() };
+        updateData = { approved_by: approverEmployeeId, approved_at: new Date().toISOString() };
         break;
       case 'approve_accounts':
         newStatus = 'vendor_assigned';
-        updateData = { approved_by: currentUser?.id, approved_at: new Date().toISOString() };
+        updateData = { approved_by: approverEmployeeId, approved_at: new Date().toISOString() };
         break;
       case 'assign_vendor':
         newStatus = 'completed';
@@ -192,11 +205,11 @@ export default function PurchaseRequestsListPage() {
   const formattedData = filteredData.map((item) => ({
     ...item,
     requestNumber: item.request_number || '-',
-    requester: item.profiles ? `${item.profiles.first_name} ${item.profiles.last_name}` : '-',
+    requester: item.employees ? `${item.employees.first_name} ${item.employees.last_name}` : '-',
     department: item.departments?.name || '-',
     description: item.title || '-',
     amount: item.estimated_cost ? `$${item.estimated_cost.toFixed(2)}` : '-',
-    requestedDate: item.requested_date ? format(new Date(item.requested_date), 'MMM dd, yyyy') : '-',
+    requestedDate: item.required_date ? format(new Date(item.required_date), 'MMM dd, yyyy') : '-',
     status: getStatusBadge(item.status),
     actions: (
       <div className="flex gap-2">

@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import DataTable from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,10 +14,94 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Search, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
+import { format, subDays } from 'date-fns';
+import { toast } from 'sonner';
 
 export default function PurchaseRequestsApprovalsPage() {
+  const { company, user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUrgency, setSelectedUrgency] = useState('');
+  const [selectedPriority, setSelectedPriority] = useState('');
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [comments, setComments] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    loadRequests();
+  }, [company?.id]);
+
+  const loadRequests = async () => {
+    if (!company?.id) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('purchase_requests')
+      .select('*, employees:requested_by(first_name, last_name), departments(name)')
+      .eq('company_id', company.id)
+      .in('status', ['pending', 'md_approval', 'accounts_review'])
+      .order('required_date', { ascending: true });
+    setRequests(data ?? []);
+    setLoading(false);
+  };
+
+  const handleReview = async (request: any, approve: boolean) => {
+    if (!company?.id) return;
+
+    let approverEmployeeId: string | null = null;
+    if (approve && currentUser?.id) {
+      const { data: employeeRecord } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .eq('company_id', company.id)
+        .maybeSingle();
+      approverEmployeeId = employeeRecord?.id ?? null;
+    }
+
+    const nextStatus: Record<string, string> = {
+      pending: 'md_approval',
+      md_approval: 'accounts_review',
+      accounts_review: 'vendor_assigned',
+    };
+
+    const { error } = await supabase
+      .from('purchase_requests')
+      .update(
+        approve
+          ? { status: nextStatus[request.status] ?? 'md_approval', approved_by: approverEmployeeId, approved_at: new Date().toISOString() }
+          : { status: 'rejected', rejection_reason: comments[request.id] || null }
+      )
+      .eq('id', request.id);
+
+    if (error) {
+      toast.error(`Failed to ${approve ? 'approve' : 'reject'} request`);
+      return;
+    }
+
+    toast.success(approve ? 'Request approved' : 'Request rejected');
+    loadRequests();
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    const variants: Record<string, string> = {
+      low: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      medium: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+      high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+      urgent: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    };
+    const p = priority || 'medium';
+    return <Badge className={variants[p] || variants.medium}>{p.charAt(0).toUpperCase() + p.slice(1)}</Badge>;
+  };
+
+  const filtered = requests.filter(r => {
+    const matchesSearch = !searchTerm ||
+      r.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.request_number?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPriority = !selectedPriority || r.priority === selectedPriority;
+    return matchesSearch && matchesPriority;
+  });
+
+  const urgentCount = requests.filter(r => r.priority === 'urgent' || r.priority === 'high').length;
+  const weekAgo = subDays(new Date(), 7).toISOString();
+  const approvedThisWeek = requests.filter(r => r.approved_at && r.approved_at >= weekAgo).length;
 
   const columns = [
     { key: 'requestNumber', header: 'Request #' },
@@ -23,100 +109,65 @@ export default function PurchaseRequestsApprovalsPage() {
     { key: 'department', header: 'Department' },
     { key: 'description', header: 'Description' },
     { key: 'amount', header: 'Amount' },
-    { key: 'urgency', header: 'Urgency' },
-    { key: 'requestedDate', header: 'Requested Date' },
+    { key: 'urgency', header: 'Priority' },
+    { key: 'requestedDate', header: 'Required By' },
     { key: 'actions', header: 'Actions' },
   ];
 
-  const mockData = [
-    {
-      id: '1',
-      requestNumber: 'PR-2024-001',
-      requester: 'John Doe',
-      department: 'IT',
-      description: 'Laptops for new employees',
-      amount: 4500.00,
-      urgency: 'high',
-      requestedDate: '2024-01-15',
-    },
-    {
-      id: '2',
-      requestNumber: 'PR-2024-004',
-      requester: 'Alice Williams',
-      department: 'Finance',
-      description: 'Accounting software license',
-      amount: 1200.00,
-      urgency: 'medium',
-      requestedDate: '2024-01-12',
-    },
-    {
-      id: '3',
-      requestNumber: 'PR-2024-005',
-      requester: 'Bob Johnson',
-      department: 'Operations',
-      description: 'Emergency warehouse repair',
-      amount: 850.00,
-      urgency: 'urgent',
-      requestedDate: '2024-01-16',
-    },
-  ];
-
-  const getUrgencyBadge = (urgency: string) => {
-    const variants: Record<string, string> = {
-      low: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-      medium: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-      high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-      urgent: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    };
-    return <Badge className={variants[urgency] || variants.medium}>{urgency.charAt(0).toUpperCase() + urgency.slice(1)}</Badge>;
-  };
-
-  const formattedData = mockData.map((item) => ({
+  const formattedData = filtered.map((item) => ({
     ...item,
-    amount: `$${item.amount.toFixed(2)}`,
-    urgency: getUrgencyBadge(item.urgency),
+    requestNumber: item.request_number || '-',
+    requester: item.employees ? `${item.employees.first_name} ${item.employees.last_name}` : '-',
+    department: item.departments?.name || '-',
+    description: item.title || '-',
+    amount: item.estimated_cost ? `$${item.estimated_cost.toFixed(2)}` : '-',
+    urgency: getPriorityBadge(item.priority),
+    requestedDate: item.required_date ? format(new Date(item.required_date), 'MMM dd, yyyy') : '-',
     actions: (
-      <div className="flex gap-2">
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="outline" className="h-8">
-              Review
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Review Purchase Request</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Request Details</Label>
-                <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg space-y-2">
-                  <p><strong>Request #:</strong> {item.requestNumber}</p>
-                  <p><strong>Requester:</strong> {item.requester}</p>
-                  <p><strong>Department:</strong> {item.department}</p>
-                  <p><strong>Description:</strong> {item.description}</p>
-                  <p><strong>Amount:</strong> ${item.amount.toFixed(2)}</p>
-                  <p><strong>Urgency:</strong> {item.urgency}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="comments">Comments</Label>
-                <Textarea id="comments" placeholder="Add your comments..." />
-              </div>
-              <div className="flex gap-2">
-                <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve
-                </Button>
-                <Button variant="destructive" className="flex-1">
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Reject
-                </Button>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button size="sm" variant="outline" className="h-8">
+            Review
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Review Purchase Request</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Request Details</Label>
+              <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg space-y-2 text-sm">
+                <p><strong>Request #:</strong> {item.request_number || '-'}</p>
+                <p><strong>Requester:</strong> {item.employees ? `${item.employees.first_name} ${item.employees.last_name}` : '-'}</p>
+                <p><strong>Department:</strong> {item.departments?.name || '-'}</p>
+                <p><strong>Description:</strong> {item.title}</p>
+                <p><strong>Amount:</strong> {item.estimated_cost ? `$${item.estimated_cost.toFixed(2)}` : '-'}</p>
+                <p><strong>Justification:</strong> {item.justification || '-'}</p>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <div className="space-y-2">
+              <Label htmlFor={`comments-${item.id}`}>Comments (used if rejecting)</Label>
+              <Textarea
+                id={`comments-${item.id}`}
+                placeholder="Add your comments..."
+                value={comments[item.id] || ''}
+                onChange={(e) => setComments(prev => ({ ...prev, [item.id]: e.target.value }))}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={() => handleReview(item, true)}>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve
+              </Button>
+              <Button variant="destructive" className="flex-1" onClick={() => handleReview(item, false)}>
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     ),
   }));
 
@@ -141,7 +192,7 @@ export default function PurchaseRequestsApprovalsPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Awaiting Review</p>
-                <p className="text-2xl font-bold">12</p>
+                <p className="text-2xl font-bold">{loading ? '—' : requests.length}</p>
               </div>
             </div>
           </CardContent>
@@ -153,8 +204,8 @@ export default function PurchaseRequestsApprovalsPage() {
                 <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Urgent Requests</p>
-                <p className="text-2xl font-bold">3</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Urgent/High Priority</p>
+                <p className="text-2xl font-bold">{loading ? '—' : urgentCount}</p>
               </div>
             </div>
           </CardContent>
@@ -167,7 +218,7 @@ export default function PurchaseRequestsApprovalsPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Approved This Week</p>
-                <p className="text-2xl font-bold">8</p>
+                <p className="text-2xl font-bold">{loading ? '—' : approvedThisWeek}</p>
               </div>
             </div>
           </CardContent>
@@ -188,12 +239,12 @@ export default function PurchaseRequestsApprovalsPage() {
                 />
               </div>
             </div>
-            <Select value={selectedUrgency} onValueChange={setSelectedUrgency}>
+            <Select value={selectedPriority} onValueChange={setSelectedPriority}>
               <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Urgency" />
+                <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Urgency</SelectItem>
+                <SelectItem value="">All Priority</SelectItem>
                 <SelectItem value="low">Low</SelectItem>
                 <SelectItem value="medium">Medium</SelectItem>
                 <SelectItem value="high">High</SelectItem>
@@ -205,6 +256,8 @@ export default function PurchaseRequestsApprovalsPage() {
           <DataTable
             columns={columns}
             data={formattedData}
+            loading={loading}
+            emptyTitle="Nothing awaiting review"
           />
         </CardContent>
       </Card>

@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import DataTable from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,14 +12,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Plus, Download, Car, MapPin, TrendingUp } from 'lucide-react';
+import { Search, Plus, Car, MapPin, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 export default function DriverTripsPage() {
+  const { company } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDriver, setSelectedDriver] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [trips, setTrips] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [formDriver, setFormDriver] = useState('');
+  const [formVehicle, setFormVehicle] = useState('');
+  const [formDate, setFormDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [formStartLocation, setFormStartLocation] = useState('');
+  const [formEndLocation, setFormEndLocation] = useState('');
+  const [formDistance, setFormDistance] = useState('');
+  const [formFuel, setFormFuel] = useState('');
+  const [formPurpose, setFormPurpose] = useState('');
+  const [formRemarks, setFormRemarks] = useState('');
 
   const columns = [
     { key: 'date', header: 'Date' },
@@ -27,51 +47,104 @@ export default function DriverTripsPage() {
     { key: 'endLocation', header: 'End Location' },
     { key: 'distance', header: 'Distance (km)' },
     { key: 'fuelConsumed', header: 'Fuel (L)' },
-    { key: 'actions', header: 'Actions' },
   ];
 
-  const mockData = [
-    {
-      id: '1',
-      date: '2024-01-15',
-      driver: 'John Doe',
-      vehicle: 'KA 1234',
-      startLocation: 'Main Office',
-      endLocation: 'Branch 1',
-      distance: 45.5,
-      fuelConsumed: 6.2,
-    },
-    {
-      id: '2',
-      date: '2024-01-14',
-      driver: 'Jane Smith',
-      vehicle: 'KB 5678',
-      startLocation: 'Warehouse',
-      endLocation: 'Client Site',
-      distance: 32.0,
-      fuelConsumed: 4.1,
-    },
-    {
-      id: '3',
-      date: '2024-01-13',
-      driver: 'Bob Johnson',
-      vehicle: 'KC 9012',
-      startLocation: 'Main Office',
-      endLocation: 'Airport',
-      distance: 28.5,
-      fuelConsumed: 3.8,
-    },
-  ];
+  useEffect(() => {
+    loadTrips();
+    loadDrivers();
+    loadVehicles();
+  }, [company?.id, selectedMonth, selectedDriver, selectedVehicle]);
 
-  const formattedData = mockData.map((item) => ({
+  const loadTrips = async () => {
+    if (!company?.id) return;
+    setLoading(true);
+
+    // vehicle_id has no FK constraint on driver_trips, matched client-side.
+    // driver_id -> drivers -> employee_id -> profiles are all real FKs.
+    let query = supabase
+      .from('driver_trips')
+      .select('*, drivers(profiles(first_name, last_name))')
+      .eq('company_id', company.id)
+      .gte('trip_date', `${selectedMonth}-01`)
+      .lte('trip_date', `${selectedMonth}-31`);
+
+    if (selectedDriver) query = query.eq('driver_id', selectedDriver);
+    if (selectedVehicle) query = query.eq('vehicle_id', selectedVehicle);
+
+    const { data } = await query.order('trip_date', { ascending: false });
+    setTrips(data || []);
+    setLoading(false);
+  };
+
+  const loadDrivers = async () => {
+    if (!company?.id) return;
+    const { data } = await supabase.from('drivers').select('id, profiles(first_name, last_name)').eq('company_id', company.id);
+    setDrivers(data || []);
+  };
+
+  const loadVehicles = async () => {
+    if (!company?.id) return;
+    const { data } = await supabase.from('vehicles').select('id, plate_number').eq('company_id', company.id);
+    setVehicles(data || []);
+  };
+
+  const handleLogTrip = async () => {
+    if (!company?.id) return;
+    if (!formDriver || !formDate) {
+      toast.error('Driver and date are required');
+      return;
+    }
+
+    setSubmitting(true);
+    const { error } = await supabase.from('driver_trips').insert({
+      company_id: company.id,
+      driver_id: formDriver,
+      vehicle_id: formVehicle || null,
+      trip_date: formDate,
+      start_location: formStartLocation.trim() || null,
+      end_location: formEndLocation.trim() || null,
+      distance_km: formDistance ? parseFloat(formDistance) : null,
+      fuel_consumed: formFuel ? parseFloat(formFuel) : null,
+      purpose: formPurpose.trim() || null,
+      remarks: formRemarks.trim() || null,
+    });
+    setSubmitting(false);
+
+    if (error) {
+      toast.error('Failed to log trip');
+      return;
+    }
+
+    toast.success('Trip logged');
+    setFormDriver(''); setFormVehicle(''); setFormStartLocation(''); setFormEndLocation('');
+    setFormDistance(''); setFormFuel(''); setFormPurpose(''); setFormRemarks('');
+    setFormDate(format(new Date(), 'yyyy-MM-dd'));
+    setDialogOpen(false);
+    loadTrips();
+  };
+
+  const vehiclePlate = (vehicleId: string | null) => vehicles.find(v => v.id === vehicleId)?.plate_number || '-';
+  const driverName = (d: any) => d.profiles ? `${d.profiles.first_name} ${d.profiles.last_name}` : '-';
+
+  const filtered = trips.filter(t => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return t.start_location?.toLowerCase().includes(term) || t.end_location?.toLowerCase().includes(term) || t.purpose?.toLowerCase().includes(term);
+  });
+
+  const totalTrips = trips.length;
+  const totalDistance = trips.reduce((sum, t) => sum + (t.distance_km || 0), 0);
+  const avgDistance = totalTrips > 0 ? totalDistance / totalTrips : 0;
+
+  const formattedData = filtered.map((item) => ({
     ...item,
-    actions: (
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" className="h-8">
-          View
-        </Button>
-      </div>
-    ),
+    date: item.trip_date ? format(new Date(item.trip_date), 'MMM dd, yyyy') : '-',
+    driver: item.drivers ? driverName(item.drivers) : '-',
+    vehicle: vehiclePlate(item.vehicle_id),
+    startLocation: item.start_location || '-',
+    endLocation: item.end_location || '-',
+    distance: item.distance_km ?? '-',
+    fuelConsumed: item.fuel_consumed ?? '-',
   }));
 
   return (
@@ -85,94 +158,85 @@ export default function DriverTripsPage() {
           { label: 'Trips' },
         ]}
       >
-        <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Log Trip
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Log New Trip</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="driver">Driver</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select driver" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">John Doe</SelectItem>
-                        <SelectItem value="2">Jane Smith</SelectItem>
-                        <SelectItem value="3">Bob Johnson</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle">Vehicle</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select vehicle" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ka1234">KA 1234</SelectItem>
-                        <SelectItem value="kb5678">KB 5678</SelectItem>
-                        <SelectItem value="kc9012">KC 9012</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
-                    <Input id="date" type="date" defaultValue={format(new Date(), 'yyyy-MM-dd')} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="startTime">Start Time</Label>
-                    <Input id="startTime" type="time" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="startLocation">Start Location</Label>
-                    <Input id="startLocation" placeholder="Starting point" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="endLocation">End Location</Label>
-                    <Input id="endLocation" placeholder="Destination" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="distance">Distance (km)</Label>
-                    <Input id="distance" type="number" step="0.1" placeholder="0.0" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fuel">Fuel Consumed (L)</Label>
-                    <Input id="fuel" type="number" step="0.1" placeholder="0.0" />
-                  </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Log Trip
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Log New Trip</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="driver">Driver *</Label>
+                  <Select value={formDriver} onValueChange={setFormDriver}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select driver" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {drivers.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>{driverName(d)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="purpose">Purpose</Label>
-                  <Input id="purpose" placeholder="Trip purpose" />
+                  <Label htmlFor="vehicle">Vehicle</Label>
+                  <Select value={formVehicle || 'none'} onValueChange={(v) => setFormVehicle(v === 'none' ? '' : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vehicle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Unspecified</SelectItem>
+                      {vehicles.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>{v.plate_number}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="remarks">Remarks</Label>
-                  <Textarea id="remarks" placeholder="Additional notes..." />
-                </div>
-                <Button className="w-full">Log Trip</Button>
               </div>
-            </DialogContent>
-          </Dialog>
-          <Button size="sm" variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="date">Date *</Label>
+                <Input id="date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startLocation">Start Location</Label>
+                  <Input id="startLocation" placeholder="Starting point" value={formStartLocation} onChange={(e) => setFormStartLocation(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endLocation">End Location</Label>
+                  <Input id="endLocation" placeholder="Destination" value={formEndLocation} onChange={(e) => setFormEndLocation(e.target.value)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="distance">Distance (km)</Label>
+                  <Input id="distance" type="number" step="0.1" placeholder="0.0" value={formDistance} onChange={(e) => setFormDistance(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fuel">Fuel Consumed (L)</Label>
+                  <Input id="fuel" type="number" step="0.1" placeholder="0.0" value={formFuel} onChange={(e) => setFormFuel(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="purpose">Purpose</Label>
+                <Input id="purpose" placeholder="Trip purpose" value={formPurpose} onChange={(e) => setFormPurpose(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="remarks">Remarks</Label>
+                <Textarea id="remarks" placeholder="Additional notes..." value={formRemarks} onChange={(e) => setFormRemarks(e.target.value)} />
+              </div>
+              <Button className="w-full" onClick={handleLogTrip} disabled={submitting}>
+                {submitting ? 'Saving…' : 'Log Trip'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -184,7 +248,7 @@ export default function DriverTripsPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Total Trips</p>
-                <p className="text-2xl font-bold">245</p>
+                <p className="text-2xl font-bold">{loading ? '—' : totalTrips}</p>
               </div>
             </div>
           </CardContent>
@@ -197,7 +261,7 @@ export default function DriverTripsPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Total Distance</p>
-                <p className="text-2xl font-bold">5,370 km</p>
+                <p className="text-2xl font-bold">{loading ? '—' : `${totalDistance.toLocaleString()} km`}</p>
               </div>
             </div>
           </CardContent>
@@ -210,7 +274,7 @@ export default function DriverTripsPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Avg Distance/Trip</p>
-                <p className="text-2xl font-bold">21.9 km</p>
+                <p className="text-2xl font-bold">{loading ? '—' : `${avgDistance.toFixed(1)} km`}</p>
               </div>
             </div>
           </CardContent>
@@ -238,26 +302,26 @@ export default function DriverTripsPage() {
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="w-auto"
               />
-              <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+              <Select value={selectedDriver || 'all'} onValueChange={(v) => setSelectedDriver(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Driver" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Drivers</SelectItem>
-                  <SelectItem value="1">John Doe</SelectItem>
-                  <SelectItem value="2">Jane Smith</SelectItem>
-                  <SelectItem value="3">Bob Johnson</SelectItem>
+                  <SelectItem value="all">All Drivers</SelectItem>
+                  {drivers.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{driverName(d)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+              <Select value={selectedVehicle || 'all'} onValueChange={(v) => setSelectedVehicle(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Vehicle" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Vehicles</SelectItem>
-                  <SelectItem value="ka1234">KA 1234</SelectItem>
-                  <SelectItem value="kb5678">KB 5678</SelectItem>
-                  <SelectItem value="kc9012">KC 9012</SelectItem>
+                  <SelectItem value="all">All Vehicles</SelectItem>
+                  {vehicles.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>{v.plate_number}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -266,6 +330,8 @@ export default function DriverTripsPage() {
           <DataTable
             columns={columns}
             data={formattedData}
+            loading={loading}
+            emptyTitle="No trips logged"
           />
         </CardContent>
       </Card>

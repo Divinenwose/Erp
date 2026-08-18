@@ -163,12 +163,12 @@ export default function ClockInOutPage() {
                 onChange={(e) => setSelectedDate(e.target.value)}
                 className="w-auto"
               />
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <Select value={selectedDepartment || 'all'} onValueChange={(v) => setSelectedDepartment(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Departments</SelectItem>
+                  <SelectItem value="all">All Departments</SelectItem>
                   <SelectItem value="hr">HR</SelectItem>
                   <SelectItem value="finance">Finance</SelectItem>
                   <SelectItem value="it">IT</SelectItem>

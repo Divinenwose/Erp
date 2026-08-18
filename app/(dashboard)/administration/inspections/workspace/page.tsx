@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import DataTable from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,13 +14,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Plus, Camera } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
+
+const CHECKLIST_ITEMS = [
+  'Desks are organized and clutter-free',
+  'Walkways are clear of obstructions',
+  'Cables and wiring are managed safely',
+  'Fire exits are unobstructed',
+  'Equipment is in good working order',
+  'Storage areas are organized',
+  'Lighting is adequate',
+  'Ergonomic setup is appropriate',
+];
 
 export default function WorkspaceInspectionPage() {
+  const { company, user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [inspectionData, setInspectionData] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formBranch, setFormBranch] = useState('');
+  const [formDate, setFormDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [findings, setFindings] = useState('');
+  const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
 
   const columns = [
     { key: 'date', header: 'Date' },
@@ -29,69 +53,186 @@ export default function WorkspaceInspectionPage() {
     { key: 'actions', header: 'Actions' },
   ];
 
-  const mockData = [
-    {
-      id: '1',
-      date: '2024-01-15',
-      branch: 'Main Office',
-      inspector: 'John Doe',
-      score: 88,
-      status: 'completed',
-    },
-  ];
+  useEffect(() => {
+    loadInspections();
+    loadBranches();
+  }, [company?.id, selectedDate, selectedBranch]);
+
+  const loadInspections = async () => {
+    if (!company?.id) return;
+    setLoading(true);
+
+    let query = supabase
+      .from('office_inspections')
+      .select('*, profiles(first_name, last_name), branches(name)')
+      .eq('company_id', company.id)
+      .eq('inspection_type', 'workspace');
+
+    if (selectedBranch) {
+      query = query.eq('branch_id', selectedBranch);
+    }
+
+    const { data } = await query.order('inspection_date', { ascending: false });
+    setInspectionData(data || []);
+    setLoading(false);
+  };
+
+  const loadBranches = async () => {
+    if (!company?.id) return;
+    const { data } = await supabase
+      .from('branches')
+      .select('id, name')
+      .eq('company_id', company.id);
+    setBranches(data || []);
+  };
+
+  const handleStartInspection = async () => {
+    if (!company?.id || !currentUser?.id) return;
+    if (!formBranch) {
+      toast.error('Please select a branch');
+      return;
+    }
+
+    setSubmitting(true);
+    const checkedCount = Object.values(checkedItems).filter(Boolean).length;
+    const overallScore = Math.round((checkedCount / CHECKLIST_ITEMS.length) * 100);
+
+    const { data: inspection, error } = await supabase
+      .from('office_inspections')
+      .insert({
+        company_id: company.id,
+        branch_id: formBranch,
+        inspection_type: 'workspace',
+        inspection_date: formDate,
+        inspected_by: currentUser.id,
+        status: 'completed',
+        overall_score: overallScore,
+        findings: findings.trim() || null,
+      })
+      .select()
+      .single();
+
+    if (error || !inspection) {
+      toast.error('Failed to create inspection');
+      setSubmitting(false);
+      return;
+    }
+
+    const checklistRows = CHECKLIST_ITEMS.map((item, index) => ({
+      inspection_id: inspection.id,
+      item_name: item,
+      status: checkedItems[index] ? 'pass' : 'fail',
+    }));
+    await supabase.from('inspection_checklist_items').insert(checklistRows);
+
+    toast.success('Inspection recorded');
+    setFormBranch(''); setFindings(''); setCheckedItems({});
+    setFormDate(format(new Date(), 'yyyy-MM-dd'));
+    setDialogOpen(false);
+    setSubmitting(false);
+    loadInspections();
+  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
-      completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+      pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
       in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-      pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+      completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+      failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     };
-    return <Badge className={variants[status] || variants.pending}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
+    return (
+      <Badge className={variants[status] || variants.pending}>
+        {status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+      </Badge>
+    );
   };
 
-  const getScoreBadge = (score: number) => {
-    if (score >= 80) return <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">{score}%</Badge>;
-    if (score >= 60) return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">{score}%</Badge>;
-    return <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">{score}%</Badge>;
-  };
-
-  const formattedData = mockData.map((item) => ({
+  const formattedData = inspectionData.map((item) => ({
     ...item,
-    score: getScoreBadge(item.score),
+    date: item.inspection_date,
+    branch: item.branches?.name || '-',
+    inspector: item.profiles ? `${item.profiles.first_name} ${item.profiles.last_name}` : '-',
+    score: item.overall_score || '-',
     status: getStatusBadge(item.status),
-    actions: <Button size="sm" variant="outline" className="h-8">View</Button>,
+    actions: (
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" className="h-8">
+          View
+        </Button>
+        <Button size="sm" variant="outline" className="h-8">
+          Edit
+        </Button>
+      </div>
+    ),
   }));
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Workspace Inspection"
-        description="Inspect desk and workspace organization"
+        description="Inspect general workspace organization and safety"
         breadcrumbs={[
           { label: 'Administration', href: '/administration' },
           { label: 'Inspections', href: '/administration/inspections' },
           { label: 'Workspace' },
         ]}
       >
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-2" />New Inspection</Button>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              New Inspection
+            </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>New Workspace Inspection</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>New Workspace Inspection</DialogTitle>
+            </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Branch</Label><Select><SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger><SelectContent><SelectItem value="main">Main Office</SelectItem></SelectContent></Select></div>
-                <div className="space-y-2"><Label>Date</Label><Input type="date" defaultValue={format(new Date(), 'yyyy-MM-dd')} /></div>
+                <div className="space-y-2">
+                  <Label htmlFor="branch">Branch</Label>
+                  <Select value={formBranch} onValueChange={setFormBranch}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="date">Inspection Date</Label>
+                  <Input id="date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
+                </div>
               </div>
-              <div className="space-y-3">
-                <h3 className="font-semibold">Checklist</h3>
-                {['Desks are organized and clutter-free', 'Chairs are in good condition', 'Computer equipment is clean', 'Personal items are minimal', 'Cables are organized', 'Documents are properly filed', 'No food items at desk', 'Workspace is ergonomically set up'].map((item, i) => (
-                  <div key={i} className="flex items-center space-x-2"><Checkbox id={`c-${i}`} /><Label htmlFor={`c-${i}`} className="text-sm">{item}</Label></div>
-                ))}
+
+              <div className="space-y-4">
+                <h3 className="font-semibold">Checklist Items</h3>
+                <div className="space-y-3">
+                  {CHECKLIST_ITEMS.map((item, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`check-${index}`}
+                        checked={!!checkedItems[index]}
+                        onCheckedChange={(checked) => setCheckedItems(prev => ({ ...prev, [index]: !!checked }))}
+                      />
+                      <Label htmlFor={`check-${index}`} className="text-sm">{item}</Label>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2"><Label>Findings</Label><Textarea placeholder="Note any issues..." /></div>
-              <Button className="w-full">Start Inspection</Button>
+
+              <div className="space-y-2">
+                <Label htmlFor="findings">Findings</Label>
+                <Textarea id="findings" placeholder="Note any issues or observations..." value={findings} onChange={(e) => setFindings(e.target.value)} />
+              </div>
+
+              <Button className="w-full" onClick={handleStartInspection} disabled={submitting}>
+                {submitting ? 'Saving…' : 'Start Inspection'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -100,19 +241,42 @@ export default function WorkspaceInspectionPage() {
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search inspections..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
             <div className="flex gap-2">
-              <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-auto" />
-              <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Branch" /></SelectTrigger>
-                <SelectContent><SelectItem value="">All Branches</SelectItem><SelectItem value="main">Main Office</SelectItem></SelectContent>
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-auto"
+              />
+              <Select value={selectedBranch || 'all'} onValueChange={(v) => setSelectedBranch(v === 'all' ? '' : v)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
           </div>
-          <DataTable columns={columns} data={formattedData} searchable={false} />
+
+          <DataTable
+            columns={columns}
+            data={formattedData}
+          />
         </CardContent>
       </Card>
     </div>

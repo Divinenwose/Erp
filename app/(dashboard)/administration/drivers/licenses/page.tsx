@@ -181,12 +181,12 @@ export default function DriverLicensesPage() {
                 />
               </div>
             </div>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <Select value={selectedStatus || 'all'} onValueChange={(v) => setSelectedStatus(v === 'all' ? '' : v)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="valid">Valid</SelectItem>
                 <SelectItem value="expiring">Expiring Soon</SelectItem>
                 <SelectItem value="expired">Expired</SelectItem>

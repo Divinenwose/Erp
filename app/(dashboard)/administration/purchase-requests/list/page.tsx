@@ -33,6 +33,12 @@ export default function PurchaseRequestsListPage() {
   const [actionNotes, setActionNotes] = useState('');
   const [selectedVendor, setSelectedVendor] = useState('');
   const [actualCost, setActualCost] = useState('');
+  const [newRequestOpen, setNewRequestOpen] = useState(false);
+  const [newRequestSubmitting, setNewRequestSubmitting] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newAmount, setNewAmount] = useState('');
+  const [newJustification, setNewJustification] = useState('');
+  const [newPriority, setNewPriority] = useState('medium');
 
   const columns = [
     { key: 'requestNumber', header: 'Request #' },
@@ -177,6 +183,76 @@ export default function PurchaseRequestsListPage() {
     setIsActionDialogOpen(true);
   };
 
+  const handleNewRequest = async () => {
+    if (!company?.id || !currentUser?.id) return;
+    if (!newTitle.trim() || !newAmount) {
+      toast.error('Description and estimated amount are required');
+      return;
+    }
+
+    setNewRequestSubmitting(true);
+    const { data: employeeRecord } = await supabase
+      .from('employees')
+      .select('id, department_id')
+      .eq('user_id', currentUser.id)
+      .eq('company_id', company.id)
+      .maybeSingle();
+
+    if (!employeeRecord?.id) {
+      toast.error('Could not find your employee record');
+      setNewRequestSubmitting(false);
+      return;
+    }
+
+    const { error } = await supabase.from('purchase_requests').insert({
+      company_id: company.id,
+      title: newTitle.trim(),
+      estimated_cost: parseFloat(newAmount),
+      justification: newJustification.trim() || null,
+      priority: newPriority,
+      department_id: employeeRecord.department_id,
+      requested_by: employeeRecord.id,
+      status: 'pending',
+    });
+    setNewRequestSubmitting(false);
+
+    if (error) {
+      toast.error('Failed to submit request');
+      return;
+    }
+
+    toast.success('Purchase request submitted');
+    setNewTitle(''); setNewAmount(''); setNewJustification(''); setNewPriority('medium');
+    setNewRequestOpen(false);
+    loadRequests();
+  };
+
+  const handleExportCsv = () => {
+    if (requestData.length === 0) {
+      toast.error('No requests to export');
+      return;
+    }
+    const header = ['Request #', 'Requester', 'Department', 'Description', 'Amount', 'Priority', 'Status', 'Required Date'];
+    const rows = requestData.map((r: any) => [
+      r.request_number || '',
+      r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : '',
+      r.departments?.name || '',
+      (r.title || '').replace(/"/g, '""'),
+      r.estimated_cost ?? '',
+      r.priority || '',
+      r.status || '',
+      r.required_date || '',
+    ]);
+    const csv = [header, ...rows].map(row => row.map((v: any) => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `purchase-requests-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
       pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
@@ -249,7 +325,7 @@ export default function PurchaseRequestsListPage() {
         ]}
       >
         <div className="flex gap-2">
-          <Dialog>
+          <Dialog open={newRequestOpen} onOpenChange={setNewRequestOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-2" />
@@ -263,52 +339,39 @@ export default function PurchaseRequestsListPage() {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="description">Description *</Label>
-                  <Textarea id="description" placeholder="Describe what you need to purchase..." />
+                  <Textarea id="description" placeholder="Describe what you need to purchase..." value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="amount">Estimated Amount *</Label>
-                    <Input id="amount" type="number" step="0.01" placeholder="0.00" />
+                    <Input id="amount" type="number" step="0.01" placeholder="0.00" value={newAmount} onChange={(e) => setNewAmount(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select>
+                    <Label htmlFor="priority">Priority</Label>
+                    <Select value={newPriority} onValueChange={setNewPriority}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="it">IT Equipment</SelectItem>
-                        <SelectItem value="office">Office Supplies</SelectItem>
-                        <SelectItem value="furniture">Furniture</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="justification">Justification</Label>
-                  <Textarea id="justification" placeholder="Why is this purchase needed?" />
+                  <Textarea id="justification" placeholder="Why is this purchase needed?" value={newJustification} onChange={(e) => setNewJustification(e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="urgency">Urgency</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select urgency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button className="w-full">Submit Request</Button>
+                <Button className="w-full" onClick={handleNewRequest} disabled={newRequestSubmitting}>
+                  {newRequestSubmitting ? 'Submitting…' : 'Submit Request'}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="outline" onClick={handleExportCsv}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -336,12 +399,12 @@ export default function PurchaseRequestsListPage() {
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="w-auto"
               />
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <Select value={selectedStatus || 'all'} onValueChange={(v) => setSelectedStatus(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="submitted">Submitted</SelectItem>
                   <SelectItem value="under_review">Under Review</SelectItem>
@@ -352,12 +415,12 @@ export default function PurchaseRequestsListPage() {
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <Select value={selectedDepartment || 'all'} onValueChange={(v) => setSelectedDepartment(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Departments</SelectItem>
+                  <SelectItem value="all">All Departments</SelectItem>
                   {departments.map((d) => (
                     <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                   ))}

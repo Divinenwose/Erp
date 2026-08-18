@@ -14,17 +14,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Plus, Camera, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
+
+const CHECKLIST_ITEMS = [
+  'Floors are clean and free of debris',
+  'Desks and workstations are organized',
+  'Windows are clean',
+  'Trash bins are emptied',
+  'Common areas are tidy',
+  'Kitchen/break area is clean',
+  'Conference rooms are organized',
+  'Hallways and corridors are clear',
+];
 
 export default function CleanlinessInspectionPage() {
-  const { company } = useAuth();
+  const { company, user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [inspectionData, setInspectionData] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formBranch, setFormBranch] = useState('');
+  const [formDate, setFormDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [findings, setFindings] = useState('');
+  const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
 
   const columns = [
     { key: 'date', header: 'Date' },
@@ -66,6 +84,53 @@ export default function CleanlinessInspectionPage() {
       .select('id, name')
       .eq('company_id', company.id);
     setBranches(data || []);
+  };
+
+  const handleStartInspection = async () => {
+    if (!company?.id || !currentUser?.id) return;
+    if (!formBranch) {
+      toast.error('Please select a branch');
+      return;
+    }
+
+    setSubmitting(true);
+    const checkedCount = Object.values(checkedItems).filter(Boolean).length;
+    const overallScore = Math.round((checkedCount / CHECKLIST_ITEMS.length) * 100);
+
+    const { data: inspection, error } = await supabase
+      .from('office_inspections')
+      .insert({
+        company_id: company.id,
+        branch_id: formBranch,
+        inspection_type: 'cleanliness',
+        inspection_date: formDate,
+        inspected_by: currentUser.id,
+        status: 'completed',
+        overall_score: overallScore,
+        findings: findings.trim() || null,
+      })
+      .select()
+      .single();
+
+    if (error || !inspection) {
+      toast.error('Failed to create inspection');
+      setSubmitting(false);
+      return;
+    }
+
+    const checklistRows = CHECKLIST_ITEMS.map((item, index) => ({
+      inspection_id: inspection.id,
+      item_name: item,
+      status: checkedItems[index] ? 'pass' : 'fail',
+    }));
+    await supabase.from('inspection_checklist_items').insert(checklistRows);
+
+    toast.success('Inspection recorded');
+    setFormBranch(''); setFindings(''); setCheckedItems({});
+    setFormDate(format(new Date(), 'yyyy-MM-dd'));
+    setDialogOpen(false);
+    setSubmitting(false);
+    loadInspections();
   };
 
   const getStatusBadge = (status: string) => {
@@ -112,7 +177,7 @@ export default function CleanlinessInspectionPage() {
           { label: 'Cleanliness' },
         ]}
       >
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
               <Plus className="h-4 w-4 mr-2" />
@@ -127,38 +192,33 @@ export default function CleanlinessInspectionPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="branch">Branch</Label>
-                  <Select>
+                  <Select value={formBranch} onValueChange={setFormBranch}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select branch" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="main">Main Office</SelectItem>
-                      <SelectItem value="branch1">Branch 1</SelectItem>
-                      <SelectItem value="branch2">Branch 2</SelectItem>
+                      {branches.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="date">Inspection Date</Label>
-                  <Input id="date" type="date" defaultValue={format(new Date(), 'yyyy-MM-dd')} />
+                  <Input id="date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
                 </div>
               </div>
 
               <div className="space-y-4">
                 <h3 className="font-semibold">Checklist Items</h3>
                 <div className="space-y-3">
-                  {[
-                    'Floors are clean and free of debris',
-                    'Desks and workstations are organized',
-                    'Windows are clean',
-                    'Trash bins are emptied',
-                    'Common areas are tidy',
-                    'Kitchen/break area is clean',
-                    'Conference rooms are organized',
-                    'Hallways and corridors are clear',
-                  ].map((item, index) => (
+                  {CHECKLIST_ITEMS.map((item, index) => (
                     <div key={index} className="flex items-center space-x-2">
-                      <Checkbox id={`check-${index}`} />
+                      <Checkbox
+                        id={`check-${index}`}
+                        checked={!!checkedItems[index]}
+                        onCheckedChange={(checked) => setCheckedItems(prev => ({ ...prev, [index]: !!checked }))}
+                      />
                       <Label htmlFor={`check-${index}`} className="text-sm">{item}</Label>
                     </div>
                   ))}
@@ -167,18 +227,12 @@ export default function CleanlinessInspectionPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="findings">Findings</Label>
-                <Textarea id="findings" placeholder="Note any issues or observations..." />
+                <Textarea id="findings" placeholder="Note any issues or observations..." value={findings} onChange={(e) => setFindings(e.target.value)} />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="photos">Photos</Label>
-                <Button variant="outline" size="sm" className="w-full">
-                  <Camera className="h-4 w-4 mr-2" />
-                  Upload Photos
-                </Button>
-              </div>
-
-              <Button className="w-full">Start Inspection</Button>
+              <Button className="w-full" onClick={handleStartInspection} disabled={submitting}>
+                {submitting ? 'Saving…' : 'Start Inspection'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -205,12 +259,12 @@ export default function CleanlinessInspectionPage() {
                 onChange={(e) => setSelectedDate(e.target.value)}
                 className="w-auto"
               />
-              <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+              <Select value={selectedBranch || 'all'} onValueChange={(v) => setSelectedBranch(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Branch" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Branches</SelectItem>
+                  <SelectItem value="all">All Branches</SelectItem>
                   {branches.map((b) => (
                     <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                   ))}

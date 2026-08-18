@@ -287,12 +287,12 @@ export default function MyPurchaseRequestsPage() {
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="w-auto"
               />
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <Select value={selectedStatus || 'all'} onValueChange={(v) => setSelectedStatus(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[170px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="md_approval">MD Approval</SelectItem>
                   <SelectItem value="accounts_review">Accounts Review</SelectItem>

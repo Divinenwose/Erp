@@ -239,12 +239,12 @@ export default function PurchaseRequestsApprovalsPage() {
                 />
               </div>
             </div>
-            <Select value={selectedPriority} onValueChange={setSelectedPriority}>
+            <Select value={selectedPriority || 'all'} onValueChange={(v) => setSelectedPriority(v === 'all' ? '' : v)}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Priority</SelectItem>
+                <SelectItem value="all">All Priority</SelectItem>
                 <SelectItem value="low">Low</SelectItem>
                 <SelectItem value="medium">Medium</SelectItem>
                 <SelectItem value="high">High</SelectItem>

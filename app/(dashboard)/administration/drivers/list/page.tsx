@@ -12,14 +12,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Edit, Car, IdCard } from 'lucide-react';
+import { Search, Plus, Edit } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function DriversListPage() {
   const { company } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [driverData, setDriverData] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [formEmployee, setFormEmployee] = useState('');
+  const [formLicenseNumber, setFormLicenseNumber] = useState('');
+  const [formLicenseType, setFormLicenseType] = useState('');
+  const [formLicenseExpiry, setFormLicenseExpiry] = useState('');
+  const [formVehicle, setFormVehicle] = useState('');
 
   const columns = [
     { key: 'driver', header: 'Driver' },
@@ -33,15 +44,20 @@ export default function DriversListPage() {
 
   useEffect(() => {
     loadDrivers();
+    loadProfiles();
+    loadVehicles();
   }, [company?.id, selectedStatus]);
 
   const loadDrivers = async () => {
     if (!company?.id) return;
     setLoading(true);
 
+    // assigned_vehicle_id has no FK constraint on drivers, so PostgREST
+    // can't embed vehicles(...) directly — matched client-side below.
+    // employee_id is a real FK (profiles) and embeds normally.
     let query = supabase
       .from('drivers')
-      .select('*, profiles(first_name, last_name), vehicles(plate_number)')
+      .select('*, profiles(first_name, last_name)')
       .eq('company_id', company.id);
 
     if (selectedStatus) {
@@ -53,12 +69,53 @@ export default function DriversListPage() {
     setLoading(false);
   };
 
+  const loadProfiles = async () => {
+    if (!company?.id) return;
+    const { data } = await supabase.from('profiles').select('id, first_name, last_name').eq('company_id', company.id);
+    setProfiles(data || []);
+  };
+
+  const loadVehicles = async () => {
+    if (!company?.id) return;
+    const { data } = await supabase.from('vehicles').select('id, plate_number').eq('company_id', company.id);
+    setVehicles(data || []);
+  };
+
+  const handleAddDriver = async () => {
+    if (!company?.id) return;
+    if (!formEmployee) {
+      toast.error('Please select an employee');
+      return;
+    }
+
+    setSubmitting(true);
+    const { error } = await supabase.from('drivers').insert({
+      company_id: company.id,
+      employee_id: formEmployee,
+      license_number: formLicenseNumber.trim() || null,
+      license_type: formLicenseType || null,
+      license_expiry: formLicenseExpiry || null,
+      assigned_vehicle_id: formVehicle || null,
+      status: 'active',
+    });
+    setSubmitting(false);
+
+    if (error) {
+      toast.error(error.message.includes('duplicate') ? 'That license number is already registered' : 'Failed to add driver');
+      return;
+    }
+
+    toast.success('Driver added');
+    setFormEmployee(''); setFormLicenseNumber(''); setFormLicenseType(''); setFormLicenseExpiry(''); setFormVehicle('');
+    setDialogOpen(false);
+    loadDrivers();
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
       active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
       inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
       suspended: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-      terminated: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     };
     return (
       <Badge className={variants[status] || variants.inactive}>
@@ -67,21 +124,21 @@ export default function DriversListPage() {
     );
   };
 
-  const formattedData = driverData.map((item) => ({
+  const vehiclePlate = (vehicleId: string | null) => vehicles.find(v => v.id === vehicleId)?.plate_number || '-';
+
+  const filtered = driverData.filter(d => {
+    const name = d.profiles ? `${d.profiles.first_name} ${d.profiles.last_name}` : '';
+    return !searchTerm || name.toLowerCase().includes(searchTerm.toLowerCase()) || d.license_number?.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const formattedData = filtered.map((item) => ({
     ...item,
     driver: item.profiles ? `${item.profiles.first_name} ${item.profiles.last_name}` : '-',
     licenseNumber: item.license_number || '-',
     licenseType: item.license_type || '-',
     licenseExpiry: item.license_expiry || '-',
-    assignedVehicle: item.vehicles?.plate_number || '-',
+    assignedVehicle: vehiclePlate(item.assigned_vehicle_id),
     status: getStatusBadge(item.status || 'inactive'),
-    actions: (
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" className="h-8">
-          <Edit className="h-3 w-3" />
-        </Button>
-      </div>
-    ),
   }));
 
   return (
@@ -95,7 +152,7 @@ export default function DriversListPage() {
           { label: 'List' },
         ]}
       >
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
               <Plus className="h-4 w-4 mr-2" />
@@ -108,26 +165,26 @@ export default function DriversListPage() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="employee">Employee</Label>
-                <Select>
+                <Label htmlFor="employee">Employee *</Label>
+                <Select value={formEmployee} onValueChange={setFormEmployee}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">John Doe</SelectItem>
-                    <SelectItem value="2">Jane Smith</SelectItem>
-                    <SelectItem value="3">Bob Johnson</SelectItem>
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="licenseNumber">License Number</Label>
-                  <Input id="licenseNumber" placeholder="DL-2024-XXX" />
+                  <Input id="licenseNumber" placeholder="DL-2024-XXX" value={formLicenseNumber} onChange={(e) => setFormLicenseNumber(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="licenseType">License Type</Label>
-                  <Select>
+                  <Select value={formLicenseType} onValueChange={setFormLicenseType}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -140,30 +197,27 @@ export default function DriversListPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="issueDate">Issue Date</Label>
-                  <Input id="issueDate" type="date" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expiryDate">Expiry Date</Label>
-                  <Input id="expiryDate" type="date" />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="expiryDate">License Expiry</Label>
+                <Input id="expiryDate" type="date" value={formLicenseExpiry} onChange={(e) => setFormLicenseExpiry(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="vehicle">Assigned Vehicle</Label>
-                <Select>
+                <Select value={formVehicle || 'none'} onValueChange={(v) => setFormVehicle(v === 'none' ? '' : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select vehicle" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ka1234">KA 1234</SelectItem>
-                    <SelectItem value="kb5678">KB 5678</SelectItem>
-                    <SelectItem value="kc9012">KC 9012</SelectItem>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {vehicles.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>{v.plate_number}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-              <Button className="w-full">Add Driver</Button>
+              <Button className="w-full" onClick={handleAddDriver} disabled={submitting}>
+                {submitting ? 'Adding…' : 'Add Driver'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -183,12 +237,12 @@ export default function DriversListPage() {
                 />
               </div>
             </div>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <Select value={selectedStatus || 'all'} onValueChange={(v) => setSelectedStatus(v === 'all' ? '' : v)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
                 <SelectItem value="suspended">Suspended</SelectItem>
@@ -199,6 +253,8 @@ export default function DriversListPage() {
           <DataTable
             columns={columns}
             data={formattedData}
+            loading={loading}
+            emptyTitle="No drivers found"
           />
         </CardContent>
       </Card>

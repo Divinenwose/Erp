@@ -127,24 +127,24 @@ export default function DailyAttendancePage() {
                 onChange={(e) => setSelectedDate(e.target.value)}
                 className="w-auto"
               />
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <Select value={selectedDepartment || 'all'} onValueChange={(v) => setSelectedDepartment(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Departments</SelectItem>
+                  <SelectItem value="all">All Departments</SelectItem>
                   <SelectItem value="hr">HR</SelectItem>
                   <SelectItem value="finance">Finance</SelectItem>
                   <SelectItem value="it">IT</SelectItem>
                   <SelectItem value="operations">Operations</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+              <Select value={selectedBranch || 'all'} onValueChange={(v) => setSelectedBranch(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Branch" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Branches</SelectItem>
+                  <SelectItem value="all">All Branches</SelectItem>
                   <SelectItem value="main">Main Office</SelectItem>
                   <SelectItem value="branch1">Branch 1</SelectItem>
                   <SelectItem value="branch2">Branch 2</SelectItem>

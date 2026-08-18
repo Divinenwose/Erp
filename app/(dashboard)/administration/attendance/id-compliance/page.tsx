@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import DataTable from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,13 +12,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Search, Download, BadgeCheck, AlertTriangle, Plus, Camera } from 'lucide-react';
+import { Search, BadgeCheck, AlertTriangle, Plus } from 'lucide-react';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 export default function IDCompliancePage() {
+  const { company } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [records, setRecords] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [idNumber, setIdNumber] = useState('');
+  const [issueDate, setIssueDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [expiryDate, setExpiryDate] = useState('');
 
   const columns = [
     { key: 'employee', header: 'Employee' },
@@ -28,69 +43,120 @@ export default function IDCompliancePage() {
     { key: 'actions', header: 'Actions' },
   ];
 
-  const mockData = [
-    {
-      id: '1',
-      employee: 'John Doe',
-      department: 'HR',
-      idNumber: 'ID-2024-001',
-      issueDate: '2024-01-01',
-      expiryDate: '2025-01-01',
+  useEffect(() => {
+    loadData();
+  }, [company?.id]);
+
+  const loadData = async () => {
+    if (!company?.id) return;
+    setLoading(true);
+
+    const [recordsRes, profilesRes, deptRes] = await Promise.all([
+      supabase
+        .from('id_card_compliance')
+        .select('*, profiles(first_name, last_name, department_id, departments(name))')
+        .eq('company_id', company.id)
+        .order('created_at', { ascending: false }),
+      supabase.from('profiles').select('id, first_name, last_name, department_id').eq('company_id', company.id),
+      supabase.from('departments').select('id, name').eq('company_id', company.id),
+    ]);
+
+    setRecords(recordsRes.data ?? []);
+    setProfiles(profilesRes.data ?? []);
+    setDepartments(deptRes.data ?? []);
+    setLoading(false);
+  };
+
+  const handleIssueCard = async () => {
+    if (!company?.id) return;
+    if (!selectedEmployee || !idNumber.trim() || !issueDate) {
+      toast.error('Employee, ID number, and issue date are required');
+      return;
+    }
+
+    setSubmitting(true);
+    const { error } = await supabase.from('id_card_compliance').insert({
+      company_id: company.id,
+      employee_id: selectedEmployee,
+      id_number: idNumber.trim(),
+      issue_date: issueDate,
+      expiry_date: expiryDate || null,
       status: 'active',
-    },
-    {
-      id: '2',
-      employee: 'Jane Smith',
-      department: 'Finance',
-      idNumber: 'ID-2024-002',
-      issueDate: '2023-06-15',
-      expiryDate: '2024-06-15',
-      status: 'expired',
-    },
-    {
-      id: '3',
-      employee: 'Bob Johnson',
-      department: 'IT',
-      idNumber: 'ID-2024-003',
-      issueDate: '2024-01-10',
-      expiryDate: '2025-01-10',
-      status: 'active',
-    },
-    {
-      id: '4',
-      employee: 'Alice Williams',
-      department: 'Operations',
-      idNumber: 'ID-2024-004',
-      issueDate: '2023-12-01',
-      expiryDate: '2024-12-01',
-      status: 'lost',
-    },
-  ];
+    });
+    setSubmitting(false);
+
+    if (error) {
+      toast.error(error.message.includes('duplicate') ? 'That ID number is already in use' : 'Failed to issue ID card');
+      return;
+    }
+
+    toast.success('ID card issued');
+    setSelectedEmployee(''); setIdNumber(''); setExpiryDate('');
+    setIssueDate(format(new Date(), 'yyyy-MM-dd'));
+    setDialogOpen(false);
+    loadData();
+  };
+
+  const markReplacement = async (record: any) => {
+    const { error } = await supabase
+      .from('id_card_compliance')
+      .update({ status: 'replacement_pending' })
+      .eq('id', record.id);
+
+    if (error) {
+      toast.error('Failed to update status');
+      return;
+    }
+    toast.success('Marked for replacement');
+    loadData();
+  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
       active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
       expired: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
       lost: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-      'replacement_pending': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      replacement_pending: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
     };
+    const s = status || 'active';
     return (
-      <Badge className={variants[status] || variants.active}>
-        {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+      <Badge className={variants[s] || variants.active}>
+        {s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')}
       </Badge>
     );
   };
 
-  const formattedData = mockData.map((item) => ({
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const effectiveStatus = (r: any) => {
+    if (r.status === 'active' && r.expiry_date && r.expiry_date < today) return 'expired';
+    return r.status || 'active';
+  };
+
+  const filtered = records.filter(r => {
+    const name = r.profiles ? `${r.profiles.first_name} ${r.profiles.last_name}` : '';
+    const matchesSearch = !searchTerm || name.toLowerCase().includes(searchTerm.toLowerCase()) || r.id_number?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDept = !selectedDepartment || r.profiles?.department_id === selectedDepartment;
+    const matchesStatus = !selectedStatus || effectiveStatus(r) === selectedStatus;
+    return matchesSearch && matchesDept && matchesStatus;
+  });
+
+  const activeCount = records.filter(r => effectiveStatus(r) === 'active').length;
+  const expiredCount = records.filter(r => effectiveStatus(r) === 'expired').length;
+  const lostCount = records.filter(r => r.status === 'lost').length;
+  const complianceRate = records.length > 0 ? Math.round((activeCount / records.length) * 100) : 0;
+
+  const formattedData = filtered.map((item) => ({
     ...item,
-    status: getStatusBadge(item.status),
+    employee: item.profiles ? `${item.profiles.first_name} ${item.profiles.last_name}` : '-',
+    department: item.profiles?.departments?.name || '-',
+    idNumber: item.id_number || '-',
+    issueDate: item.issue_date ? format(new Date(item.issue_date), 'MMM dd, yyyy') : '-',
+    expiryDate: item.expiry_date ? format(new Date(item.expiry_date), 'MMM dd, yyyy') : '-',
+    status: getStatusBadge(effectiveStatus(item)),
     actions: (
       <div className="flex gap-2">
-        <Button size="sm" variant="outline" className="h-8">
-          View
-        </Button>
-        {item.status !== 'active' && (
-          <Button size="sm" variant="outline" className="h-8">
+        {effectiveStatus(item) !== 'active' && item.status !== 'replacement_pending' && (
+          <Button size="sm" variant="outline" className="h-8" onClick={() => markReplacement(item)}>
             Replace
           </Button>
         )}
@@ -109,62 +175,49 @@ export default function IDCompliancePage() {
           { label: 'ID Compliance' },
         ]}
       >
-        <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Issue ID Card
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Issue New ID Card</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="employee">Employee</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select employee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">John Doe</SelectItem>
-                      <SelectItem value="2">Jane Smith</SelectItem>
-                      <SelectItem value="3">Bob Johnson</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="idNumber">ID Number</Label>
-                  <Input id="idNumber" placeholder="ID-2024-XXX" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="issueDate">Issue Date</Label>
-                  <Input id="issueDate" type="date" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expiryDate">Expiry Date</Label>
-                  <Input id="expiryDate" type="date" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="photo">Photo</Label>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                      <Camera className="h-4 w-4 mr-2" />
-                      Upload Photo
-                    </Button>
-                  </div>
-                </div>
-                <Button className="w-full">Issue ID Card</Button>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Issue ID Card
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Issue New ID Card</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="employee">Employee *</Label>
+                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </DialogContent>
-          </Dialog>
-          <Button size="sm" variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="idNumber">ID Number *</Label>
+                <Input id="idNumber" placeholder="ID-2024-XXX" value={idNumber} onChange={(e) => setIdNumber(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="issueDate">Issue Date *</Label>
+                <Input id="issueDate" type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="expiryDate">Expiry Date</Label>
+                <Input id="expiryDate" type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+              </div>
+              <Button className="w-full" onClick={handleIssueCard} disabled={submitting}>
+                {submitting ? 'Issuing…' : 'Issue ID Card'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -176,7 +229,7 @@ export default function IDCompliancePage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Active IDs</p>
-                <p className="text-2xl font-bold">42</p>
+                <p className="text-2xl font-bold">{loading ? '—' : activeCount}</p>
               </div>
             </div>
           </CardContent>
@@ -189,7 +242,7 @@ export default function IDCompliancePage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Expired IDs</p>
-                <p className="text-2xl font-bold">5</p>
+                <p className="text-2xl font-bold">{loading ? '—' : expiredCount}</p>
               </div>
             </div>
           </CardContent>
@@ -202,7 +255,7 @@ export default function IDCompliancePage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Lost IDs</p>
-                <p className="text-2xl font-bold">3</p>
+                <p className="text-2xl font-bold">{loading ? '—' : lostCount}</p>
               </div>
             </div>
           </CardContent>
@@ -215,7 +268,7 @@ export default function IDCompliancePage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Compliance Rate</p>
-                <p className="text-2xl font-bold">95%</p>
+                <p className="text-2xl font-bold">{loading ? '—' : `${complianceRate}%`}</p>
               </div>
             </div>
           </CardContent>
@@ -237,24 +290,23 @@ export default function IDCompliancePage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <Select value={selectedDepartment || 'all'} onValueChange={(v) => setSelectedDepartment(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Departments</SelectItem>
-                  <SelectItem value="hr">HR</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="it">IT</SelectItem>
-                  <SelectItem value="operations">Operations</SelectItem>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <Select value={selectedStatus || 'all'} onValueChange={(v) => setSelectedStatus(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="expired">Expired</SelectItem>
                   <SelectItem value="lost">Lost</SelectItem>
@@ -267,7 +319,8 @@ export default function IDCompliancePage() {
           <DataTable
             columns={columns}
             data={formattedData}
-            searchable={false}
+            loading={loading}
+            emptyTitle="No ID card records"
           />
         </CardContent>
       </Card>

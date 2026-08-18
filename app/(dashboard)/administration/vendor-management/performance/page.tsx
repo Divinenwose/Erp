@@ -195,64 +195,10 @@ export default function VendorPerformancePage() {
         ]}
       >
         <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Star className="h-4 w-4 mr-2" />
-                Rate Vendor
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Rate Vendor Performance</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="vendor">Vendor</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select vendor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="abc">ABC Cleaning Services</SelectItem>
-                      <SelectItem value="xyz">XYZ Maintenance</SelectItem>
-                      <SelectItem value="fast">Fast Internet Providers</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="rating">Overall Rating (1-5)</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select rating" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5 - Excellent</SelectItem>
-                      <SelectItem value="4">4 - Good</SelectItem>
-                      <SelectItem value="3">3 - Average</SelectItem>
-                      <SelectItem value="2">2 - Fair</SelectItem>
-                      <SelectItem value="1">1 - Poor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="onTime">On-Time Delivery (%)</Label>
-                    <Input id="onTime" type="number" min="0" max="100" placeholder="0-100" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="quality">Quality Score (%)</Label>
-                    <Input id="quality" type="number" min="0" max="100" placeholder="0-100" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="feedback">Feedback</Label>
-                  <Textarea id="feedback" placeholder="Provide detailed feedback..." />
-                </div>
-                <Button className="w-full">Submit Rating</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" onClick={() => setIsRatingDialogOpen(true)}>
+            <Star className="h-4 w-4 mr-2" />
+            Rate Vendor
+          </Button>
           <Button size="sm" variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export
@@ -330,12 +276,12 @@ export default function VendorPerformancePage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Select value={selectedVendorType} onValueChange={setSelectedVendorType}>
+              <Select value={selectedVendorType || 'all'} onValueChange={(v) => setSelectedVendorType(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Vendor Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="cleaning">Cleaning</SelectItem>
                   <SelectItem value="maintenance">Maintenance</SelectItem>
                   <SelectItem value="internet">Internet</SelectItem>

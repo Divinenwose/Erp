@@ -11,9 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Search, Plus, Upload, Download } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 export default function FuelRecordsPage() {
   const { company } = useAuth();
@@ -25,6 +25,16 @@ export default function FuelRecordsPage() {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [formVehicle, setFormVehicle] = useState('');
+  const [formDriver, setFormDriver] = useState('');
+  const [formDate, setFormDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [formQuantity, setFormQuantity] = useState('');
+  const [formCost, setFormCost] = useState('');
+  const [formOdometer, setFormOdometer] = useState('');
+  const [formStation, setFormStation] = useState('');
 
   const columns = [
     { key: 'date', header: 'Date' },
@@ -34,7 +44,6 @@ export default function FuelRecordsPage() {
     { key: 'cost', header: 'Cost' },
     { key: 'odometer', header: 'Odometer' },
     { key: 'station', header: 'Station' },
-    { key: 'actions', header: 'Actions' },
   ];
 
   useEffect(() => {
@@ -47,9 +56,13 @@ export default function FuelRecordsPage() {
     if (!company?.id) return;
     setLoading(true);
 
+    // vehicle_id has no FK constraint on fuel_records, so PostgREST can't
+    // embed vehicles(...) directly — match against the separately-loaded
+    // vehicles list instead. profiles(...) is a real FK (driver_id) and can
+    // be embedded normally.
     let query = supabase
       .from('fuel_records')
-      .select('*, vehicles(plate_number), profiles(first_name, last_name)')
+      .select('*, profiles(first_name, last_name)')
       .eq('company_id', company.id)
       .gte('fuel_date', `${selectedMonth}-01`)
       .lte('fuel_date', `${selectedMonth}-31`);
@@ -85,25 +98,49 @@ export default function FuelRecordsPage() {
     setDrivers(data || []);
   };
 
+  const handleSaveRecord = async () => {
+    if (!company?.id) return;
+    if (!formVehicle || !formDate || !formQuantity || !formCost) {
+      toast.error('Vehicle, date, quantity, and cost are required');
+      return;
+    }
+
+    setSubmitting(true);
+    const { error } = await supabase.from('fuel_records').insert({
+      company_id: company.id,
+      vehicle_id: formVehicle,
+      driver_id: formDriver || null,
+      fuel_date: formDate,
+      fuel_quantity: parseFloat(formQuantity),
+      cost: parseFloat(formCost),
+      odometer_reading: formOdometer ? parseInt(formOdometer, 10) : null,
+      fuel_station: formStation.trim() || null,
+    });
+    setSubmitting(false);
+
+    if (error) {
+      toast.error('Failed to save fuel record');
+      return;
+    }
+
+    toast.success('Fuel record saved');
+    setFormVehicle(''); setFormDriver(''); setFormQuantity(''); setFormCost(''); setFormOdometer(''); setFormStation('');
+    setFormDate(format(new Date(), 'yyyy-MM-dd'));
+    setDialogOpen(false);
+    loadFuelRecords();
+  };
+
+  const vehiclePlate = (vehicleId: string) => vehicles.find(v => v.id === vehicleId)?.plate_number || '-';
+
   const formattedData = fuelData.map((item) => ({
     ...item,
-    date: item.fuel_date,
-    vehicle: item.vehicles?.plate_number || '-',
+    date: item.fuel_date ? format(new Date(item.fuel_date), 'MMM dd, yyyy') : '-',
+    vehicle: vehiclePlate(item.vehicle_id),
     driver: item.profiles ? `${item.profiles.first_name} ${item.profiles.last_name}` : '-',
     quantity: item.fuel_quantity,
-    cost: `$${item.cost.toFixed(2)}`,
+    cost: `$${(item.cost || 0).toFixed(2)}`,
     odometer: item.odometer_reading || '-',
     station: item.fuel_station || '-',
-    actions: (
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" className="h-8">
-          View
-        </Button>
-        <Button size="sm" variant="outline" className="h-8">
-          Edit
-        </Button>
-      </div>
-    ),
   }));
 
   return (
@@ -117,87 +154,77 @@ export default function FuelRecordsPage() {
           { label: 'Records' },
         ]}
       >
-        <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Record
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Fuel Record</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle">Vehicle</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select vehicle" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ka1234">KA 1234</SelectItem>
-                        <SelectItem value="kb5678">KB 5678</SelectItem>
-                        <SelectItem value="kc9012">KC 9012</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="driver">Driver</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select driver" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">John Doe</SelectItem>
-                        <SelectItem value="2">Jane Smith</SelectItem>
-                        <SelectItem value="3">Bob Johnson</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
-                    <Input id="date" type="date" defaultValue={format(new Date(), 'yyyy-MM-dd')} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantity (Liters)</Label>
-                    <Input id="quantity" type="number" step="0.1" placeholder="0.0" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cost">Cost</Label>
-                    <Input id="cost" type="number" step="0.01" placeholder="0.00" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="odometer">Odometer Reading</Label>
-                    <Input id="odometer" type="number" placeholder="0" />
-                  </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Record
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Fuel Record</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="vehicle">Vehicle *</Label>
+                  <Select value={formVehicle} onValueChange={setFormVehicle}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vehicle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vehicles.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>{v.plate_number}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="station">Fuel Station</Label>
-                  <Input id="station" placeholder="Station name" />
+                  <Label htmlFor="driver">Driver</Label>
+                  <Select value={formDriver || 'none'} onValueChange={(v) => setFormDriver(v === 'none' ? '' : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select driver" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Unassigned</SelectItem>
+                      {drivers.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>{d.first_name} {d.last_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="receipt">Receipt</Label>
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Receipt
-                  </Button>
-                </div>
-                <Button className="w-full">Save Record</Button>
               </div>
-            </DialogContent>
-          </Dialog>
-          <Button size="sm" variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date *</Label>
+                  <Input id="date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantity (Liters) *</Label>
+                  <Input id="quantity" type="number" step="0.1" placeholder="0.0" value={formQuantity} onChange={(e) => setFormQuantity(e.target.value)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cost">Cost *</Label>
+                  <Input id="cost" type="number" step="0.01" placeholder="0.00" value={formCost} onChange={(e) => setFormCost(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="odometer">Odometer Reading</Label>
+                  <Input id="odometer" type="number" placeholder="0" value={formOdometer} onChange={(e) => setFormOdometer(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="station">Fuel Station</Label>
+                <Input id="station" placeholder="Station name" value={formStation} onChange={(e) => setFormStation(e.target.value)} />
+              </div>
+              <Button className="w-full" onClick={handleSaveRecord} disabled={submitting}>
+                {submitting ? 'Saving…' : 'Save Record'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </PageHeader>
 
       <Card>
@@ -221,23 +248,23 @@ export default function FuelRecordsPage() {
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="w-auto"
               />
-              <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+              <Select value={selectedVehicle || 'all'} onValueChange={(v) => setSelectedVehicle(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Vehicle" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Vehicles</SelectItem>
+                  <SelectItem value="all">All Vehicles</SelectItem>
                   {vehicles.map((v) => (
                     <SelectItem key={v.id} value={v.id}>{v.plate_number}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+              <Select value={selectedDriver || 'all'} onValueChange={(v) => setSelectedDriver(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Driver" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Drivers</SelectItem>
+                  <SelectItem value="all">All Drivers</SelectItem>
                   {drivers.map((d) => (
                     <SelectItem key={d.id} value={d.id}>{d.first_name} {d.last_name}</SelectItem>
                   ))}
@@ -249,6 +276,8 @@ export default function FuelRecordsPage() {
           <DataTable
             columns={columns}
             data={formattedData}
+            loading={loading}
+            emptyTitle="No fuel records"
           />
         </CardContent>
       </Card>

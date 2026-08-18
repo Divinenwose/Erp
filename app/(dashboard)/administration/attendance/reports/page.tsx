@@ -100,12 +100,12 @@ export default function AttendanceReportsPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+            <Select value={selectedDepartment || 'all'} onValueChange={(v) => setSelectedDepartment(v === 'all' ? '' : v)}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Department" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Departments</SelectItem>
+                <SelectItem value="all">All Departments</SelectItem>
                 <SelectItem value="hr">HR</SelectItem>
                 <SelectItem value="finance">Finance</SelectItem>
                 <SelectItem value="it">IT</SelectItem>

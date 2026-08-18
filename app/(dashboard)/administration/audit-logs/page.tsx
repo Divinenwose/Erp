@@ -222,12 +222,12 @@ export default function AuditLogsPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Select value={selectedModule} onValueChange={setSelectedModule}>
+              <Select value={selectedModule || 'all'} onValueChange={(v) => setSelectedModule(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Module" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Modules</SelectItem>
+                  <SelectItem value="all">All Modules</SelectItem>
                   <SelectItem value="attendance">Attendance</SelectItem>
                   <SelectItem value="fuel">Fuel</SelectItem>
                   <SelectItem value="inspections">Inspections</SelectItem>
@@ -246,12 +246,12 @@ export default function AuditLogsPage() {
                   <SelectItem value="permissions">Permissions</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={selectedAction} onValueChange={setSelectedAction}>
+              <Select value={selectedAction || 'all'} onValueChange={(v) => setSelectedAction(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Action" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Actions</SelectItem>
+                  <SelectItem value="all">All Actions</SelectItem>
                   <SelectItem value="created">Created</SelectItem>
                   <SelectItem value="updated">Updated</SelectItem>
                   <SelectItem value="deleted">Deleted</SelectItem>

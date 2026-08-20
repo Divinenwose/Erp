@@ -11,6 +11,7 @@ const routePermissions: Record<string, string> = {
   '/dashboard': 'dashboard.view',
   '/hr': 'hr.view',
   '/hr/employees': 'hr.employees.view',
+  '/hr/employee-requests': 'hr.employee_requests.view',
   '/hr/recruitment': 'hr.recruitment.view',
   '/hr/leave': 'hr.leave.view',
   '/hr/attendance': 'hr.attendance.view',

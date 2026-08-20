@@ -372,3 +372,67 @@ export async function logSuppliesEvent(
     new_value: newData,
   });
 }
+
+// HR Module Audit Functions
+
+/**
+ * Log employee lifecycle request events (confirmation, promotion, transfer,
+ * status change)
+ */
+export async function logEmployeeRequestEvent(
+  companyId: string,
+  userId: string,
+  action: 'request_submitted' | 'request_approved' | 'request_rejected' | 'request_cancelled',
+  requestId?: string,
+  previousData?: Record<string, unknown>,
+  newData?: Record<string, unknown>
+) {
+  await logAuditEvent(companyId, userId, {
+    action,
+    module: 'hr_employee_requests',
+    entity_type: 'employee_request',
+    entity_id: requestId,
+    previous_value: previousData,
+    new_value: newData,
+  });
+}
+
+/**
+ * Log leave request events
+ */
+export async function logLeaveEvent(
+  companyId: string,
+  userId: string,
+  action: 'leave_submitted' | 'leave_approved' | 'leave_rejected' | 'leave_cancelled',
+  leaveRequestId?: string,
+  previousData?: Record<string, unknown>,
+  newData?: Record<string, unknown>
+) {
+  await logAuditEvent(companyId, userId, {
+    action,
+    module: 'hr_leave',
+    entity_type: 'leave_request',
+    entity_id: leaveRequestId,
+    previous_value: previousData,
+    new_value: newData,
+  });
+}
+
+/**
+ * Log employee personnel document events
+ */
+export async function logEmployeeDocumentEvent(
+  companyId: string,
+  userId: string,
+  action: 'document_uploaded' | 'document_deleted',
+  documentId?: string,
+  newData?: Record<string, unknown>
+) {
+  await logAuditEvent(companyId, userId, {
+    action,
+    module: 'hr_documents',
+    entity_type: 'employee_document',
+    entity_id: documentId,
+    new_value: newData,
+  });
+}

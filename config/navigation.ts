@@ -60,6 +60,7 @@ export const defaultNavigationConfig: NavItem[] = [
     children: [
       { title: 'Overview', href: '/hr', icon: LayoutDashboard, permission: 'hr.view' },
       { title: 'Employees', href: '/hr/employees', icon: Users, permission: 'hr.employees.view' },
+      { title: 'Employee Requests', href: '/hr/employee-requests', icon: UserPlus, permission: 'hr.employee_requests.view' },
       { title: 'Departments', href: '/hr/departments', icon: Layers, permission: 'hr.departments.view' },
       { title: 'Attendance', href: '/hr/attendance', icon: Activity, permission: 'hr.attendance.view' },
       { title: 'Leave', href: '/hr/leave', icon: Calendar, permission: 'hr.leave.view' },
@@ -434,6 +435,7 @@ export const navigationConfig: NavItem[] = [
     children: [
       { title: 'Overview', href: '/hr', icon: LayoutDashboard, permission: 'hr.view' },
       { title: 'Employees', href: '/hr/employees', icon: Users, permission: 'hr.employees.view' },
+      { title: 'Employee Requests', href: '/hr/employee-requests', icon: UserPlus, permission: 'hr.employee_requests.view' },
       { title: 'Departments', href: '/hr/departments', icon: Layers, permission: 'hr.departments.view' },
       { title: 'Attendance', href: '/hr/attendance', icon: Activity, permission: 'hr.attendance.view' },
       { title: 'Leave', href: '/hr/leave', icon: Calendar, permission: 'hr.leave.view' },

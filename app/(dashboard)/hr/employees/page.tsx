@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -39,7 +40,8 @@ const empSchema = z.object({
 type EmpForm = z.infer<typeof empSchema>;
 
 export default function EmployeesPage() {
-  const { company } = useAuth();
+  const { company, hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const canRequestActions = isSuperAdmin() || isCompanyAdmin() || hasPermission('hr.employee_requests.manage');
   const [employees, setEmployees] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,7 +110,7 @@ export default function EmployeesPage() {
     {
       key: 'name', header: 'Employee', sortable: true,
       cell: (row) => (
-        <div className="flex items-center gap-3">
+        <Link href={`/hr/employees/${row.id}`} className="flex items-center gap-3 hover:underline">
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold">
               {getInitials(`${row.first_name} ${row.last_name}`)}
@@ -118,7 +120,7 @@ export default function EmployeesPage() {
             <p className="font-medium text-gray-900 dark:text-white text-sm">{row.first_name} {row.last_name}</p>
             <p className="text-xs text-gray-400">{row.employee_number ?? '—'}</p>
           </div>
-        </div>
+        </Link>
       ),
     },
     { key: 'job_title', header: 'Job Title', sortable: true, cell: (row) => <span className="text-sm">{row.job_title ?? '—'}</span> },
@@ -135,7 +137,15 @@ export default function EmployeesPage() {
             <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild><Link href={`/hr/employees/${row.id}`}><Eye className="h-4 w-4 mr-2" />View Profile</Link></DropdownMenuItem>
             <DropdownMenuItem onClick={() => openEdit(row)}><Edit className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+            {canRequestActions && (
+              <>
+                <DropdownMenuItem asChild><Link href={`/hr/employee-requests?employee=${row.id}&type=confirmation`}>Start Confirmation</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href={`/hr/employee-requests?employee=${row.id}&type=promotion`}>Submit Promotion</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href={`/hr/employee-requests?employee=${row.id}&type=transfer`}>Submit Transfer</Link></DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuItem className="text-red-600" onClick={() => setDeleteId(row.id)}><Trash2 className="h-4 w-4 mr-2" />Terminate</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

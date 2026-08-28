@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { logAuditEvent } from '@/lib/audit';
-import { Can } from '@/components/rbac/PermissionGuard';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
@@ -344,7 +344,8 @@ export default function EquipmentPage() {
   const totalValue = equipment.reduce((sum, e) => sum + (e.purchase_cost || 0), 0);
 
   return (
-    <div className="space-y-6">
+    <PermissionGuard permission="assets.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view equipment</div>}>
+      <div className="space-y-6">
       <PageHeader
         title="Equipment"
         description="Manage office equipment and devices"
@@ -478,6 +479,7 @@ export default function EquipmentPage() {
         description="This will permanently delete the equipment record."
         confirmLabel="Delete"
       />
-    </div>
+      </div>
+    </PermissionGuard>
   );
 }

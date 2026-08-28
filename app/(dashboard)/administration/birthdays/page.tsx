@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/rbac/PermissionGuard';
+import { logAuditEvent } from '@/lib/audit';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,18 +12,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Cake, Gift, Bell, Search, Filter, Mail, Send } from 'lucide-react';
+import { Calendar, Cake, Gift, Bell, Search, Filter, Mail, Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isToday, isThisMonth, isThisWeek, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 
 export default function BirthdaysPage() {
-  const { company } = useAuth();
+  const { company, user } = useAuth();
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'MM'));
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [departments, setDepartments] = useState<any[]>([]);
+  const [sendingWish, setSendingWish] = useState<string | null>(null);
 
   const load = async () => {
     if (!company?.id) return;
@@ -44,9 +46,37 @@ export default function BirthdaysPage() {
 
   useEffect(() => { load(); }, [company?.id]);
 
-  const sendBirthdayWish = async (employeeId: string) => {
-    // This would integrate with email/notification system
-    toast.success('Birthday wish sent!');
+  const sendBirthdayWish = async (employeeId: string, employeeName: string) => {
+    if (!company?.id || !user?.id) return;
+    setSendingWish(employeeId);
+
+    try {
+      const { error: notificationError } = await supabase.from('notifications').insert({
+        company_id: company.id,
+        user_id: employeeId,
+        title: 'Happy Birthday!',
+        message: `Happy Birthday, ${employeeName}! Wishing you a wonderful day!`,
+        type: 'birthday',
+        read: false,
+      });
+
+      if (notificationError) throw notificationError;
+
+      await logAuditEvent(company.id, user.id, {
+        action: 'birthday_wish_sent',
+        module: 'birthdays',
+        entity_type: 'employees',
+        entity_id: employeeId,
+        new_value: { employee_name: employeeName },
+      });
+
+      toast.success(`Birthday wish sent to ${employeeName}`);
+    } catch (error) {
+      console.error('Error sending birthday wish:', error);
+      toast.error('Failed to send birthday wish');
+    } finally {
+      setSendingWish(null);
+    }
   };
 
   const getBirthdayStatus = (dob: string) => {
@@ -199,8 +229,14 @@ export default function BirthdaysPage() {
                       </Badge>
                       {status === 'today' && (
                         <PermissionGuard permission="birthdays.notify">
-                          <Button size="sm" variant="outline" className="h-8">
-                            <Send className="h-4 w-4 mr-2" />
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-8"
+                            onClick={() => sendBirthdayWish(emp.id, `${emp.first_name} ${emp.last_name}`)}
+                            disabled={sendingWish === emp.id}
+                          >
+                            {sendingWish === emp.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
                             Send Wish
                           </Button>
                         </PermissionGuard>

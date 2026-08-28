@@ -7,6 +7,7 @@ import PageHeader from '@/components/common/PageHeader';
 import DataTable from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -144,7 +145,8 @@ export default function FuelRecordsPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <PermissionGuard permission="fuel.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view fuel records</div>}>
+      <div className="space-y-6">
       <PageHeader
         title="Fuel Records"
         description="Manage vehicle fuel consumption records"
@@ -281,6 +283,7 @@ export default function FuelRecordsPage() {
           />
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </PermissionGuard>
   );
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { logAuditEvent } from '@/lib/audit';
-import { Can } from '@/components/rbac/PermissionGuard';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
@@ -409,6 +409,7 @@ export default function OfficeRelocationPage() {
         description="This will permanently delete the relocation record."
         confirmLabel="Delete"
       />
-    </div>
+      </div>
+    </PermissionGuard>
   );
 }

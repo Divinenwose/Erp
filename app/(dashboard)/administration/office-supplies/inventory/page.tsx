@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { logAuditEvent } from '@/lib/audit';
-import { Can } from '@/components/rbac/PermissionGuard';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
@@ -335,7 +335,8 @@ export default function InventoryPage() {
   const totalValue = inventory.reduce((sum, i) => sum + (i.quantity * (i.unit_cost || 0)), 0);
 
   return (
-    <div className="space-y-6">
+    <PermissionGuard permission="office_supplies.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view office supplies inventory</div>}>
+      <div className="space-y-6">
       <PageHeader
         title="Office Supplies Inventory"
         description="Manage office supplies and stock levels"
@@ -460,7 +461,8 @@ export default function InventoryPage() {
         title="Delete Inventory Item?"
         description="This will permanently delete the inventory item."
         confirmLabel="Delete"
-      />
+        />>
+    </PermissionGuard
     </div>
   );
 }

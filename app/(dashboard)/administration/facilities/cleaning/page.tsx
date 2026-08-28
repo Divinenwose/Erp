@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { logAuditEvent } from '@/lib/audit';
-import { Can } from '@/components/rbac/PermissionGuard';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
@@ -298,7 +298,8 @@ export default function CleaningSchedulePage() {
   const completed = schedules.filter(s => s.status === 'completed').length;
 
   return (
-    <div className="space-y-6">
+    <PermissionGuard permission="facilities.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view cleaning schedules</div>}>
+      <div className="space-y-6">
       <PageHeader
         title="Cleaning Schedule"
         description="Manage facility cleaning schedules"
@@ -407,6 +408,7 @@ export default function CleaningSchedulePage() {
         description="This will permanently delete the cleaning schedule."
         confirmLabel="Delete"
       />
-    </div>
+      </div>
+    </PermissionGuard>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import PageHeader from '@/components/common/PageHeader';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import DataTable from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -167,7 +167,8 @@ export default function CleanlinessInspectionPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <PermissionGuard permission="inspections.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view cleanliness inspections</div>}>
+      <div className="space-y-6">
       <PageHeader
         title="Office Cleanliness Inspection"
         description="Inspect and monitor office cleanliness standards"
@@ -279,6 +280,7 @@ export default function CleanlinessInspectionPage() {
           />
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </PermissionGuard>
   );
 }

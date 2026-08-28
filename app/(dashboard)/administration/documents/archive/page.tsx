@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { logAuditEvent } from '@/lib/audit';
-import { Can } from '@/components/rbac/PermissionGuard';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
@@ -328,7 +328,8 @@ export default function ArchivePage() {
   const restored = archives.filter(a => a.status === 'restored').length;
 
   return (
-    <div className="space-y-6">
+    <PermissionGuard permission="documents.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view document archive</div>}>
+      <div className="space-y-6">
       <PageHeader
         title="Document Archive"
         description="Manage archived documents and records"
@@ -450,6 +451,7 @@ export default function ArchivePage() {
         description="This will permanently delete the archive record."
         confirmLabel="Delete"
       />
-    </div>
+      </div>
+    </PermissionGuard>
   );
 }

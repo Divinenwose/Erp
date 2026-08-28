@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { logAuditEvent } from '@/lib/audit';
-import { Can } from '@/components/rbac/PermissionGuard';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
@@ -327,7 +327,8 @@ export default function LettersPage() {
   const archived = letters.filter(l => l.status === 'archived').length;
 
   return (
-    <div className="space-y-6">
+    <PermissionGuard permission="documents.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view letters</div>}>
+      <div className="space-y-6">
       <PageHeader
         title="Letters"
         description="Manage official and informal letters"
@@ -444,6 +445,7 @@ export default function LettersPage() {
         description="This will permanently delete the letter."
         confirmLabel="Delete"
       />
-    </div>
+      </div>
+    </PermissionGuard>
   );
 }

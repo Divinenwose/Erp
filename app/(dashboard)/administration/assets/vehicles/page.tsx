@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { logAuditEvent } from '@/lib/audit';
-import { Can } from '@/components/rbac/PermissionGuard';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
@@ -345,7 +345,8 @@ export default function VehiclesPage() {
   const totalValue = vehicles.reduce((sum, v) => sum + (v.purchase_cost || 0), 0);
 
   return (
-    <div className="space-y-6">
+    <PermissionGuard permission="assets.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view vehicles</div>}>
+      <div className="space-y-6">
       <PageHeader
         title="Vehicles"
         description="Manage company vehicles and fleet"
@@ -495,6 +496,7 @@ export default function VehiclesPage() {
         description="This will permanently delete the vehicle record."
         confirmLabel="Delete"
       />
-    </div>
+      </div>
+    </PermissionGuard>
   );
 }

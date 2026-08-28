@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { PermissionGuard } from '@/components/rbac/PermissionGuard';
+import { logAuditEvent } from '@/lib/audit';
 import PageHeader from '@/components/common/PageHeader';
 import DataTable from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,12 +14,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { KPICard } from '@/components/common/KPICard';
 import { Search, BadgeCheck, AlertTriangle, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function IDCompliancePage() {
-  const { company } = useAuth();
+  const { company, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
@@ -68,7 +71,7 @@ export default function IDCompliancePage() {
   };
 
   const handleIssueCard = async () => {
-    if (!company?.id) return;
+    if (!company?.id || !user?.id) return;
     if (!selectedEmployee || !idNumber.trim() || !issueDate) {
       toast.error('Employee, ID number, and issue date are required');
       return;
@@ -83,21 +86,30 @@ export default function IDCompliancePage() {
       expiry_date: expiryDate || null,
       status: 'active',
     });
-    setSubmitting(false);
 
     if (error) {
       toast.error(error.message.includes('duplicate') ? 'That ID number is already in use' : 'Failed to issue ID card');
+      setSubmitting(false);
       return;
     }
+
+    await logAuditEvent(company.id, user.id, {
+      action: 'id_card_issued',
+      module: 'attendance',
+      entity_type: 'id_card_compliance',
+      new_value: { employee_id: selectedEmployee, id_number: idNumber.trim() },
+    });
 
     toast.success('ID card issued');
     setSelectedEmployee(''); setIdNumber(''); setExpiryDate('');
     setIssueDate(format(new Date(), 'yyyy-MM-dd'));
     setDialogOpen(false);
+    setSubmitting(false);
     loadData();
   };
 
   const markReplacement = async (record: any) => {
+    if (!company?.id || !user?.id) return;
     const { error } = await supabase
       .from('id_card_compliance')
       .update({ status: 'replacement_pending' })
@@ -107,6 +119,16 @@ export default function IDCompliancePage() {
       toast.error('Failed to update status');
       return;
     }
+
+    await logAuditEvent(company.id, user.id, {
+      action: 'id_card_marked_replacement',
+      module: 'attendance',
+      entity_type: 'id_card_compliance',
+      entity_id: record.id,
+      old_value: { status: record.status },
+      new_value: { status: 'replacement_pending' },
+    });
+
     toast.success('Marked for replacement');
     loadData();
   };
@@ -154,176 +176,158 @@ export default function IDCompliancePage() {
     expiryDate: item.expiry_date ? format(new Date(item.expiry_date), 'MMM dd, yyyy') : '-',
     status: getStatusBadge(effectiveStatus(item)),
     actions: (
-      <div className="flex gap-2">
-        {effectiveStatus(item) !== 'active' && item.status !== 'replacement_pending' && (
-          <Button size="sm" variant="outline" className="h-8" onClick={() => markReplacement(item)}>
-            Replace
-          </Button>
-        )}
-      </div>
+      <PermissionGuard permission="attendance.edit">
+        <div className="flex gap-2">
+          {effectiveStatus(item) !== 'active' && item.status !== 'replacement_pending' && (
+            <Button size="sm" variant="outline" className="h-8" onClick={() => markReplacement(item)}>
+              Replace
+            </Button>
+          )}
+        </div>
+      </PermissionGuard>
     ),
   }));
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="ID Card Compliance"
-        description="Manage employee ID cards and compliance"
-        breadcrumbs={[
-          { label: 'Administration', href: '/administration' },
-          { label: 'Attendance', href: '/administration/attendance' },
-          { label: 'ID Compliance' },
-        ]}
-      >
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Issue ID Card
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Issue New ID Card</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="employee">Employee *</Label>
-                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select employee" />
+    <PermissionGuard permission="attendance.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view ID compliance</div>}>
+      <div className="space-y-6">
+        <PageHeader
+          title="ID Card Compliance"
+          description="Manage employee ID cards and compliance"
+          breadcrumbs={[
+            { label: 'Administration', href: '/administration' },
+            { label: 'Attendance', href: '/administration/attendance' },
+            { label: 'ID Compliance' },
+          ]}
+        >
+          <PermissionGuard permission="attendance.edit">
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Issue ID Card
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Issue New ID Card</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="employee">Employee *</Label>
+                    <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select employee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {profiles.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="idNumber">ID Number *</Label>
+                    <Input id="idNumber" placeholder="ID-2024-XXX" value={idNumber} onChange={(e) => setIdNumber(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="issueDate">Issue Date *</Label>
+                    <Input id="issueDate" type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="expiryDate">Expiry Date</Label>
+                    <Input id="expiryDate" type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+                  </div>
+                  <Button className="w-full" onClick={handleIssueCard} disabled={submitting}>
+                    {submitting ? 'Issuing…' : 'Issue ID Card'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </PermissionGuard>
+        </PageHeader>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <KPICard
+            title="Active IDs"
+            value={activeCount}
+            icon={<BadgeCheck className="h-4 w-4 text-emerald-600" />}
+            iconBg="bg-emerald-50 dark:bg-emerald-950/50"
+            loading={loading}
+          />
+          <KPICard
+            title="Expired IDs"
+            value={expiredCount}
+            icon={<AlertTriangle className="h-4 w-4 text-red-600" />}
+            iconBg="bg-red-50 dark:bg-red-950/50"
+            loading={loading}
+          />
+          <KPICard
+            title="Lost IDs"
+            value={lostCount}
+            icon={<AlertTriangle className="h-4 w-4 text-amber-600" />}
+            iconBg="bg-amber-50 dark:bg-amber-950/50"
+            loading={loading}
+          />
+          <KPICard
+            title="Compliance Rate"
+            value={`${complianceRate}%`}
+            icon={<BadgeCheck className="h-4 w-4 text-blue-600" />}
+            iconBg="bg-blue-50 dark:bg-blue-950/50"
+            loading={loading}
+          />
+        </div>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search employees..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Select value={selectedDepartment || 'all'} onValueChange={(v) => setSelectedDepartment(v === 'all' ? '' : v)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {profiles.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {departments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <Select value={selectedStatus || 'all'} onValueChange={(v) => setSelectedStatus(v === 'all' ? '' : v)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                    <SelectItem value="lost">Lost</SelectItem>
+                    <SelectItem value="replacement_pending">Replacement Pending</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="idNumber">ID Number *</Label>
-                <Input id="idNumber" placeholder="ID-2024-XXX" value={idNumber} onChange={(e) => setIdNumber(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="issueDate">Issue Date *</Label>
-                <Input id="issueDate" type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="expiryDate">Expiry Date</Label>
-                <Input id="expiryDate" type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
-              </div>
-              <Button className="w-full" onClick={handleIssueCard} disabled={submitting}>
-                {submitting ? 'Issuing…' : 'Issue ID Card'}
-              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </PageHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
-                <BadgeCheck className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Active IDs</p>
-                <p className="text-2xl font-bold">{loading ? '—' : activeCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-50 dark:bg-red-950/30 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Expired IDs</p>
-                <p className="text-2xl font-bold">{loading ? '—' : expiredCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Lost IDs</p>
-                <p className="text-2xl font-bold">{loading ? '—' : lostCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                <BadgeCheck className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Compliance Rate</p>
-                <p className="text-2xl font-bold">{loading ? '—' : `${complianceRate}%`}</p>
-              </div>
-            </div>
+            <DataTable
+              columns={columns}
+              data={formattedData}
+              loading={loading}
+              emptyTitle="No ID card records"
+            />
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search employees..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Select value={selectedDepartment || 'all'} onValueChange={(v) => setSelectedDepartment(v === 'all' ? '' : v)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {departments.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedStatus || 'all'} onValueChange={(v) => setSelectedStatus(v === 'all' ? '' : v)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
-                  <SelectItem value="lost">Lost</SelectItem>
-                  <SelectItem value="replacement_pending">Replacement Pending</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DataTable
-            columns={columns}
-            data={formattedData}
-            loading={loading}
-            emptyTitle="No ID card records"
-          />
-        </CardContent>
-      </Card>
-    </div>
+    </PermissionGuard>
   );
 }

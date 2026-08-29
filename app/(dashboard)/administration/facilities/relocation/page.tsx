@@ -410,6 +410,5 @@ export default function OfficeRelocationPage() {
         confirmLabel="Delete"
       />
       </div>
-    </PermissionGuard>
   );
 }

@@ -185,7 +185,7 @@ export default function DriverLicensesPage() {
       id: item.id,
       driver: item.employees ? `${item.employees.first_name} ${item.employees.last_name}` : '-',
       licenseNumber: item.license_number || '-',
-      licenseType: item.license_type?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-',
+      licenseType: item.license_type?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || '-',
       issueDate: item.issue_date ? format(new Date(item.issue_date), 'MMM dd, yyyy') : '-',
       expiryDate: item.expiry_date ? format(new Date(item.expiry_date), 'MMM dd, yyyy') : '-',
       daysRemaining: days < 0 ? `Expired ${Math.abs(days)} days ago` : `${days} days`,

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { KPICard } from '@/components/common/KPICard';
+import KPICard from '@/components/common/KPICard';
 import { Search, Download, AlertTriangle, Calendar, UserX, Loader2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { toast } from 'sonner';

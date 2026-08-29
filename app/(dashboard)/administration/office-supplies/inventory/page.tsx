@@ -461,8 +461,8 @@ export default function InventoryPage() {
         title="Delete Inventory Item?"
         description="This will permanently delete the inventory item."
         confirmLabel="Delete"
-        />>
-    </PermissionGuard
-    </div>
+      />
+      </div>
+    </PermissionGuard>
   );
 }

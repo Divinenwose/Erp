@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { KPICard } from '@/components/common/KPICard';
+import KPICard from '@/components/common/KPICard';
 import { Search, BadgeCheck, AlertTriangle, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -125,7 +125,7 @@ export default function IDCompliancePage() {
       module: 'attendance',
       entity_type: 'id_card_compliance',
       entity_id: record.id,
-      old_value: { status: record.status },
+      previous_value: { status: record.status },
       new_value: { status: 'replacement_pending' },
     });
 

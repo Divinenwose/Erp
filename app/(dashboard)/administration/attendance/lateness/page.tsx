@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { KPICard } from '@/components/common/KPICard';
+import KPICard from '@/components/common/KPICard';
 import { Search, Download, AlertTriangle, Calendar, TrendingUp, Loader2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { toast } from 'sonner';
@@ -123,12 +123,12 @@ export default function LatenessPage() {
     : 0;
   
   // Count repeat offenders (employees with 3+ late arrivals this month)
-  const lateByEmployee = attendanceData.reduce((acc, r) => {
+  const lateByEmployee = attendanceData.reduce<Record<string, number>>((acc, r) => {
     const empId = r.employee_id;
     acc[empId] = (acc[empId] || 0) + 1;
     return acc;
-  }, {} as Record<string, number>);
-  const repeatOffenders = Object.values(lateByEmployee).filter(count => count >= 3).length;
+  }, {});
+  const repeatOffenders = Object.values(lateByEmployee).filter((count: number) => count >= 3).length;
   
   // Calculate improvement (compare with previous month - simplified for now)
   const improvement = -12; // This would be calculated from historical data

@@ -454,8 +454,8 @@ export default function CourierRegisterPage() {
         title="Delete Courier Record?"
         description="This will permanently delete the courier record."
         confirmLabel="Delete"
-        />>
-    </PermissionGuard
-    </div>
+      />
+      </div>
+    </PermissionGuard>
   );
 }

@@ -80,6 +80,33 @@ export default function AdministrationReportsPage() {
       iconColor: 'text-indigo-600',
       href: '/administration/reports/purchases',
     },
+    {
+      id: 'vendors',
+      title: 'Vendor Performance',
+      description: 'Vendor ratings, reliability, and spend',
+      icon: Users,
+      color: 'bg-orange-50 dark:bg-orange-950/30',
+      iconColor: 'text-orange-600',
+      href: '/administration/reports/vendors',
+    },
+    {
+      id: 'wpi',
+      title: 'Weekly Performance Indicator (WPI)',
+      description: 'KPI targets vs achieved, with weekly trend charts',
+      icon: TrendingUp,
+      color: 'bg-teal-50 dark:bg-teal-950/30',
+      iconColor: 'text-teal-600',
+      href: '/administration/reports/wpi',
+    },
+    {
+      id: 'tgif',
+      title: 'TGIF Management Report',
+      description: 'Weekly summary across attendance, purchases, maintenance, and more',
+      icon: Briefcase,
+      color: 'bg-rose-50 dark:bg-rose-950/30',
+      iconColor: 'text-rose-600',
+      href: '/administration/reports/tgif',
+    },
   ];
 
   useEffect(() => {
@@ -182,20 +209,20 @@ export default function AdministrationReportsPage() {
     if (!company?.id) return;
     const { data } = await supabase
       .from('purchase_requests')
-      .select('*, profiles(first_name, last_name), departments(name)')
+      .select('*, employees:requested_by(first_name, last_name), departments(name)')
       .eq('company_id', company.id)
       .gte('created_at', `${selectedMonth}-01`)
       .lte('created_at', `${selectedMonth}-31`);
 
-    const headers = ['Request #', 'Title', 'Requester', 'Department', 'Amount', 'Status', 'Requested Date'];
+    const headers = ['Request #', 'Title', 'Requester', 'Department', 'Amount', 'Status', 'Required Date'];
     const rows = (data || []).map(r => [
       r.request_number || '',
       r.title,
-      r.profiles ? `${r.profiles.first_name} ${r.profiles.last_name}` : '',
+      r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : '',
       r.departments?.name || '',
       r.estimated_cost || '',
       r.status,
-      r.requested_date || '',
+      r.required_date || '',
     ]);
 
     const csvContent = [

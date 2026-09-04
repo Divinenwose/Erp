@@ -277,7 +277,7 @@ export const defaultNavigationConfig: NavItem[] = [
         ]
       },
       { 
-        title: 'Reports', 
+        title: 'Admin Reports', 
         icon: BarChart3,
         permission: 'admin_reports.view',
         children: [
@@ -689,7 +689,7 @@ export const navigationConfig: NavItem[] = [
         ]
       },
       { 
-        title: 'Reports', 
+        title: 'Admin Reports', 
         icon: BarChart3,
         permission: 'admin_reports.view',
         children: [

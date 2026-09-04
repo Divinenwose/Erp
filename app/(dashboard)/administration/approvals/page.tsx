@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
+import { PermissionGuard } from '@/components/rbac/PermissionGuard';
 import DataTable from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -205,6 +206,7 @@ export default function ApprovalsPage() {
   }));
 
   return (
+    <PermissionGuard permission="approvals.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view approvals</div>}>
     <div className="space-y-6">
       <PageHeader
         title="My Approvals"
@@ -366,5 +368,6 @@ export default function ApprovalsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </PermissionGuard>
   );
 }

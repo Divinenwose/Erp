@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
+import { PermissionGuard } from '@/components/rbac/PermissionGuard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -108,6 +109,7 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
+    <PermissionGuard permission="notifications.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view notifications</div>}>
     <div className="space-y-6">
       <PageHeader
         title="Notification Center"
@@ -239,5 +241,6 @@ export default function NotificationsPage() {
         </CardContent>
       </Card>
     </div>
+    </PermissionGuard>
   );
 }

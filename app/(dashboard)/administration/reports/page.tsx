@@ -244,7 +244,7 @@ export default function AdministrationReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PermissionGuard permission="reports.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view reports</div>}>
+      <PermissionGuard permission="admin_reports.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view reports</div>}>
         <PageHeader
           title="Administration Reports"
           description="Generate and view administrative reports"
@@ -271,7 +271,7 @@ export default function AdministrationReportsPage() {
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="w-auto"
             />
-            <PermissionGuard permission="reports.export">
+            <PermissionGuard permission="admin_reports.view">
               <Button size="sm" variant="outline" onClick={handlePrint}>
                 <Printer className="h-4 w-4 mr-2" />
                 Print

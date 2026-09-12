@@ -95,7 +95,18 @@ export default function AssetsPage() {
 
   const onSubmit = async (data: AssetForm) => {
     if (!company?.id) return;
-    const num = `AST-${String(assets.length + 1).padStart(4, '0')}`;
+    // Generate asset number from database to avoid conflicts
+    const { data: maxAsset } = await supabase
+      .from('assets')
+      .select('asset_number')
+      .eq('company_id', company.id)
+      .order('asset_number', { ascending: false })
+      .limit(1)
+      .single();
+    
+    const lastNum = maxAsset?.asset_number ? parseInt(maxAsset.asset_number.replace('AST-', '')) : 0;
+    const num = `AST-${String(lastNum + 1).padStart(4, '0')}`;
+    
     const { error } = await supabase.from('assets').insert({ ...data, company_id: company.id, asset_number: num, status: 'active', current_value: data.purchase_price });
     if (error) { toast.error('Failed to register asset'); return; }
     toast.success('Asset registered');

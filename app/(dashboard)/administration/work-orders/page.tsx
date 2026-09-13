@@ -102,7 +102,7 @@ export default function WorkOrdersPage() {
         }
       } else {
         const woNumber = `WO-${format(new Date(), 'yyyy')}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
-        const result = await supabase.from('work_orders').insert({ ...payload, wo_number, status: 'open' });
+        const result = await supabase.from('work_orders').insert({ ...payload, wo_number: woNumber, status: 'open' });
         error = result.error;
         if (!error) {
           await logAuditEvent(company.id, user.id, {

@@ -116,7 +116,7 @@ export default function FleetPage() {
       setStatus('available');
       setEditVehicle(null);
       setDialogOpen(false);
-      loadVehicles();
+      await loadVehicles();
     } catch (error) {
       console.error('Error saving vehicle:', error);
       toast.error('Failed to save vehicle');
@@ -150,7 +150,7 @@ export default function FleetPage() {
       });
       toast.success('Vehicle deleted');
       setDeleteId(null);
-      loadVehicles();
+      await loadVehicles();
     } catch (error) {
       console.error('Error deleting vehicle:', error);
       toast.error('Failed to delete vehicle');
@@ -179,7 +179,7 @@ export default function FleetPage() {
       });
 
       toast.success('Status updated');
-      loadVehicles();
+      await loadVehicles();
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
@@ -192,17 +192,17 @@ export default function FleetPage() {
   const maintenanceCount = vehicles.filter(v => v.status === 'maintenance').length;
 
   return (
-    <PermissionGuard permission="fleet.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view fleet</div>}>
+    <PermissionGuard permission="assets.vehicles.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view fleet</div>}>
       <div className="space-y-6">
         <PageHeader
           title="Fleet Management"
           description="Track and manage company vehicles"
           breadcrumbs={[{ label: 'Administration' }, { label: 'Fleet' }]}
         >
-          <PermissionGuard permission="fleet.export">
+          <PermissionGuard permission="assets.vehicles.view">
             <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" />Export</Button>
           </PermissionGuard>
-          <PermissionGuard permission="fleet.create">
+          <PermissionGuard permission="assets.vehicles.create">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Add Vehicle</Button>
@@ -347,7 +347,7 @@ export default function FleetPage() {
                         <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
                         <td className="px-4 py-3">
                           <div className="flex gap-2">
-                            <PermissionGuard permission="fleet.edit">
+                            <PermissionGuard permission="assets.vehicles.edit">
                               <Select value={row.status} onValueChange={(v) => updateVehicleStatus(row.id, v)}>
                                 <SelectTrigger className="w-32 h-8">
                                   <SelectValue />

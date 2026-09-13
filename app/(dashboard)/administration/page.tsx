@@ -101,7 +101,6 @@ export default function AdministrationOverviewPage() {
         canPurchaseRequests ? supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending') : Promise.resolve({ count: null } as any),
         canMeetings ? supabase.from('meetings').select('id', { count: 'exact', head: true }).eq('company_id', id).gte('date', today).lte('date', format(new Date(Date.now() + 7 * 86400000), 'yyyy-MM-dd')) : Promise.resolve({ count: null } as any),
         canBirthdays ? supabase.from('employees').select('date_of_birth').eq('company_id', id).not('date_of_birth', 'is', null) : Promise.resolve({ data: null } as any),
-        canNotifications && user?.id ? supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('user_id', user.id).eq('is_read', false) : Promise.resolve({ count: null } as any),
         canNotifications && user?.id ? supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('user_id', user.id).eq('read', false) : Promise.resolve({ count: null } as any),
         canApprovals ? supabase.from('request_approvals').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending') : Promise.resolve({ count: null } as any),
       ]);

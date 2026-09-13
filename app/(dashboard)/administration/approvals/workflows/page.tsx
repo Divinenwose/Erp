@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { PermissionGuard } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
 import DataTable from '@/components/common/DataTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,23 +57,36 @@ export default function ApprovalWorkflowsPage() {
 
   const loadWorkflows = async () => {
     if (!company?.id) return;
-    const { data } = await supabase
+    setLoading(true);
+    const { data, error } = await supabase
       .from('approval_workflows')
       .select('*')
       .eq('company_id', company.id)
       .order('created_at', { ascending: false });
-    setWorkflows(data || []);
+    if (error) {
+      console.error('Error loading approval workflows:', error);
+      toast.error('Failed to load approval workflows');
+      setWorkflows([]);
+    } else {
+      setWorkflows(data || []);
+    }
     setLoading(false);
   };
 
   const loadStages = async () => {
     if (!company?.id) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('approval_stages')
       .select('*')
       .eq('company_id', company.id)
       .order('stage_order', { ascending: true });
-    setStages(data || []);
+    if (error) {
+      console.error('Error loading approval stages:', error);
+      toast.error('Failed to load approval stages');
+      setStages([]);
+    } else {
+      setStages(data || []);
+    }
   };
 
   const createWorkflow = async () => {
@@ -97,7 +111,7 @@ export default function ApprovalWorkflowsPage() {
     setWorkflowName('');
     setRequestType('purchase_request');
     setIsDialogOpen(false);
-    loadWorkflows();
+    await loadWorkflows();
   };
 
   const createStage = async () => {
@@ -135,7 +149,7 @@ export default function ApprovalWorkflowsPage() {
     setRequiresAll(false);
     setIsFinal(false);
     setIsStageDialogOpen(false);
-    loadStages();
+    await loadStages();
   };
 
   const deleteWorkflow = async (id: string) => {
@@ -191,6 +205,7 @@ export default function ApprovalWorkflowsPage() {
   }));
 
   return (
+    <PermissionGuard permission="approvals.workflows.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view approval workflows</div>}>
     <div className="space-y-6">
       <PageHeader
         title="Approval Workflows"
@@ -344,5 +359,6 @@ export default function ApprovalWorkflowsPage() {
         </Card>
       </div>
     </div>
+    </PermissionGuard>
   );
 }

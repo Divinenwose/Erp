@@ -297,7 +297,7 @@ export default function DriversListPage() {
 
       <ConfirmDialog
         open={deleteId !== null}
-        onOpenChange={() => setDeleteId(null)}
+        onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
         title="Delete Driver"
         description="Are you sure you want to delete this driver? This action cannot be undone."

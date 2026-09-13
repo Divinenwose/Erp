@@ -277,7 +277,7 @@ export default function FuelRecordsPage() {
 
       <ConfirmDialog
         open={deleteId !== null}
-        onOpenChange={() => setDeleteId(null)}
+        onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
         title="Delete Fuel Record"
         description="Are you sure you want to delete this fuel record? This action cannot be undone."

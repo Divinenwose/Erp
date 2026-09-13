@@ -302,7 +302,7 @@ export default function FleetPage() {
 
         <ConfirmDialog
           open={deleteId !== null}
-          onOpenChange={() => setDeleteId(null)}
+          onClose={() => setDeleteId(null)}
           onConfirm={handleDelete}
           title="Delete Vehicle"
           description="Are you sure you want to delete this vehicle? This action cannot be undone."

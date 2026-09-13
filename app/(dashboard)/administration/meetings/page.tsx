@@ -285,7 +285,7 @@ export default function MeetingsPage() {
 
         <ConfirmDialog
           open={deleteId !== null}
-          onOpenChange={() => setDeleteId(null)}
+          onClose={() => setDeleteId(null)}
           onConfirm={handleDelete}
           title="Delete Meeting"
           description="Are you sure you want to delete this meeting? This action cannot be undone."

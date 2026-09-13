@@ -49,7 +49,7 @@ export default function FuelRecordsPage() {
     { key: 'cost', header: 'Cost' },
     { key: 'odometer', header: 'Odometer' },
     { key: 'station', header: 'Station' },
-    { key: 'actions', header: 'Actions' },
+    { key: 'actions', header: 'Actions', cell: (row: any) => row.actions },
   ];
 
   useEffect(() => {

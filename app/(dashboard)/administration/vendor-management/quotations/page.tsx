@@ -45,7 +45,7 @@ export default function VendorQuotationsPage() {
     { key: 'amount', header: 'Amount' },
     { key: 'validUntil', header: 'Valid Until' },
     { key: 'status', header: 'Status' },
-    { key: 'actions', header: 'Actions' },
+    { key: 'actions', header: 'Actions', cell: (row: any) => row.actions },
   ];
 
   useEffect(() => {

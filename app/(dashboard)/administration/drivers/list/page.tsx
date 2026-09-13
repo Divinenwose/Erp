@@ -43,7 +43,7 @@ export default function DriversListPage() {
     { key: 'licenseExpiry', header: 'License Expiry' },
     { key: 'assignedVehicle', header: 'Assigned Vehicle' },
     { key: 'status', header: 'Status' },
-    { key: 'actions', header: 'Actions' },
+    { key: 'actions', header: 'Actions', cell: (row: any) => row.actions },
   ];
 
   useEffect(() => {

@@ -62,7 +62,7 @@ export default function AssetMaintenancePage() {
     const [maintRes, furnRes, eqRes, vehRes, userRes] = await Promise.all([
       supabase
         .from('asset_maintenance')
-        .select('*, performed_by_profile(first_name, last_name)')
+        .select('*, performed_by_profile:profiles!asset_maintenance_performed_by_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('scheduled_date', { ascending: false }),
       supabase.from('furniture').select('*').eq('company_id', company.id),

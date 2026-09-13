@@ -59,7 +59,7 @@ export default function CompanyPoliciesPage() {
     const [polRes, branchRes, userRes] = await Promise.all([
       supabase
         .from('company_policies')
-        .select('*, branches(name), approved_by_profile(first_name, last_name)')
+        .select('*, branches(name), approved_by_profile:profiles!company_policies_approved_by_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('effective_date', { ascending: false }),
       supabase.from('branches').select('*').eq('company_id', company.id),

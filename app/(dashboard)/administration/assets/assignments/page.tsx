@@ -57,7 +57,7 @@ export default function AssetAssignmentsPage() {
     const [assignRes, furnRes, eqRes, vehRes, userRes] = await Promise.all([
       supabase
         .from('asset_assignments')
-        .select('*, assigned_to_profile(first_name, last_name)')
+        .select('*, assigned_to_profile:profiles!asset_assignments_assigned_to_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('assigned_at', { ascending: false }),
       supabase.from('furniture').select('*').eq('company_id', company.id),

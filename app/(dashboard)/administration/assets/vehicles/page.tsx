@@ -64,7 +64,7 @@ export default function VehiclesPage() {
     const [vehRes, branchRes, userRes] = await Promise.all([
       supabase
         .from('vehicles')
-        .select('*, branches(name), assigned_to_profile(first_name, last_name)')
+        .select('*, branches(name), assigned_to_profile:profiles!vehicles_assigned_to_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('vehicle_number'),
       supabase.from('branches').select('*').eq('company_id', company.id),

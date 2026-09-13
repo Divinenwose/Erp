@@ -60,7 +60,7 @@ export default function RequestsPage() {
     const [reqRes, branchRes, userRes] = await Promise.all([
       supabase
         .from('office_supplies_requests')
-        .select('*, branches(name), requested_by_profile(first_name, last_name), approved_by_profile(first_name, last_name)')
+        .select('*, branches(name), requested_by_profile:profiles!supply_requests_requested_by_fkey(first_name, last_name), approved_by_profile:profiles!supply_requests_approved_by_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('requested_date', { ascending: false }),
       supabase.from('branches').select('*').eq('company_id', company.id),

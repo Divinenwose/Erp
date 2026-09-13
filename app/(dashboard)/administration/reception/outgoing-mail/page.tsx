@@ -59,7 +59,7 @@ export default function OutgoingMailPage() {
     const [mailRes, branchRes, userRes] = await Promise.all([
       supabase
         .from('outgoing_mail')
-        .select('*, branches(name), sender_profile(first_name, last_name), sent_by_profile(first_name, last_name)')
+        .select('*, branches(name), sender_profile:profiles!outgoing_mail_sender_id_fkey(first_name, last_name), sent_by_profile:profiles!outgoing_mail_sent_by_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('sent_date', { ascending: false }),
       supabase.from('branches').select('*').eq('company_id', company.id),

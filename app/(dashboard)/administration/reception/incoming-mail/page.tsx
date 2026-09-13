@@ -59,7 +59,7 @@ export default function IncomingMailPage() {
     const [mailRes, branchRes, userRes] = await Promise.all([
       supabase
         .from('incoming_mail')
-        .select('*, branches(name), recipient_profile(first_name, last_name), received_by_profile(first_name, last_name)')
+        .select('*, branches(name), recipient_profile:profiles!incoming_mail_recipient_id_fkey(first_name, last_name), received_by_profile:profiles!incoming_mail_received_by_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('received_date', { ascending: false }),
       supabase.from('branches').select('*').eq('company_id', company.id),

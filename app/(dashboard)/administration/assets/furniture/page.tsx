@@ -61,7 +61,7 @@ export default function FurniturePage() {
     const [furnRes, branchRes, userRes] = await Promise.all([
       supabase
         .from('furniture')
-        .select('*, branches(name), assigned_to_profile(first_name, last_name)')
+        .select('*, branches(name), assigned_to_profile:profiles!furniture_assigned_to_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('name'),
       supabase.from('branches').select('*').eq('company_id', company.id),

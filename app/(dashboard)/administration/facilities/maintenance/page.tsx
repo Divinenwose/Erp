@@ -57,13 +57,17 @@ export default function MaintenanceRequestsPage() {
     const [reqRes, branchRes, userRes] = await Promise.all([
       supabase
         .from('maintenance_requests')
-        .select('*, branches(name), requested_by_profile(first_name, last_name), assigned_to_profile(first_name, last_name)')
+        .select('*, branches(name), requested_by_profile:profiles!maintenance_requests_requested_by_fkey(first_name, last_name), assigned_to_profile:profiles!maintenance_requests_assigned_to_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('requested_at', { ascending: false }),
       supabase.from('branches').select('*').eq('company_id', company.id),
       supabase.from('profiles').select('*').eq('company_id', company.id),
     ]);
 
+    if (reqRes.error) {
+      console.error('Error loading maintenance requests:', reqRes.error);
+      toast.error('Failed to load maintenance requests');
+    }
     setRequests(reqRes.data ?? []);
     setBranches(branchRes.data ?? []);
     setUsers(userRes.data ?? []);
@@ -145,7 +149,7 @@ export default function MaintenanceRequestsPage() {
     reset();
     setEditRequest(null);
     setDialogOpen(false);
-    load();
+    await load();
   };
 
   const handleDelete = async () => {

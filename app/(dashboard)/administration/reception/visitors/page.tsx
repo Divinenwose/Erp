@@ -58,7 +58,7 @@ export default function VisitorsPage() {
     const [visRes, branchRes, userRes] = await Promise.all([
       supabase
         .from('visitors')
-        .select('*, branches(name), host_profile(first_name, last_name)')
+        .select('*, branches(name), host_profile:profiles!visitors_host_id_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('check_in', { ascending: false }),
       supabase.from('branches').select('*').eq('company_id', company.id),

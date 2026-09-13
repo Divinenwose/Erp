@@ -1,16 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download, FileText, Calendar, TrendingUp, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function PurchaseRequestsReportsPage() {
+  const { company } = useAuth();
   const [reportType, setReportType] = useState('monthly');
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [summary, setSummary] = useState({ total: 0, pending: 0, approved: 0, value: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!company?.id) return;
+    const loadSummary = async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from('purchase_requests')
+        .select('status, estimated_cost')
+        .eq('company_id', company.id)
+        .gte('created_at', `${selectedMonth}-01`)
+        .lte('created_at', `${selectedMonth}-31`);
+      const rows = data ?? [];
+      setSummary({
+        total: rows.length,
+        pending: rows.filter(row => ['pending', 'submitted', 'under_review', 'md_approval', 'accounts_review'].includes(row.status)).length,
+        approved: rows.filter(row => ['approved', 'vendor_assigned', 'completed'].includes(row.status)).length,
+        value: rows.reduce((sum, row) => sum + (row.estimated_cost ?? 0), 0),
+      });
+      setLoading(false);
+    };
+    loadSummary();
+  }, [company?.id, selectedMonth]);
 
   const reports = [
     {
@@ -98,16 +126,7 @@ export default function PurchaseRequestsReportsPage() {
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6">
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select month" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="2024-01">January 2024</SelectItem>
-                <SelectItem value="2023-12">December 2023</SelectItem>
-                <SelectItem value="2023-11">November 2023</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="w-[200px]" />
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Export Excel
@@ -120,8 +139,14 @@ export default function PurchaseRequestsReportsPage() {
 
           <div className="border rounded-lg p-8 text-center text-gray-500 dark:text-gray-400">
             <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-            <p>Report preview will be displayed here</p>
-            <p className="text-sm mt-2">Select report type and filters to generate report</p>
+            {loading ? <p>Loading report data...</p> : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-left">
+                <div><p className="text-xs uppercase tracking-wide">Requests</p><p className="text-2xl font-semibold text-gray-900 dark:text-white">{summary.total}</p></div>
+                <div><p className="text-xs uppercase tracking-wide">Pending</p><p className="text-2xl font-semibold text-gray-900 dark:text-white">{summary.pending}</p></div>
+                <div><p className="text-xs uppercase tracking-wide">Approved</p><p className="text-2xl font-semibold text-gray-900 dark:text-white">{summary.approved}</p></div>
+                <div><p className="text-xs uppercase tracking-wide">Estimated Value</p><p className="text-2xl font-semibold text-gray-900 dark:text-white">${summary.value.toLocaleString()}</p></div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

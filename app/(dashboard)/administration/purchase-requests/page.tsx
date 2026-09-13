@@ -17,6 +17,7 @@ export default function PurchaseRequestsDashboardPage() {
   const [pendingApproval, setPendingApproval] = useState(0);
   const [approved, setApproved] = useState(0);
   const [totalValue, setTotalValue] = useState(0);
+  const [urgentRequests, setUrgentRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const currentMonth = format(new Date(), 'yyyy-MM');
 
@@ -28,7 +29,7 @@ export default function PurchaseRequestsDashboardPage() {
     if (!company?.id) return;
     setLoading(true);
 
-    const [totalResult, pendingResult, approvedResult, valueResult] = await Promise.all([
+    const [totalResult, pendingResult, approvedResult, valueResult, urgentResult] = await Promise.all([
       supabase
         .from('purchase_requests')
         .select('id', { count: 'exact', head: true })
@@ -39,7 +40,7 @@ export default function PurchaseRequestsDashboardPage() {
         .from('purchase_requests')
         .select('id', { count: 'exact', head: true })
         .eq('company_id', company.id)
-        .in('status', ['submitted', 'under_review']),
+        .in('status', ['pending', 'submitted', 'under_review', 'md_approval', 'accounts_review']),
       supabase
         .from('purchase_requests')
         .select('id', { count: 'exact', head: true })
@@ -47,21 +48,30 @@ export default function PurchaseRequestsDashboardPage() {
         .eq('status', 'approved'),
       supabase
         .from('purchase_requests')
-        .select('amount')
+        .select('estimated_cost')
         .eq('company_id', company.id)
         .gte('created_at', `${currentMonth}-01`)
         .lte('created_at', `${currentMonth}-31`),
+      supabase
+        .from('purchase_requests')
+        .select('id, title, priority, required_date, status')
+        .eq('company_id', company.id)
+        .in('priority', ['urgent', 'high'])
+        .in('status', ['pending', 'submitted', 'under_review', 'md_approval', 'accounts_review'])
+        .order('required_date', { ascending: true })
+        .limit(5),
     ]);
 
     const totalCount = totalResult.count || 0;
     const pendingCount = pendingResult.count || 0;
     const approvedCount = approvedResult.count || 0;
-    const valueSum = (valueResult.data || []).reduce((sum, item) => sum + (item.amount || 0), 0);
+    const valueSum = (valueResult.data || []).reduce((sum, item) => sum + (item.estimated_cost || 0), 0);
 
     setTotalRequests(totalCount);
     setPendingApproval(pendingCount);
     setApproved(approvedCount);
     setTotalValue(valueSum);
+    setUrgentRequests(urgentResult.data || []);
     setLoading(false);
   };
 
@@ -75,9 +85,11 @@ export default function PurchaseRequestsDashboardPage() {
           { label: 'Purchase Requests' }
         ]}
       >
-        <Button size="sm">
+        <Button size="sm" asChild>
+          <Link href="/administration/purchase-requests/my-requests">
           <Plus className="h-4 w-4 mr-2" />
           New Request
+          </Link>
         </Button>
       </PageHeader>
 
@@ -171,28 +183,24 @@ export default function PurchaseRequestsDashboardPage() {
           <CardTitle className="text-lg">Urgent Requests</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/30 rounded-lg">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                <div>
-                  <p className="font-medium text-sm">Office Supplies - Printer Paper</p>
-                  <p className="text-xs text-gray-500">Requested 2 days ago</p>
+          {urgentRequests.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">No high-priority requests are waiting.</p>
+          ) : (
+            <div className="space-y-3">
+              {urgentRequests.map(request => (
+                <div key={request.id} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{request.title}</p>
+                      <p className="text-xs text-gray-500">{request.priority} priority · {request.status.replace(/_/g, ' ')}</p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" asChild><Link href="/administration/purchase-requests/approvals">Review</Link></Button>
                 </div>
-              </div>
-              <Button size="sm" variant="outline">Review</Button>
+              ))}
             </div>
-            <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-amber-600" />
-                <div>
-                  <p className="font-medium text-sm">Maintenance - AC Repair</p>
-                  <p className="text-xs text-gray-500">Requested 5 days ago</p>
-                </div>
-              </div>
-              <Button size="sm" variant="outline">Review</Button>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

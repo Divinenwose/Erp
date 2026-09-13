@@ -73,7 +73,13 @@ export default function FuelDriversPage() {
     setLoading(false);
   };
 
-  const formattedData = driverData.map((item) => ({
+  const filteredData = driverData.filter(item => !searchTerm || item.driver.toLowerCase().includes(searchTerm.toLowerCase()));
+  const totalLiters = driverData.reduce((sum, item) => sum + item.totalLiters, 0);
+  const averageEfficiency = driverData.length > 0
+    ? driverData.reduce((sum, item) => sum + Number(item.avgEfficiency), 0) / driverData.length
+    : 0;
+
+  const formattedData = filteredData.map((item) => ({
     ...item,
     totalCost: `$${item.totalCost.toFixed(2)}`,
   }));
@@ -104,7 +110,7 @@ export default function FuelDriversPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Total Drivers</p>
-                <p className="text-2xl font-bold">18</p>
+                <p className="text-2xl font-bold">{loading ? '—' : driverData.length}</p>
               </div>
             </div>
           </CardContent>
@@ -117,7 +123,7 @@ export default function FuelDriversPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Avg Efficiency</p>
-                <p className="text-2xl font-bold">7.2 km/L</p>
+                <p className="text-2xl font-bold">{loading ? '—' : `${averageEfficiency.toFixed(1)} km/L`}</p>
               </div>
             </div>
           </CardContent>
@@ -129,8 +135,8 @@ export default function FuelDriversPage() {
                 <Car className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Distance</p>
-                <p className="text-2xl font-bold">5,370 km</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total Fuel</p>
+                <p className="text-2xl font-bold">{loading ? '—' : `${totalLiters.toFixed(1)} L`}</p>
               </div>
             </div>
           </CardContent>

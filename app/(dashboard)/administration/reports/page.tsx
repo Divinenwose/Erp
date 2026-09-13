@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart3, Download, FileText, Calendar, Users, DollarSign, TrendingUp, Printer, Briefcase } from 'lucide-react';
 import { format, subMonths } from 'date-fns';
+import Link from 'next/link';
 
 export default function AdministrationReportsPage() {
   const { company } = useAuth();
@@ -254,17 +255,6 @@ export default function AdministrationReportsPage() {
           ]}
         >
           <div className="flex gap-2">
-            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Period" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-                <SelectItem value="quarter">This Quarter</SelectItem>
-                <SelectItem value="year">This Year</SelectItem>
-              </SelectContent>
-            </Select>
             <Input
               type="month"
               value={selectedMonth}
@@ -332,9 +322,11 @@ export default function AdministrationReportsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 dark:text-gray-400">{report.description}</p>
-              <Button size="sm" variant="outline" className="mt-4 w-full">
+              <Button size="sm" variant="outline" className="mt-4 w-full" asChild>
+                <Link href={report.href}>
                 <Download className="h-4 w-4 mr-2" />
                 Generate Report
+                </Link>
               </Button>
             </CardContent>
           </Card>

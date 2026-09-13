@@ -102,6 +102,7 @@ export default function AdministrationOverviewPage() {
         canMeetings ? supabase.from('meetings').select('id', { count: 'exact', head: true }).eq('company_id', id).gte('date', today).lte('date', format(new Date(Date.now() + 7 * 86400000), 'yyyy-MM-dd')) : Promise.resolve({ count: null } as any),
         canBirthdays ? supabase.from('employees').select('date_of_birth').eq('company_id', id).not('date_of_birth', 'is', null) : Promise.resolve({ data: null } as any),
         canNotifications && user?.id ? supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('user_id', user.id).eq('is_read', false) : Promise.resolve({ count: null } as any),
+        canNotifications && user?.id ? supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('user_id', user.id).eq('read', false) : Promise.resolve({ count: null } as any),
         canApprovals ? supabase.from('request_approvals').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending') : Promise.resolve({ count: null } as any),
       ]);
 
@@ -191,12 +192,16 @@ export default function AdministrationOverviewPage() {
       />
 
       {/* Headline KPIs — only for sections the viewer can see and that have real data */}
-      {(canAssets || canFleet || canAttendance || canPurchaseRequests) && (
+      {(canAssets || canFleet || canAttendance || canPurchaseRequests || canDrivers || canFuel || canMeetings || canApprovals) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {canAssets && <KPICard title="Total Assets" value={loading ? 0 : (stats.assets ?? 0)} icon={<Briefcase className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
           {canFleet && <KPICard title="Fleet Vehicles" value={loading ? 0 : (stats.fleet ?? 0)} icon={<Car className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
           {canAttendance && <KPICard title="Present Today" value={loading ? 0 : (stats.presentToday ?? 0)} icon={<Users className="h-4 w-4 text-purple-600" />} iconBg="bg-purple-50 dark:bg-purple-950/50" loading={loading} />}
           {canPurchaseRequests && <KPICard title="Pending Requests" value={loading ? 0 : (stats.pendingRequests ?? 0)} icon={<Clipboard className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />}
+          {canDrivers && <KPICard title="Drivers" value={loading ? 0 : (stats.drivers ?? 0)} icon={<Car className="h-4 w-4 text-cyan-600" />} iconBg="bg-cyan-50 dark:bg-cyan-950/50" loading={loading} />}
+          {canFuel && <KPICard title="Fuel This Month" value={loading ? 0 : `$${(stats.fuelCost ?? 0).toFixed(0)}`} icon={<Fuel className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />}
+          {canMeetings && <KPICard title="Upcoming Meetings" value={loading ? 0 : (stats.upcomingMeetings ?? 0)} icon={<Clock className="h-4 w-4 text-indigo-600" />} iconBg="bg-indigo-50 dark:bg-indigo-950/50" loading={loading} />}
+          {canApprovals && <KPICard title="Pending Approvals" value={loading ? 0 : (stats.pendingApprovals ?? 0)} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
         </div>
       )}
 

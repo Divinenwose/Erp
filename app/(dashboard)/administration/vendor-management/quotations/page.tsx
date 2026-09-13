@@ -301,7 +301,7 @@ export default function VendorQuotationsPage() {
 
       <ConfirmDialog
         open={deleteId !== null}
-        onOpenChange={() => setDeleteId(null)}
+        onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
         title="Delete Quotation"
         description="Are you sure you want to delete this quotation? This action cannot be undone."

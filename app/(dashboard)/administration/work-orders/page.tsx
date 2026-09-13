@@ -310,7 +310,7 @@ export default function WorkOrdersPage() {
 
         <ConfirmDialog
           open={deleteId !== null}
-          onOpenChange={() => setDeleteId(null)}
+          onClose={() => setDeleteId(null)}
           onConfirm={handleDelete}
           title="Delete Work Order"
           description="Are you sure you want to delete this work order? This action cannot be undone."

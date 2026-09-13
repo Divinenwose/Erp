@@ -278,7 +278,7 @@ export default function AdminCalendarPage() {
 
         <ConfirmDialog
           open={deleteId !== null}
-          onOpenChange={() => setDeleteId(null)}
+          onClose={() => setDeleteId(null)}
           onConfirm={handleDelete}
           title="Delete Event"
           description="Are you sure you want to delete this event? This action cannot be undone."

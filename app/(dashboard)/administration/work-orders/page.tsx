@@ -8,6 +8,7 @@ import { logAuditEvent } from '@/lib/audit';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import StatusBadge from '@/components/common/StatusBadge';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -25,6 +26,9 @@ export default function WorkOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [editWorkOrder, setEditWorkOrder] = useState<any>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [title, setTitle] = useState('');
   const [type, setType] = useState('corrective');
@@ -72,43 +76,95 @@ export default function WorkOrdersPage() {
     setSubmitting(true);
 
     try {
-      const woNumber = `WO-${format(new Date(), 'yyyy')}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
-
-      const { error } = await supabase.from('work_orders').insert({
+      const payload = {
         company_id: company.id,
-        wo_number: woNumber,
         title: title.trim(),
         type,
         priority,
         assigned_to: assignee || null,
         due_date: dueDate,
         description: description.trim() || null,
-        status: 'open',
-      });
+      };
+
+      let error;
+      if (editWorkOrder) {
+        const result = await supabase.from('work_orders').update(payload).eq('id', editWorkOrder.id);
+        error = result.error;
+        if (!error) {
+          await logAuditEvent(company.id, user.id, {
+            action: 'work_order_updated',
+            module: 'work_orders',
+            entity_type: 'work_orders',
+            entity_id: editWorkOrder.id,
+            new_value: { title: title.trim() },
+          });
+          toast.success('Work order updated successfully');
+        }
+      } else {
+        const woNumber = `WO-${format(new Date(), 'yyyy')}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+        const result = await supabase.from('work_orders').insert({ ...payload, wo_number, status: 'open' });
+        error = result.error;
+        if (!error) {
+          await logAuditEvent(company.id, user.id, {
+            action: 'work_order_created',
+            module: 'work_orders',
+            entity_type: 'work_orders',
+            new_value: { wo_number, title: title.trim() },
+          });
+          toast.success('Work order created successfully');
+        }
+      }
 
       if (error) throw error;
 
-      await logAuditEvent(company.id, user.id, {
-        action: 'work_order_created',
-        module: 'work_orders',
-        entity_type: 'work_orders',
-        new_value: { wo_number: woNumber, title: title.trim() },
-      });
-
-      toast.success('Work order created successfully');
       setTitle('');
       setType('corrective');
       setPriority('medium');
       setAssignee('');
       setDescription('');
       setDueDate(format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'));
+      setEditWorkOrder(null);
       setDialogOpen(false);
       loadWorkOrders();
     } catch (error) {
-      console.error('Error creating work order:', error);
-      toast.error('Failed to create work order');
+      console.error('Error saving work order:', error);
+      toast.error('Failed to save work order');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openEdit = (wo: any) => {
+    setEditWorkOrder(wo);
+    setTitle(wo.title || '');
+    setType(wo.type || 'corrective');
+    setPriority(wo.priority || 'medium');
+    setAssignee(wo.assigned_to || '');
+    setDueDate(wo.due_date || format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'));
+    setDescription(wo.description || '');
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!company?.id || !user?.id || !deleteId) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('work_orders').delete().eq('id', deleteId);
+      if (error) throw error;
+      await logAuditEvent(company.id, user.id, {
+        action: 'work_order_deleted',
+        module: 'work_orders',
+        entity_type: 'work_orders',
+        entity_id: deleteId,
+      });
+      toast.success('Work order deleted');
+      setDeleteId(null);
+      loadWorkOrders();
+    } catch (error) {
+      console.error('Error deleting work order:', error);
+      toast.error('Failed to delete work order');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -162,7 +218,7 @@ export default function WorkOrdersPage() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create New Work Order</DialogTitle>
+                  <DialogTitle>{editWorkOrder ? 'Edit Work Order' : 'Create New Work Order'}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
@@ -252,6 +308,15 @@ export default function WorkOrdersPage() {
           />
         </div>
 
+        <ConfirmDialog
+          open={deleteId !== null}
+          onOpenChange={() => setDeleteId(null)}
+          onConfirm={handleDelete}
+          title="Delete Work Order"
+          description="Are you sure you want to delete this work order? This action cannot be undone."
+          loading={deleting}
+        />
+
         <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Work Order List</CardTitle>
@@ -297,7 +362,7 @@ export default function WorkOrdersPage() {
                         <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{row.due_date ? format(new Date(row.due_date), 'MMM dd, yyyy') : '-'}</td>
                         <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
                         <td className="px-4 py-3">
-                          <PermissionGuard permission="work_orders.edit">
+                          <div className="flex gap-2">
                             <Select value={row.status} onValueChange={(v) => updateStatus(row.id, v)}>
                               <SelectTrigger className="w-32 h-8">
                                 <SelectValue />
@@ -308,7 +373,13 @@ export default function WorkOrdersPage() {
                                 <SelectItem value="completed">Completed</SelectItem>
                               </SelectContent>
                             </Select>
-                          </PermissionGuard>
+                            <Button size="sm" variant="ghost" className="h-8" onClick={() => openEdit(row)}>
+                              Edit
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-8 text-red-600" onClick={() => setDeleteId(row.id)}>
+                              Delete
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}

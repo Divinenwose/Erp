@@ -7,6 +7,7 @@ import { PermissionGuard } from '@/components/rbac/PermissionGuard';
 import { logAuditEvent } from '@/lib/audit';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +47,9 @@ export default function MeetingsPage() {
   const [selectedType, setSelectedType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editMeeting, setEditMeeting] = useState<any>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<MeetingForm>({ resolver: zodResolver(meetingSchema) });
 
@@ -71,27 +75,88 @@ export default function MeetingsPage() {
 
   const onSubmit = async (data: MeetingForm) => {
     if (!company?.id) return;
-    const { error } = await supabase.from('meetings').insert({
+    const payload = {
       ...data,
       company_id: company.id,
       status: 'scheduled',
       created_by: currentUser?.id,
-    });
+    };
+
+    let error;
+    if (editMeeting) {
+      const result = await supabase.from('meetings').update(payload).eq('id', editMeeting.id);
+      error = result.error;
+      if (!error) {
+        await logAuditEvent(company.id, currentUser?.id || '', {
+          action: 'meeting_updated',
+          module: 'meetings',
+          entity_id: editMeeting.id,
+          new_value: { title: data.title, type: data.type, date: data.date },
+        });
+        toast.success('Meeting updated');
+      }
+    } else {
+      const result = await supabase.from('meetings').insert(payload);
+      error = result.error;
+      if (!error) {
+        await logAuditEvent(company.id, currentUser?.id || '', {
+          action: 'meeting_created',
+          module: 'meetings',
+          new_value: { title: data.title, type: data.type, date: data.date },
+        });
+        toast.success('Meeting scheduled');
+      }
+    }
+
     if (error) {
-      toast.error('Failed to create meeting');
+      toast.error('Failed to save meeting');
       return;
     }
 
-    await logAuditEvent(company.id, currentUser?.id || '', {
-      action: 'meeting_created',
-      module: 'meetings',
-      new_value: { title: data.title, type: data.type, date: data.date },
-    });
-
-    toast.success('Meeting scheduled');
     reset();
+    setEditMeeting(null);
     setDialogOpen(false);
     load();
+  };
+
+  const openEdit = (meeting: any) => {
+    setEditMeeting(meeting);
+    reset({
+      title: meeting.title,
+      type: meeting.type,
+      description: meeting.description || '',
+      date: meeting.date,
+      start_time: meeting.start_time,
+      end_time: meeting.end_time,
+      location: meeting.location || '',
+      meeting_link: meeting.meeting_link || '',
+      department_id: meeting.department_id || '',
+      attendees: meeting.attendees || '',
+      agenda: meeting.agenda || '',
+    });
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!company?.id || !currentUser?.id || !deleteId) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('meetings').delete().eq('id', deleteId);
+      if (error) throw error;
+      await logAuditEvent(company.id, currentUser.id, {
+        action: 'meeting_deleted',
+        module: 'meetings',
+        entity_id: deleteId,
+      });
+      toast.success('Meeting deleted');
+      setDeleteId(null);
+      load();
+    } catch (error) {
+      console.error('Error deleting meeting:', error);
+      toast.error('Failed to delete meeting');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const getMeetingStatus = (meeting: any) => {
@@ -155,7 +220,7 @@ export default function MeetingsPage() {
                   <Button size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Schedule Meeting</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-lg">
-                  <DialogHeader><DialogTitle>Schedule Meeting</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>{editMeeting ? 'Edit Meeting' : 'Schedule Meeting'}</DialogTitle></DialogHeader>
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2"><Label>Title *</Label><Input className="mt-1" {...register('title')} /></div>
@@ -218,6 +283,15 @@ export default function MeetingsPage() {
           <KPICard title="Total" value={meetings.length} icon={<Users className="h-4 w-4 text-purple-600" />} iconBg="bg-purple-50 dark:bg-purple-950/50" loading={loading} />
         </div>
 
+        <ConfirmDialog
+          open={deleteId !== null}
+          onOpenChange={() => setDeleteId(null)}
+          onConfirm={handleDelete}
+          title="Delete Meeting"
+          description="Are you sure you want to delete this meeting? This action cannot be undone."
+          loading={deleting}
+        />
+
         <Card>
           <CardContent className="p-0">
             <div className="flex items-center gap-3 p-4 border-b dark:border-gray-800">
@@ -277,12 +351,20 @@ export default function MeetingsPage() {
                       </div>
                       <Badge className={getMeetingTypeBadge(m.type)}>{m.type.replace('_', ' ')}</Badge>
                       <Badge className={getStatusBadge(status)}>{status.replace('_', ' ')}</Badge>
-                      {m.meeting_link && (
-                        <Button size="sm" variant="outline" className="h-8">
-                          <Video className="h-4 w-4 mr-2" />
-                          Join
+                      <div className="flex gap-2">
+                        {m.meeting_link && (
+                          <Button size="sm" variant="outline" className="h-8">
+                            <Video className="h-4 w-4 mr-2" />
+                            Join
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" className="h-8" onClick={() => openEdit(m)}>
+                          Edit
                         </Button>
-                      )}
+                        <Button size="sm" variant="ghost" className="h-8 text-red-600" onClick={() => setDeleteId(m.id)}>
+                          Delete
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}

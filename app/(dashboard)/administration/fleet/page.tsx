@@ -8,6 +8,7 @@ import { logAuditEvent } from '@/lib/audit';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import StatusBadge from '@/components/common/StatusBadge';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -24,6 +25,9 @@ export default function FleetPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [editVehicle, setEditVehicle] = useState<any>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [vehicleName, setVehicleName] = useState('');
   const [vehicleType, setVehicleType] = useState('van');
@@ -65,7 +69,7 @@ export default function FleetPage() {
     setSubmitting(true);
 
     try {
-      const { error } = await supabase.from('fleet_vehicles').insert({
+      const payload = {
         company_id: company.id,
         vehicle_name: vehicleName.trim(),
         vehicle_type: vehicleType,
@@ -73,30 +77,85 @@ export default function FleetPage() {
         assigned_driver_id: assignedDriver || null,
         mileage: mileage ? parseInt(mileage) : 0,
         status,
-      });
+      };
+
+      let error;
+      if (editVehicle) {
+        const result = await supabase.from('fleet_vehicles').update(payload).eq('id', editVehicle.id);
+        error = result.error;
+        if (!error) {
+          await logAuditEvent(company.id, user.id, {
+            action: 'vehicle_updated',
+            module: 'fleet',
+            entity_type: 'fleet_vehicles',
+            entity_id: editVehicle.id,
+            new_value: { vehicle_name: vehicleName.trim() },
+          });
+          toast.success('Vehicle updated successfully');
+        }
+      } else {
+        const result = await supabase.from('fleet_vehicles').insert(payload);
+        error = result.error;
+        if (!error) {
+          await logAuditEvent(company.id, user.id, {
+            action: 'vehicle_added',
+            module: 'fleet',
+            entity_type: 'fleet_vehicles',
+            new_value: { vehicle_name: vehicleName.trim(), plate_number: plateNumber.trim() },
+          });
+          toast.success('Vehicle added successfully');
+        }
+      }
 
       if (error) throw error;
 
-      await logAuditEvent(company.id, user.id, {
-        action: 'vehicle_added',
-        module: 'fleet',
-        entity_type: 'fleet_vehicles',
-        new_value: { vehicle_name: vehicleName.trim(), plate_number: plateNumber.trim() },
-      });
-
-      toast.success('Vehicle added successfully');
       setVehicleName('');
       setPlateNumber('');
       setAssignedDriver('');
       setMileage('');
       setStatus('available');
+      setEditVehicle(null);
       setDialogOpen(false);
       loadVehicles();
     } catch (error) {
-      console.error('Error adding vehicle:', error);
-      toast.error('Failed to add vehicle');
+      console.error('Error saving vehicle:', error);
+      toast.error('Failed to save vehicle');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openEdit = (vehicle: any) => {
+    setEditVehicle(vehicle);
+    setVehicleName(vehicle.vehicle_name || '');
+    setVehicleType(vehicle.vehicle_type || 'van');
+    setPlateNumber(vehicle.plate_number || '');
+    setAssignedDriver(vehicle.assigned_driver_id || '');
+    setMileage(vehicle.mileage?.toString() || '');
+    setStatus(vehicle.status || 'available');
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!company?.id || !user?.id || !deleteId) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('fleet_vehicles').delete().eq('id', deleteId);
+      if (error) throw error;
+      await logAuditEvent(company.id, user.id, {
+        action: 'vehicle_deleted',
+        module: 'fleet',
+        entity_type: 'fleet_vehicles',
+        entity_id: deleteId,
+      });
+      toast.success('Vehicle deleted');
+      setDeleteId(null);
+      loadVehicles();
+    } catch (error) {
+      console.error('Error deleting vehicle:', error);
+      toast.error('Failed to delete vehicle');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -150,7 +209,7 @@ export default function FleetPage() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add New Vehicle</DialogTitle>
+                  <DialogTitle>{editVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
@@ -241,6 +300,15 @@ export default function FleetPage() {
           />
         </div>
 
+        <ConfirmDialog
+          open={deleteId !== null}
+          onOpenChange={() => setDeleteId(null)}
+          onConfirm={handleDelete}
+          title="Delete Vehicle"
+          description="Are you sure you want to delete this vehicle? This action cannot be undone."
+          loading={deleting}
+        />
+
         <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Vehicle Registry</CardTitle>
@@ -278,18 +346,26 @@ export default function FleetPage() {
                         <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{row.mileage?.toLocaleString() || '0'} mi</td>
                         <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
                         <td className="px-4 py-3">
-                          <PermissionGuard permission="fleet.edit">
-                            <Select value={row.status} onValueChange={(v) => updateVehicleStatus(row.id, v)}>
-                              <SelectTrigger className="w-32 h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="available">Available</SelectItem>
-                                <SelectItem value="in_use">In Use</SelectItem>
-                                <SelectItem value="maintenance">Maintenance</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </PermissionGuard>
+                          <div className="flex gap-2">
+                            <PermissionGuard permission="fleet.edit">
+                              <Select value={row.status} onValueChange={(v) => updateVehicleStatus(row.id, v)}>
+                                <SelectTrigger className="w-32 h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="available">Available</SelectItem>
+                                  <SelectItem value="in_use">In Use</SelectItem>
+                                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </PermissionGuard>
+                            <Button size="sm" variant="ghost" className="h-8" onClick={() => openEdit(row)}>
+                              Edit
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-8 text-red-600" onClick={() => setDeleteId(row.id)}>
+                              Delete
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}

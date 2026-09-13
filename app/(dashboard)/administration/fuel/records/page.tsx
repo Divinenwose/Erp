@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import DataTable from '@/components/common/DataTable';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
@@ -28,6 +29,9 @@ export default function FuelRecordsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [editRecord, setEditRecord] = useState<any>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [formVehicle, setFormVehicle] = useState('');
   const [formDriver, setFormDriver] = useState('');
@@ -45,6 +49,7 @@ export default function FuelRecordsPage() {
     { key: 'cost', header: 'Cost' },
     { key: 'odometer', header: 'Odometer' },
     { key: 'station', header: 'Station' },
+    { key: 'actions', header: 'Actions' },
   ];
 
   useEffect(() => {
@@ -107,7 +112,7 @@ export default function FuelRecordsPage() {
     }
 
     setSubmitting(true);
-    const { error } = await supabase.from('fuel_records').insert({
+    const payload = {
       company_id: company.id,
       vehicle_id: formVehicle,
       driver_id: formDriver || null,
@@ -116,7 +121,11 @@ export default function FuelRecordsPage() {
       cost: parseFloat(formCost),
       odometer_reading: formOdometer ? parseInt(formOdometer, 10) : null,
       fuel_station: formStation.trim() || null,
-    });
+    };
+
+    const { error } = editRecord
+      ? await supabase.from('fuel_records').update(payload).eq('id', editRecord.id)
+      : await supabase.from('fuel_records').insert(payload);
     setSubmitting(false);
 
     if (error) {
@@ -124,10 +133,37 @@ export default function FuelRecordsPage() {
       return;
     }
 
-    toast.success('Fuel record saved');
+    toast.success(editRecord ? 'Fuel record updated' : 'Fuel record saved');
     setFormVehicle(''); setFormDriver(''); setFormQuantity(''); setFormCost(''); setFormOdometer(''); setFormStation('');
     setFormDate(format(new Date(), 'yyyy-MM-dd'));
+    setEditRecord(null);
     setDialogOpen(false);
+    loadFuelRecords();
+  };
+
+  const openEdit = (record: any) => {
+    setEditRecord(record);
+    setFormVehicle(record.vehicle_id || '');
+    setFormDriver(record.driver_id || '');
+    setFormDate(record.fuel_date || format(new Date(), 'yyyy-MM-dd'));
+    setFormQuantity(record.fuel_quantity?.toString() || '');
+    setFormCost(record.cost?.toString() || '');
+    setFormOdometer(record.odometer_reading?.toString() || '');
+    setFormStation(record.fuel_station || '');
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!company?.id || !deleteId) return;
+    setDeleting(true);
+    const { error } = await supabase.from('fuel_records').delete().eq('id', deleteId);
+    setDeleting(false);
+    if (error) {
+      toast.error('Failed to delete fuel record');
+      return;
+    }
+    toast.success('Fuel record deleted');
+    setDeleteId(null);
     loadFuelRecords();
   };
 
@@ -142,6 +178,16 @@ export default function FuelRecordsPage() {
     cost: `$${(item.cost || 0).toFixed(2)}`,
     odometer: item.odometer_reading || '-',
     station: item.fuel_station || '-',
+    actions: (
+      <div className="flex gap-2">
+        <Button size="sm" variant="ghost" className="h-8" onClick={() => openEdit(item)}>
+          Edit
+        </Button>
+        <Button size="sm" variant="ghost" className="h-8 text-red-600" onClick={() => setDeleteId(item.id)}>
+          Delete
+        </Button>
+      </div>
+    ),
   }));
 
   return (
@@ -165,7 +211,7 @@ export default function FuelRecordsPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add Fuel Record</DialogTitle>
+              <DialogTitle>{editRecord ? 'Edit Fuel Record' : 'Add Fuel Record'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -222,26 +268,33 @@ export default function FuelRecordsPage() {
                 <Input id="station" placeholder="Station name" value={formStation} onChange={(e) => setFormStation(e.target.value)} />
               </div>
               <Button className="w-full" onClick={handleSaveRecord} disabled={submitting}>
-                {submitting ? 'Saving…' : 'Save Record'}
+                {submitting ? 'Saving...' : 'Save Record'}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </PageHeader>
 
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Fuel Record"
+        description="Are you sure you want to delete this fuel record? This action cannot be undone."
+        loading={deleting}
+      />
+
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search records..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search records..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
             <div className="flex gap-2">
               <Input

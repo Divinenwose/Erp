@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import DataTable from '@/components/common/DataTable';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,9 @@ export default function DriversListPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [editDriver, setEditDriver] = useState<any>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [formEmployee, setFormEmployee] = useState('');
   const [formLicenseNumber, setFormLicenseNumber] = useState('');
@@ -89,7 +93,7 @@ export default function DriversListPage() {
     }
 
     setSubmitting(true);
-    const { error } = await supabase.from('drivers').insert({
+    const payload = {
       company_id: company.id,
       employee_id: formEmployee,
       license_number: formLicenseNumber.trim() || null,
@@ -97,17 +101,46 @@ export default function DriversListPage() {
       license_expiry: formLicenseExpiry || null,
       assigned_vehicle_id: formVehicle || null,
       status: 'active',
-    });
+    };
+
+    const { error } = editDriver
+      ? await supabase.from('drivers').update(payload).eq('id', editDriver.id)
+      : await supabase.from('drivers').insert(payload);
     setSubmitting(false);
 
     if (error) {
-      toast.error(error.message.includes('duplicate') ? 'That license number is already registered' : 'Failed to add driver');
+      toast.error(error.message.includes('duplicate') ? 'That license number is already registered' : 'Failed to save driver');
       return;
     }
 
-    toast.success('Driver added');
+    toast.success(editDriver ? 'Driver updated' : 'Driver added');
     setFormEmployee(''); setFormLicenseNumber(''); setFormLicenseType(''); setFormLicenseExpiry(''); setFormVehicle('');
+    setEditDriver(null);
     setDialogOpen(false);
+    loadDrivers();
+  };
+
+  const openEdit = (driver: any) => {
+    setEditDriver(driver);
+    setFormEmployee(driver.employee_id || '');
+    setFormLicenseNumber(driver.license_number || '');
+    setFormLicenseType(driver.license_type || '');
+    setFormLicenseExpiry(driver.license_expiry || '');
+    setFormVehicle(driver.assigned_vehicle_id || '');
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!company?.id || !deleteId) return;
+    setDeleting(true);
+    const { error } = await supabase.from('drivers').delete().eq('id', deleteId);
+    setDeleting(false);
+    if (error) {
+      toast.error('Failed to delete driver');
+      return;
+    }
+    toast.success('Driver deleted');
+    setDeleteId(null);
     loadDrivers();
   };
 
@@ -139,6 +172,16 @@ export default function DriversListPage() {
     licenseExpiry: item.license_expiry || '-',
     assignedVehicle: vehiclePlate(item.assigned_vehicle_id),
     status: getStatusBadge(item.status || 'inactive'),
+    actions: (
+      <div className="flex gap-2">
+        <Button size="sm" variant="ghost" className="h-8" onClick={() => openEdit(item)}>
+          Edit
+        </Button>
+        <Button size="sm" variant="ghost" className="h-8 text-red-600" onClick={() => setDeleteId(item.id)}>
+          Delete
+        </Button>
+      </div>
+    ),
   }));
 
   return (
@@ -161,7 +204,7 @@ export default function DriversListPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Driver</DialogTitle>
+              <DialogTitle>{editDriver ? 'Edit Driver' : 'Add New Driver'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -249,15 +292,17 @@ export default function DriversListPage() {
               </SelectContent>
             </Select>
           </div>
-
-          <DataTable
-            columns={columns}
-            data={formattedData}
-            loading={loading}
-            emptyTitle="No drivers found"
-          />
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Driver"
+        description="Are you sure you want to delete this driver? This action cannot be undone."
+        loading={deleting}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/rbac/PermissionGuard';
 import { logAuditEvent } from '@/lib/audit';
 import PageHeader from '@/components/common/PageHeader';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +43,9 @@ export default function AdminCalendarPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState('all');
+  const [editEvent, setEditEvent] = useState<any>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<EventForm>({ resolver: zodResolver(eventSchema) });
 
@@ -68,26 +72,85 @@ export default function AdminCalendarPage() {
 
   const onSubmit = async (data: EventForm) => {
     if (!company?.id) return;
-    const { error } = await supabase.from('admin_calendar_events').insert({
+    const payload = {
       ...data,
       company_id: company.id,
       created_by: currentUser?.id,
-    });
+    };
+
+    let error;
+    if (editEvent) {
+      const result = await supabase.from('admin_calendar_events').update(payload).eq('id', editEvent.id);
+      error = result.error;
+      if (!error) {
+        await logAuditEvent(company.id, currentUser?.id || '', {
+          action: 'calendar_event_updated',
+          module: 'calendar',
+          entity_id: editEvent.id,
+          new_value: { title: data.title, type: data.event_type, date: data.event_date },
+        });
+        toast.success('Event updated');
+      }
+    } else {
+      const result = await supabase.from('admin_calendar_events').insert(payload);
+      error = result.error;
+      if (!error) {
+        await logAuditEvent(company.id, currentUser?.id || '', {
+          action: 'calendar_event_created',
+          module: 'calendar',
+          new_value: { title: data.title, type: data.event_type, date: data.event_date },
+        });
+        toast.success('Event created');
+      }
+    }
+
     if (error) {
-      toast.error('Failed to create event');
+      toast.error('Failed to save event');
       return;
     }
 
-    await logAuditEvent(company.id, currentUser?.id || '', {
-      action: 'calendar_event_created',
-      module: 'calendar',
-      new_value: { title: data.title, type: data.event_type, date: data.event_date },
-    });
-
-    toast.success('Event created');
     reset();
+    setEditEvent(null);
     setDialogOpen(false);
     load();
+  };
+
+  const openEdit = (event: any) => {
+    setEditEvent(event);
+    reset({
+      title: event.title,
+      description: event.description || '',
+      event_date: event.event_date,
+      start_time: event.start_time || '',
+      end_time: event.end_time || '',
+      location: event.location || '',
+      event_type: event.event_type,
+      reminder_minutes: event.reminder_minutes || undefined,
+      attendees: event.attendees || '',
+    });
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!company?.id || !currentUser?.id || !deleteId) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('admin_calendar_events').delete().eq('id', deleteId);
+      if (error) throw error;
+      await logAuditEvent(company.id, currentUser.id, {
+        action: 'calendar_event_deleted',
+        module: 'calendar',
+        entity_id: deleteId,
+      });
+      toast.success('Event deleted');
+      setDeleteId(null);
+      load();
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast.error('Failed to delete event');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const monthStart = startOfMonth(currentDate);
@@ -149,7 +212,7 @@ export default function AdminCalendarPage() {
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-lg">
-                  <DialogHeader><DialogTitle>Add Calendar Event</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>{editEvent ? 'Edit Calendar Event' : 'Add Calendar Event'}</DialogTitle></DialogHeader>
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2"><Label>Title *</Label><Input className="mt-1" {...register('title')} /></div>
@@ -174,9 +237,16 @@ export default function AdminCalendarPage() {
                       <div className="col-span-2"><Label>Reminder (minutes before)</Label><Input type="number" className="mt-1" {...register('reminder_minutes')} /></div>
                       <div className="col-span-2"><Label>Description</Label><Textarea className="mt-1" {...register('description')} /></div>
                     </div>
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>Add Event</Button>
+                    <div className="flex justify-between">
+                      {editEvent && (
+                        <Button type="button" variant="destructive" onClick={() => setDeleteId(editEvent.id)}>
+                          Delete
+                        </Button>
+                      )}
+                      <div className="flex gap-2 ml-auto">
+                        <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>{editEvent ? 'Update' : 'Add Event'}</Button>
+                      </div>
                     </div>
                   </form>
                 </DialogContent>
@@ -205,6 +275,15 @@ export default function AdminCalendarPage() {
             </CardContent>
           </Card>
         </div>
+
+        <ConfirmDialog
+          open={deleteId !== null}
+          onOpenChange={() => setDeleteId(null)}
+          onConfirm={handleDelete}
+          title="Delete Event"
+          description="Are you sure you want to delete this event? This action cannot be undone."
+          loading={deleting}
+        />
 
         <Card>
           <CardContent className="p-6">
@@ -265,7 +344,8 @@ export default function AdminCalendarPage() {
                       {dayEvents.slice(0, 2).map(event => (
                         <div
                           key={event.id}
-                          className={`text-xs px-1 py-0.5 rounded truncate ${getEventTypeBadge(event.event_type)}`}
+                          onClick={(e) => { e.stopPropagation(); openEdit(event); }}
+                          className={`text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 ${getEventTypeBadge(event.event_type)}`}
                         >
                           {event.title}
                         </div>

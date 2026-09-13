@@ -388,13 +388,6 @@ export const defaultNavigationConfig: NavItem[] = [
     ],
   },
   {
-    title: 'Reports',
-    href: '/reports',
-    icon: BarChart3,
-    module: 'reports',
-    permission: 'reports.view',
-  },
-  {
     title: 'Settings',
     icon: Settings,
     module: 'settings',
@@ -832,13 +825,6 @@ export const navigationConfig: NavItem[] = [
       { title: 'QA Inspections', href: '/quality/inspections', icon: ClipboardCheck, permission: 'qa_qc.inspections.view' },
       { title: 'QC Reports', href: '/quality/reports', icon: FileText, permission: 'qa_qc.reports.view' },
     ],
-  },
-  {
-    title: 'Reports',
-    href: '/reports',
-    icon: BarChart3,
-    module: 'reports',
-    permission: 'reports.view',
   },
   {
     title: 'Settings',

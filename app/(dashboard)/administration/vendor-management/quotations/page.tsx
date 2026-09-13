@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import DataTable from '@/components/common/DataTable';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,9 @@ export default function VendorQuotationsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [editQuotation, setEditQuotation] = useState<any>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [formVendor, setFormVendor] = useState('');
   const [formQuotationNumber, setFormQuotationNumber] = useState('');
@@ -78,15 +82,18 @@ export default function VendorQuotationsPage() {
     }
 
     setSubmitting(true);
-    const { error } = await supabase.from('vendor_quotations').insert({
+    const payload = {
       company_id: company.id,
       vendor_id: formVendor,
       quotation_number: formQuotationNumber.trim() || null,
       description: formDescription.trim(),
       amount: parseFloat(formAmount),
       valid_until: formValidUntil || null,
-      status: 'pending',
-    });
+    };
+
+    const { error } = editQuotation
+      ? await supabase.from('vendor_quotations').update(payload).eq('id', editQuotation.id)
+      : await supabase.from('vendor_quotations').insert({ ...payload, status: 'pending' });
     setSubmitting(false);
 
     if (error) {
@@ -94,9 +101,34 @@ export default function VendorQuotationsPage() {
       return;
     }
 
-    toast.success('Quotation saved');
+    toast.success(editQuotation ? 'Quotation updated' : 'Quotation saved');
     setFormVendor(''); setFormQuotationNumber(''); setFormDescription(''); setFormAmount(''); setFormValidUntil('');
+    setEditQuotation(null);
     setDialogOpen(false);
+    loadData();
+  };
+
+  const openEdit = (quotation: any) => {
+    setEditQuotation(quotation);
+    setFormVendor(quotation.vendor_id || '');
+    setFormQuotationNumber(quotation.quotation_number || '');
+    setFormDescription(quotation.description || '');
+    setFormAmount(quotation.amount?.toString() || '');
+    setFormValidUntil(quotation.valid_until || '');
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!company?.id || !deleteId) return;
+    setDeleting(true);
+    const { error } = await supabase.from('vendor_quotations').delete().eq('id', deleteId);
+    setDeleting(false);
+    if (error) {
+      toast.error('Failed to delete quotation');
+      return;
+    }
+    toast.success('Quotation deleted');
+    setDeleteId(null);
     loadData();
   };
 
@@ -153,6 +185,12 @@ export default function VendorQuotationsPage() {
             </Button>
           </>
         )}
+        <Button size="sm" variant="ghost" className="h-8" onClick={() => openEdit(item)}>
+          Edit
+        </Button>
+        <Button size="sm" variant="ghost" className="h-8 text-red-600" onClick={() => setDeleteId(item.id)}>
+          Delete
+        </Button>
       </div>
     ),
   }));
@@ -177,7 +215,7 @@ export default function VendorQuotationsPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add Vendor Quotation</DialogTitle>
+              <DialogTitle>{editQuotation ? 'Edit Vendor Quotation' : 'Add Vendor Quotation'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -260,6 +298,15 @@ export default function VendorQuotationsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Quotation"
+        description="Are you sure you want to delete this quotation? This action cannot be undone."
+        loading={deleting}
+      />
 
       <Card>
         <CardContent className="p-6">

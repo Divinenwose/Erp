@@ -31,7 +31,7 @@ const DEPARTMENT_MODULE_ACCESS: Record<string, string[]> = {
 };
 
 /** Modules every authenticated user should see regardless of department. */
-const UNIVERSAL_MODULES = new Set(['dashboard', 'settings', 'reports']);
+const UNIVERSAL_MODULES = new Set(['dashboard', 'settings']);
 
 /**
  * Returns the set of module identifiers a user with the given department name

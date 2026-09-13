@@ -109,7 +109,7 @@ export default function WorkOrdersPage() {
             action: 'work_order_created',
             module: 'work_orders',
             entity_type: 'work_orders',
-            new_value: { wo_number, title: title.trim() },
+            new_value: { wo_number: woNumber, title: title.trim() },
           });
           toast.success('Work order created successfully');
         }

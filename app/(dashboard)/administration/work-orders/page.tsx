@@ -50,7 +50,7 @@ export default function WorkOrdersPage() {
     try {
       const { data, error } = await supabase
         .from('work_orders')
-        .select('*, employees(first_name, last_name)')
+        .select('*, assigned_employee:employees!work_orders_assigned_to_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('created_at', { ascending: false });
 
@@ -79,10 +79,10 @@ export default function WorkOrdersPage() {
       const payload = {
         company_id: company.id,
         title: title.trim(),
-        type,
+        work_type: type,
         priority,
         assigned_to: assignee || null,
-        due_date: dueDate,
+        scheduled_date: dueDate,
         description: description.trim() || null,
       };
 
@@ -102,14 +102,14 @@ export default function WorkOrdersPage() {
         }
       } else {
         const woNumber = `WO-${format(new Date(), 'yyyy')}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
-        const result = await supabase.from('work_orders').insert({ ...payload, wo_number: woNumber, status: 'open' });
+        const result = await supabase.from('work_orders').insert({ ...payload, order_number: woNumber, status: 'open' });
         error = result.error;
         if (!error) {
           await logAuditEvent(company.id, user.id, {
             action: 'work_order_created',
             module: 'work_orders',
             entity_type: 'work_orders',
-            new_value: { wo_number: woNumber, title: title.trim() },
+            new_value: { order_number: woNumber, title: title.trim() },
           });
           toast.success('Work order created successfully');
         }
@@ -137,10 +137,10 @@ export default function WorkOrdersPage() {
   const openEdit = (wo: any) => {
     setEditWorkOrder(wo);
     setTitle(wo.title || '');
-    setType(wo.type || 'corrective');
+    setType(wo.work_type || 'corrective');
     setPriority(wo.priority || 'medium');
     setAssignee(wo.assigned_to || '');
-    setDueDate(wo.due_date || format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'));
+    setDueDate(wo.scheduled_date || format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'));
     setDescription(wo.description || '');
     setDialogOpen(true);
   };
@@ -350,16 +350,16 @@ export default function WorkOrdersPage() {
                   <tbody className="divide-y dark:divide-gray-800">
                     {workOrders.map(row => (
                       <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs text-blue-600 dark:text-blue-400">{row.wo_number}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-blue-600 dark:text-blue-400">{row.order_number}</td>
                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.title}</td>
-                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{row.type}</td>
-                        <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{row.employees ? `${row.employees.first_name} ${row.employees.last_name}` : 'Unassigned'}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{row.work_type}</td>
+                        <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{row.assigned_employee ? `${row.assigned_employee.first_name} ${row.assigned_employee.last_name}` : 'Unassigned'}</td>
                         <td className="px-4 py-3">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PRIORITY_COLOR[row.priority] ?? ''}`}>
                             {row.priority.charAt(0).toUpperCase() + row.priority.slice(1)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{row.due_date ? format(new Date(row.due_date), 'MMM dd, yyyy') : '-'}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{row.scheduled_date ? format(new Date(row.scheduled_date), 'MMM dd, yyyy') : '-'}</td>
                         <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
                         <td className="px-4 py-3">
                           <div className="flex gap-2">

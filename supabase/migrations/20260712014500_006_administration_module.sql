@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS meeting_rooms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
   branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
-  name TEXT UNOT NULL,
+  name TEXT NOT NULL,
   location TEXT,
   capacity INTEGER,
   facilities TEXT[],

@@ -198,17 +198,18 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
 }
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
-  const { company, departmentName, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const { company, departmentName, hasRole, isSuperAdmin, isCompanyAdmin } = useAuth();
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
+  const isHRManager = hasRole('HR Manager');
 
-  // Keep HR features visible as independent sidebar entries for every role.
-  // Administration remains flattened for regular department users, while
-  // company-wide admins retain its grouped navigation.
+  // HR is a grouped module for company-wide admins and other departments,
+  // but its manager gets a flat task-oriented sidebar. Administration keeps
+  // its existing department-user flattening behavior.
   const navigationItems = useMemo(() => {
     const config = getNavigationConfig(company?.name);
-    const withHrFlat = flattenTopLevelGroup(config, 'hr');
-    return isAdmin ? withHrFlat : flattenTopLevelGroup(withHrFlat, 'admin');
-  }, [company?.name, isAdmin]);
+    const withHrFlat = isHRManager ? flattenTopLevelGroup(config, 'hr') : config;
+    return isHRManager ? withHrFlat : flattenTopLevelGroup(withHrFlat, 'admin');
+  }, [company?.name, isHRManager]);
 
   // Handle escape key to close mobile drawer
   useEffect(() => {

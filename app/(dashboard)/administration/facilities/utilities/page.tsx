@@ -23,6 +23,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useRealtimeTable } from '@/lib/use-realtime-table';
 
 const utilitySchema = z.object({
   utility_type: z.enum(['electricity', 'water', 'gas', 'internet', 'other']),
@@ -70,6 +71,7 @@ export default function UtilitiesPage() {
   };
 
   useEffect(() => { load(); }, [company?.id]);
+  useRealtimeTable('utilities', company?.id, load);
 
   const openEdit = (util: any) => {
     setEditUtility(util);

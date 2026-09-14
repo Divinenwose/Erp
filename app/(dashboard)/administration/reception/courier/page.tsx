@@ -23,6 +23,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useRealtimeTable } from '@/lib/use-realtime-table';
 
 const courierSchema = z.object({
   courier_company: z.string().min(1, 'Required'),
@@ -75,6 +76,7 @@ export default function CourierRegisterPage() {
   };
 
   useEffect(() => { load(); }, [company?.id]);
+  useRealtimeTable('courier_register', company?.id, load);
 
   const openEdit = (courier: any) => {
     setEditCourier(courier);

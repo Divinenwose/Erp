@@ -22,6 +22,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useRealtimeTable } from '@/lib/use-realtime-table';
 
 const relocationSchema = z.object({
   from_branch_id: z.string().optional(),
@@ -73,6 +74,7 @@ export default function OfficeRelocationPage() {
   };
 
   useEffect(() => { load(); }, [company?.id]);
+  useRealtimeTable('office_relocations', company?.id, load);
 
   const openEdit = (rel: any) => {
     setEditRelocation(rel);

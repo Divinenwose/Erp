@@ -23,6 +23,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useRealtimeTable } from '@/lib/use-realtime-table';
 
 const visitorSchema = z.object({
   name: z.string().min(1, 'Required'),
@@ -72,6 +73,7 @@ export default function VisitorsPage() {
   };
 
   useEffect(() => { load(); }, [company?.id]);
+  useRealtimeTable('visitors', company?.id, load);
 
   const openEdit = (visitor: any) => {
     setEditVisitor(visitor);

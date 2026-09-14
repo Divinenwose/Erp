@@ -23,6 +23,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useRealtimeTable } from '@/lib/use-realtime-table';
 
 const outgoingMailSchema = z.object({
   recipient_name: z.string().min(1, 'Required'),
@@ -73,6 +74,7 @@ export default function OutgoingMailPage() {
   };
 
   useEffect(() => { load(); }, [company?.id]);
+  useRealtimeTable('outgoing_mail', company?.id, load);
 
   const openEdit = (mail: any) => {
     setEditMail(mail);

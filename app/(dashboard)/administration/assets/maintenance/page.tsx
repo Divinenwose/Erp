@@ -23,6 +23,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useRealtimeTable } from '@/lib/use-realtime-table';
 
 const maintenanceSchema = z.object({
   asset_type: z.enum(['furniture', 'equipment', 'vehicle']),
@@ -80,6 +81,7 @@ export default function AssetMaintenancePage() {
   };
 
   useEffect(() => { load(); }, [company?.id]);
+  useRealtimeTable('asset_maintenance', company?.id, load);
 
   const getAssetName = (record: any) => {
     if (record.asset_type === 'furniture') {

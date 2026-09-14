@@ -23,6 +23,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useRealtimeTable } from '@/lib/use-realtime-table';
 
 const assignmentSchema = z.object({
   asset_type: z.enum(['furniture', 'equipment', 'vehicle']),
@@ -75,6 +76,7 @@ export default function AssetAssignmentsPage() {
   };
 
  useEffect(() => { load(); }, [company?.id]);
+  useRealtimeTable('asset_assignments', company?.id, load);
 
   const getAssetName = (assignment: any) => {
     if (assignment.asset_type === 'furniture') {

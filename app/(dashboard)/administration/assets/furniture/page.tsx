@@ -23,6 +23,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useRealtimeTable } from '@/lib/use-realtime-table';
 
 const furnitureSchema = z.object({
   name: z.string().min(1, 'Required'),
@@ -75,6 +76,7 @@ export default function FurniturePage() {
   };
 
   useEffect(() => { load(); }, [company?.id]);
+  useRealtimeTable('furniture', company?.id, load);
 
   const openEdit = (item: any) => {
     setEditItem(item);

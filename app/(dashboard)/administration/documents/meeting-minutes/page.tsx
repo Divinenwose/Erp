@@ -23,6 +23,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useRealtimeTable } from '@/lib/use-realtime-table';
 
 const minutesSchema = z.object({
   title: z.string().min(1, 'Required'),
@@ -72,6 +73,7 @@ export default function MeetingMinutesPage() {
   };
 
   useEffect(() => { load(); }, [company?.id]);
+  useRealtimeTable('meeting_minutes', company?.id, load);
 
   const openEdit = (minutes: any) => {
     setEditMinutes(minutes);

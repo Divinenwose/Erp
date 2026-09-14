@@ -9,7 +9,7 @@ import {
   Mail, Inbox, Archive, FileCheck, SprayCan, Zap, MapPin, Monitor,
   Sofa, Cpu, Printer, FileSignature, Factory, Store, Scissors,
   HelpCircle, Megaphone, Palette, MonitorPlay, ClipboardCheck, IdCard, Fuel,
-  Scale, ShoppingBag
+  Scale, ShoppingBag, GitBranch
 } from 'lucide-react';
 
 export interface NavItem {
@@ -66,6 +66,9 @@ export const defaultNavigationConfig: NavItem[] = [
       { title: 'Leave', href: '/hr/leave', icon: Calendar, permission: 'hr.leave.view' },
       { title: 'Recruitment', href: '/hr/recruitment', icon: Briefcase, permission: 'hr.recruitment.view' },
       { title: 'Onboarding', href: '/hr/onboarding', icon: ClipboardCheck, permission: 'hr.onboarding.view' },
+      { title: 'Training', href: '/hr/training', icon: BookOpen, permission: 'hr.training.view' },
+      { title: 'Performance', href: '/hr/performance', icon: Award, permission: 'hr.performance.view' },
+      { title: 'Org Chart', href: '/hr/org-chart', icon: GitBranch, permission: 'hr.view' },
       { title: 'Payroll', href: '/hr/payroll', icon: CreditCard, permission: 'hr.payroll.view' },
     ],
   },
@@ -436,6 +439,9 @@ export const navigationConfig: NavItem[] = [
       { title: 'Leave', href: '/hr/leave', icon: Calendar, permission: 'hr.leave.view' },
       { title: 'Recruitment', href: '/hr/recruitment', icon: Briefcase, permission: 'hr.recruitment.view' },
       { title: 'Onboarding', href: '/hr/onboarding', icon: ClipboardCheck, permission: 'hr.onboarding.view' },
+      { title: 'Training', href: '/hr/training', icon: BookOpen, permission: 'hr.training.view' },
+      { title: 'Performance', href: '/hr/performance', icon: Award, permission: 'hr.performance.view' },
+      { title: 'Org Chart', href: '/hr/org-chart', icon: GitBranch, permission: 'hr.view' },
       { title: 'Payroll', href: '/hr/payroll', icon: CreditCard, permission: 'hr.payroll.view' },
     ],
   },

@@ -321,7 +321,7 @@ export default function InventoryPage() {
             <DropdownMenuItem onClick={() => openEdit(row)}>
               <Edit className="h-4 w-4 mr-2" />Edit
             </DropdownMenuItem>
-            <Can resource="office_supplies.inventory" action="delete">
+            <Can resource="supplies.inventory" action="delete">
               <DropdownMenuItem className="text-red-600" onClick={() => setDeleteId(row.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />Delete
               </DropdownMenuItem>
@@ -337,7 +337,7 @@ export default function InventoryPage() {
   const totalValue = inventory.reduce((sum, i) => sum + (i.quantity * (i.unit_cost || 0)), 0);
 
   return (
-    <PermissionGuard permission="office_supplies.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view office supplies inventory</div>}>
+    <PermissionGuard permission="supplies.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view office supplies inventory</div>}>
       <div className="space-y-6">
       <PageHeader
         title="Office Supplies Inventory"
@@ -348,7 +348,7 @@ export default function InventoryPage() {
           <Button size="sm" variant="outline" onClick={exportCSV}>
             Export CSV
           </Button>
-          <Can resource="office_supplies.inventory" action="create">
+          <Can resource="supplies.inventory" action="create">
             <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditItem(null); reset(); } setDialogOpen(open); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700">

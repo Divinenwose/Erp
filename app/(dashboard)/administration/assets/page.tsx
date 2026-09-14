@@ -108,7 +108,7 @@ export default function AssetsPage() {
     const num = `AST-${String(lastNum + 1).padStart(4, '0')}`;
     
     const { error } = await supabase.from('assets').insert({ ...data, company_id: company.id, asset_number: num, status: 'active', current_value: data.purchase_price });
-    if (error) { toast.error('Failed to register asset'); return; }
+    if (error) { toast.error(`Failed to register asset: ${error.message}`); return; }
     toast.success('Asset registered');
     reset(); setDialogOpen(false); load();
   };

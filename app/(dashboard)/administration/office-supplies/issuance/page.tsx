@@ -320,7 +320,7 @@ export default function IssuancePage() {
                 <Package className="h-4 w-4 mr-2" />Mark Returned
               </DropdownMenuItem>
             )}
-            <Can resource="office_supplies.issuance" action="delete">
+            <Can resource="supplies.issuance" action="delete">
               <DropdownMenuItem className="text-red-600" onClick={() => setDeleteId(row.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />Delete
               </DropdownMenuItem>
@@ -345,7 +345,7 @@ export default function IssuancePage() {
           <Button size="sm" variant="outline" onClick={exportCSV}>
             Export CSV
           </Button>
-          <Can resource="office_supplies.issuance" action="create">
+          <Can resource="supplies.issuance" action="create">
             <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditIssuance(null); reset(); } setDialogOpen(open); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700">

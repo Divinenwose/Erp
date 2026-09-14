@@ -325,7 +325,7 @@ export default function MaintenanceVendorsPage() {
                 <Wrench className="h-4 w-4 mr-2" />Activate
               </DropdownMenuItem>
             )}
-            <Can resource="vendor_management.maintenance" action="delete">
+            <Can resource="vendors.maintenance" action="delete">
               <DropdownMenuItem className="text-red-600" onClick={() => setDeleteId(row.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />Delete
               </DropdownMenuItem>
@@ -350,7 +350,7 @@ export default function MaintenanceVendorsPage() {
           <Button size="sm" variant="outline" onClick={exportCSV}>
             Export CSV
           </Button>
-          <Can resource="vendor_management.maintenance" action="create">
+          <Can resource="vendors.maintenance" action="create">
             <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditVendor(null); reset(); } setDialogOpen(open); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700">

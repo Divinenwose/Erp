@@ -81,7 +81,7 @@ export default function DriversListPage() {
 
   const loadVehicles = async () => {
     if (!company?.id) return;
-    const { data } = await supabase.from('vehicles').select('id, plate_number').eq('company_id', company.id);
+    const { data } = await supabase.from('vehicles').select('id, vehicle_number').eq('company_id', company.id);
     setVehicles(data || []);
   };
 
@@ -157,7 +157,7 @@ export default function DriversListPage() {
     );
   };
 
-  const vehiclePlate = (vehicleId: string | null) => vehicles.find(v => v.id === vehicleId)?.plate_number || '-';
+  const vehiclePlate = (vehicleId: string | null) => vehicles.find(v => v.id === vehicleId)?.vehicle_number || '-';
 
   const filtered = driverData.filter(d => {
     const name = d.profiles ? `${d.profiles.first_name} ${d.profiles.last_name}` : '';
@@ -253,7 +253,7 @@ export default function DriversListPage() {
                   <SelectContent>
                     <SelectItem value="none">Unassigned</SelectItem>
                     {vehicles.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>{v.plate_number}</SelectItem>
+                      <SelectItem key={v.id} value={v.id}>{v.vehicle_number}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -292,6 +292,15 @@ export default function DriversListPage() {
               </SelectContent>
             </Select>
           </div>
+          <DataTable
+            data={formattedData}
+            columns={columns}
+            loading={loading}
+            searchable={false}
+            pageSize={15}
+            emptyTitle="No drivers found"
+            emptyDescription="Add a driver to see driver information here"
+          />
         </CardContent>
       </Card>
 

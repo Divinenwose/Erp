@@ -333,7 +333,7 @@ export default function InternetProvidersPage() {
                 <Globe className="h-4 w-4 mr-2" />Activate
               </DropdownMenuItem>
             )}
-            <Can resource="vendor_management.internet" action="delete">
+            <Can resource="vendors.internet" action="delete">
               <DropdownMenuItem className="text-red-600" onClick={() => setDeleteId(row.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />Delete
               </DropdownMenuItem>
@@ -358,7 +358,7 @@ export default function InternetProvidersPage() {
           <Button size="sm" variant="outline" onClick={exportCSV}>
             Export CSV
           </Button>
-          <Can resource="vendor_management.internet" action="create">
+          <Can resource="vendors.internet" action="create">
             <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditProvider(null); reset(); } setDialogOpen(open); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700">

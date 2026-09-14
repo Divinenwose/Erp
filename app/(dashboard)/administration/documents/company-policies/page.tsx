@@ -315,7 +315,7 @@ export default function CompanyPoliciesPage() {
                 <FileText className="h-4 w-4 mr-2" />Activate
               </DropdownMenuItem>
             )}
-            <Can resource="documents.company_policies" action="delete">
+            <Can resource="documents.policies" action="delete">
               <DropdownMenuItem className="text-red-600" onClick={() => setDeleteId(row.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />Delete
               </DropdownMenuItem>
@@ -341,7 +341,7 @@ export default function CompanyPoliciesPage() {
           <Button size="sm" variant="outline" onClick={exportCSV}>
             Export CSV
           </Button>
-          <Can resource="documents.company_policies" action="create">
+          <Can resource="documents.policies" action="create">
             <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditPolicy(null); reset(); } setDialogOpen(open); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700">

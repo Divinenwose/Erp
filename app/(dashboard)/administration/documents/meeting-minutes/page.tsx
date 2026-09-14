@@ -316,7 +316,7 @@ export default function MeetingMinutesPage() {
                 <FileText className="h-4 w-4 mr-2" />Activate
               </DropdownMenuItem>
             )}
-            <Can resource="documents.meeting_minutes" action="delete">
+            <Can resource="documents.minutes" action="delete">
               <DropdownMenuItem className="text-red-600" onClick={() => setDeleteId(row.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />Delete
               </DropdownMenuItem>
@@ -342,7 +342,7 @@ export default function MeetingMinutesPage() {
           <Button size="sm" variant="outline" onClick={exportCSV}>
             Export CSV
           </Button>
-          <Can resource="documents.meeting_minutes" action="create">
+          <Can resource="documents.minutes" action="create">
             <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditMinutes(null); reset(); } setDialogOpen(open); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700">

@@ -350,7 +350,7 @@ export default function RequestsPage() {
                 </DropdownMenuItem>
               </>
             )}
-            <Can resource="office_supplies.requests" action="delete">
+            <Can resource="supplies.requests" action="delete">
               <DropdownMenuItem className="text-red-600" onClick={() => setDeleteId(row.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />Delete
               </DropdownMenuItem>
@@ -376,7 +376,7 @@ export default function RequestsPage() {
           <Button size="sm" variant="outline" onClick={exportCSV}>
             Export CSV
           </Button>
-          <Can resource="office_supplies.requests" action="create">
+          <Can resource="supplies.requests" action="create">
             <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditRequest(null); reset(); } setDialogOpen(open); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700">

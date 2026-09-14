@@ -50,16 +50,18 @@ function isNavItemAccessible(
   item: NavItem,
   departmentName: string | null,
   hasPermission: (permission: string) => boolean,
-  isAdmin: boolean
+  isAdmin: boolean,
+  isHRManager: boolean = false
 ): boolean {
   if (isAdmin) return true;
+  if (isHRManager && item.module === 'hr') return true; // HR Manager gets all HR items
   if (!isModuleAllowed(item.module, departmentName ?? undefined)) return false;
 
   const ownPermissionOk = !item.permission || hasPermission(item.permission);
 
   if (item.children && item.children.length > 0) {
     const hasAccessibleChild = item.children.some(child =>
-      isNavItemAccessible(child, departmentName, hasPermission, isAdmin)
+      isNavItemAccessible(child, departmentName, hasPermission, isAdmin, isHRManager)
     );
     return ownPermissionOk || hasAccessibleChild;
   }
@@ -69,23 +71,26 @@ function isNavItemAccessible(
 
 function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmentName }: { item: NavItem; collapsed: boolean; depth?: number; onMobileClose?: () => void; departmentName: string | null }) {
   const pathname = usePathname();
-  const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const { hasPermission, isSuperAdmin, isCompanyAdmin, hasRole } = useAuth();
   const [open, setOpen] = useState(false);
 
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
+  const isHRManager = hasRole('HR Manager');
 
   // Check if user has RBAC permission for this item
   const hasItemPermission = useMemo(() => {
     if (isAdmin) return true;
+    if (isHRManager && item.module === 'hr') return true; // HR Manager gets all HR items
     if (!item.permission) return true;
     return hasPermission(item.permission);
-  }, [item.permission, hasPermission, isAdmin]);
+  }, [item.permission, hasPermission, isAdmin, isHRManager, item.module]);
 
   // Check if user's department allows this module
   const hasDepartmentAccess = useMemo(() => {
     if (isAdmin) return true;
+    if (isHRManager && item.module === 'hr') return true; // HR Manager gets HR module
     return isModuleAllowed(item.module, departmentName ?? undefined);
-  }, [item.module, departmentName, isAdmin]);
+  }, [item.module, departmentName, isAdmin, isHRManager]);
 
   // Filter children based on permissions and department access. A child is
   // kept only if it (or something underneath it) is actually reachable, so a
@@ -94,10 +99,11 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
   const visibleChildren = useMemo(() => {
     if (!item.children) return [];
     if (isAdmin) return item.children;
+    if (isHRManager && item.module === 'hr') return item.children; // HR Manager sees all HR children
     return item.children.filter(child =>
-      isNavItemAccessible(child, departmentName, hasPermission, isAdmin)
+      isNavItemAccessible(child, departmentName, hasPermission, isAdmin, isHRManager)
     );
-  }, [item.children, hasPermission, isAdmin, departmentName]);
+  }, [item.children, hasPermission, isAdmin, departmentName, isHRManager, item.module]);
 
   const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + '/') : false;
   const isParentActive = visibleChildren.some(

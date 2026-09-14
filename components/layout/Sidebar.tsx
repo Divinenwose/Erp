@@ -201,17 +201,13 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const { company, departmentName, isSuperAdmin, isCompanyAdmin } = useAuth();
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
 
-  // Get navigation config using shared helper. For a regular department user,
-  // the Administration group is presented as independent top-level items
-  // rather than a nested dropdown — its sections come straight from
-  // config/navigation.ts's existing Administration children, not a manually
-  // maintained list, so any future addition/removal there is picked up
-  // automatically. Company Admin / Super Admin keep the nested "Administration"
-  // dropdown as-is, since they retain company-wide access across every
-  // department's module, not just Administration's.
+  // Keep HR features visible as independent sidebar entries for every role.
+  // Administration remains flattened for regular department users, while
+  // company-wide admins retain its grouped navigation.
   const navigationItems = useMemo(() => {
     const config = getNavigationConfig(company?.name);
-    return isAdmin ? config : flattenTopLevelGroup(config, 'admin');
+    const withHrFlat = flattenTopLevelGroup(config, 'hr');
+    return isAdmin ? withHrFlat : flattenTopLevelGroup(withHrFlat, 'admin');
   }, [company?.name, isAdmin]);
 
   // Handle escape key to close mobile drawer

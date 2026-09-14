@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
@@ -9,27 +11,63 @@ import { Users, UserCheck, Calendar, CreditCard, TrendingUp, Award, BarChart3, B
 import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const headcountData = [
-  { dept: 'Engineering', count: 24 },
-  { dept: 'Sales', count: 18 },
-  { dept: 'HR', count: 8 },
-  { dept: 'Finance', count: 12 },
-  { dept: 'Operations', count: 20 },
-  { dept: 'Marketing', count: 10 },
-];
-
-const leaveData = [
-  { month: 'Jul', requests: 12 },
-  { month: 'Aug', requests: 18 },
-  { month: 'Sep', requests: 9 },
-  { month: 'Oct', requests: 14 },
-  { month: 'Nov', requests: 11 },
-  { month: 'Dec', requests: 22 },
-];
-
 export default function HROverviewPage() {
-  const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const { company, hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ total: 0, onLeave: 0, newThisMonth: 0, avgTenure: 0 });
+  const [headcountData, setHeadcountData] = useState<{ dept: string; count: number }[]>([]);
+  const [leaveData, setLeaveData] = useState<{ month: string; requests: number }[]>([]);
+
+  useEffect(() => {
+    if (!company?.id) return;
+
+    const loadOverview = async () => {
+      setLoading(true);
+      const today = new Date().toISOString().slice(0, 10);
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5, 1);
+
+      const [employeesRes, departmentsRes, leaveRes] = await Promise.all([
+        supabase.from('employees').select('id, department_id, hire_date').eq('company_id', company.id).eq('employment_status', 'active'),
+        supabase.from('departments').select('id, name').eq('company_id', company.id),
+        supabase.from('leave_requests').select('start_date, end_date, created_at').eq('company_id', company.id).gte('created_at', sixMonthsAgo.toISOString()),
+      ]);
+
+      const employees = employeesRes.data ?? [];
+      const departments = departmentsRes.data ?? [];
+      const leaveRequests = leaveRes.data ?? [];
+      const departmentNames = Object.fromEntries(departments.map(department => [department.id, department.name]));
+      const headcount = employees.reduce<Record<string, number>>((counts, employee) => {
+        const name = departmentNames[employee.department_id] ?? 'Unassigned';
+        counts[name] = (counts[name] ?? 0) + 1;
+        return counts;
+      }, {});
+      const activeLeave = leaveRequests.filter(request => request.start_date <= today && request.end_date >= today).length;
+      const newThisMonth = employees.filter(employee => employee.hire_date && employee.hire_date >= monthStart.toISOString().slice(0, 10)).length;
+      const tenureYears = employees
+        .filter(employee => employee.hire_date)
+        .map(employee => (Date.now() - new Date(employee.hire_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      const averageTenure = tenureYears.length ? tenureYears.reduce((sum, years) => sum + years, 0) / tenureYears.length : 0;
+      const monthLabels = Array.from({ length: 6 }, (_, index) => {
+        const date = new Date();
+        date.setMonth(date.getMonth() - (5 - index), 1);
+        return { key: date.toISOString().slice(0, 7), label: date.toLocaleDateString('en-US', { month: 'short' }) };
+      });
+
+      setStats({ total: employees.length, onLeave: activeLeave, newThisMonth, avgTenure: averageTenure });
+      setHeadcountData(Object.entries(headcount).map(([dept, count]) => ({ dept, count })).sort((a, b) => b.count - a.count));
+      setLeaveData(monthLabels.map(month => ({
+        month: month.label,
+        requests: leaveRequests.filter(request => request.created_at?.slice(0, 7) === month.key).length,
+      })));
+      setLoading(false);
+    };
+
+    loadOverview();
+  }, [company?.id]);
 
   const modules = [
     { title: 'Employees', description: 'Manage workforce records', icon: Users, href: '/hr/employees', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600', permission: 'hr.employees.view' },
@@ -47,10 +85,10 @@ export default function HROverviewPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Employees" value={92} change={3.2} changeLabel="this month" icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" />
-        <KPICard title="On Leave Today" value={7} icon={<Calendar className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" />
-        <KPICard title="New This Month" value={4} change={33} changeLabel="vs last month" icon={<UserCheck className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" />
-        <KPICard title="Avg Tenure" value="2.8 yrs" icon={<TrendingUp className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" />
+        <KPICard title="Total Employees" value={stats.total} icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+        <KPICard title="On Leave Today" value={stats.onLeave} icon={<Calendar className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+        <KPICard title="New This Month" value={stats.newThisMonth} icon={<UserCheck className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+        <KPICard title="Avg Tenure" value={`${stats.avgTenure.toFixed(1)} yrs`} icon={<TrendingUp className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

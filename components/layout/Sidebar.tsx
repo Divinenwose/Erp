@@ -61,7 +61,7 @@ function isNavItemAccessible(
     const hasAccessibleChild = item.children.some(child =>
       isNavItemAccessible(child, departmentName, hasPermission, isAdmin)
     );
-    return ownPermissionOk && hasAccessibleChild;
+    return ownPermissionOk || hasAccessibleChild;
   }
 
   return ownPermissionOk;
@@ -202,14 +202,14 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
   const isHRManager = hasRole('HR Manager');
 
-  // HR is a grouped module for company-wide admins and other departments,
-  // but its manager gets a flat task-oriented sidebar. Administration keeps
-  // its existing department-user flattening behavior.
+  // Company admin sees everything grouped. HR manager gets HR flattened.
+  // Other users get Administration flattened (existing behavior).
   const navigationItems = useMemo(() => {
     const config = getNavigationConfig(company?.name);
-    const withHrFlat = isHRManager ? flattenTopLevelGroup(config, 'hr') : config;
-    return isHRManager ? withHrFlat : flattenTopLevelGroup(withHrFlat, 'admin');
-  }, [company?.name, isHRManager]);
+    if (isAdmin) return config;
+    if (isHRManager) return flattenTopLevelGroup(config, 'hr');
+    return flattenTopLevelGroup(config, 'admin');
+  }, [company?.name, isAdmin, isHRManager]);
 
   // Handle escape key to close mobile drawer
   useEffect(() => {

@@ -279,7 +279,7 @@ export default function EventsPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.events.edit">
+        <Can resource="events" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -305,7 +305,7 @@ export default function EventsPage() {
                   <CheckCircle className="h-4 w-4 mr-2" /> Complete Event
                 </DropdownMenuItem>
               )}
-              <Can do="marketing.events.delete">
+              <Can resource="events" action="delete">
                 <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
                   <Trash2 className="h-4 w-4 mr-2" /> Delete
                 </DropdownMenuItem>
@@ -320,7 +320,7 @@ export default function EventsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Events" description="Manage marketing events and sponsorships" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Events' }]}>
-        <Can do="marketing.events.create">
+        <Can resource="events" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditEvent(null); reset(); }}>

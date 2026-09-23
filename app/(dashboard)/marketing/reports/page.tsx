@@ -139,7 +139,7 @@ export default function MarketingReportsPage() {
               <SelectItem value="year">This Year</SelectItem>
             </SelectContent>
           </Select>
-          <Can do="marketing.reports.export">
+          <Can resource="reports" action="export">
             <Button variant="outline" onClick={exportReport}>
               <Download className="h-4 w-4 mr-2" /> Export CSV
             </Button>

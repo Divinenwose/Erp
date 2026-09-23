@@ -243,7 +243,7 @@ export default function MarketingDocumentsPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.documents.edit">
+        <Can resource="documents" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -269,7 +269,7 @@ export default function MarketingDocumentsPage() {
                   <FileCheck className="h-4 w-4 mr-2" /> Restore
                 </DropdownMenuItem>
               )}
-              <Can do="marketing.documents.delete">
+              <Can resource="documents" action="delete">
                 <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
                   <Trash2 className="h-4 w-4 mr-2" /> Delete
                 </DropdownMenuItem>
@@ -284,7 +284,7 @@ export default function MarketingDocumentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Marketing Documents" description="Manage marketing documents and trackers" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Documents' }]}>
-        <Can do="marketing.documents.create">
+        <Can resource="documents" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditDocument(null); reset(); }}>

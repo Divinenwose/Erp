@@ -250,7 +250,7 @@ export default function SocialMediaPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.social.edit">
+        <Can resource="social" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -271,16 +271,16 @@ export default function SocialMediaPage() {
                   <Send className="h-4 w-4 mr-2" /> Publish Now
                 </DropdownMenuItem>
               )}
+              <Can resource="social" action="delete">
+                <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete
+                </DropdownMenuItem>
+              </Can>
               {row.post_url && (
                 <DropdownMenuItem onClick={() => window.open(row.post_url, '_blank')}>
                   <Globe className="h-4 w-4 mr-2" /> View Post
                 </DropdownMenuItem>
               )}
-              <Can do="marketing.social.delete">
-                <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
-                  <Trash2 className="h-4 w-4 mr-2" /> Delete
-                </DropdownMenuItem>
-              </Can>
             </DropdownMenuContent>
           </DropdownMenu>
         </Can>
@@ -291,7 +291,7 @@ export default function SocialMediaPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Social Media" description="Manage social media posts and engagement" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Social Media' }]}>
-        <Can do="marketing.social.create">
+        <Can resource="social" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditPost(null); reset(); }}>

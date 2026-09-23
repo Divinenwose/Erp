@@ -261,7 +261,7 @@ export default function PRPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.pr.edit">
+        <Can resource="pr" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -287,7 +287,7 @@ export default function PRPage() {
                   <Megaphone className="h-4 w-4 mr-2" /> Publish
                 </DropdownMenuItem>
               )}
-              <Can do="marketing.pr.delete">
+              <Can resource="pr" action="delete">
                 <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
                   <Trash2 className="h-4 w-4 mr-2" /> Delete
                 </DropdownMenuItem>
@@ -302,7 +302,7 @@ export default function PRPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Press Releases" description="Manage PR and communications" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Press Releases' }]}>
-        <Can do="marketing.pr.create">
+        <Can resource="pr" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditPR(null); reset(); }}>

@@ -257,7 +257,7 @@ export default function MarketResearchPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.research.edit">
+        <Can resource="research" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -278,7 +278,7 @@ export default function MarketResearchPage() {
                   <ClipboardCheck className="h-4 w-4 mr-2" /> Complete Research
                 </DropdownMenuItem>
               )}
-              <Can do="marketing.research.delete">
+              <Can resource="research" action="delete">
                 <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
                   <Trash2 className="h-4 w-4 mr-2" /> Delete
                 </DropdownMenuItem>
@@ -293,7 +293,7 @@ export default function MarketResearchPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Market Research" description="Manage market research and surveys" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Research' }]}>
-        <Can do="marketing.research.create">
+        <Can resource="research" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditResearch(null); reset(); }}>

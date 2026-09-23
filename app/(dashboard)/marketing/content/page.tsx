@@ -260,7 +260,7 @@ export default function ContentPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.content.edit">
+        <Can resource="content" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -281,12 +281,7 @@ export default function ContentPage() {
                   <CheckCircle className="h-4 w-4 mr-2" /> Approve
                 </DropdownMenuItem>
               )}
-              {row.status === 'approved' && (
-                <DropdownMenuItem onClick={() => updateStatus(row.id, 'published')}>
-                  <CheckCircle className="h-4 w-4 mr-2" /> Publish
-                </DropdownMenuItem>
-              )}
-              <Can do="marketing.content.delete">
+              <Can resource="content" action="delete">
                 <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
                   <Trash2 className="h-4 w-4 mr-2" /> Delete
                 </DropdownMenuItem>
@@ -301,7 +296,7 @@ export default function ContentPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Content" description="Create and manage marketing content" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Content' }]}>
-        <Can do="marketing.content.create">
+        <Can resource="content" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditContent(null); reset(); }}>

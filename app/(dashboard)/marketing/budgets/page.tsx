@@ -244,7 +244,7 @@ export default function MarketingBudgetsPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.budgets.edit">
+        <Can resource="budgets" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -265,7 +265,7 @@ export default function MarketingBudgetsPage() {
                   <TrendingUp className="h-4 w-4 mr-2" /> Reopen Budget
                 </DropdownMenuItem>
               )}
-              <Can do="marketing.budgets.delete">
+              <Can resource="budgets" action="delete">
                 <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
                   <Trash2 className="h-4 w-4 mr-2" /> Delete
                 </DropdownMenuItem>
@@ -280,7 +280,7 @@ export default function MarketingBudgetsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Marketing Budgets" description="Manage marketing budgets and allocations" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Budgets' }]}>
-        <Can do="marketing.budgets.create">
+        <Can resource="budgets" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditBudget(null); reset(); }}>

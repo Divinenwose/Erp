@@ -258,7 +258,7 @@ export default function MarketingVendorsPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.vendors.edit">
+        <Can resource="vendors" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -274,16 +274,16 @@ export default function MarketingVendorsPage() {
                   <X className="h-4 w-4 mr-2" /> Deactivate
                 </DropdownMenuItem>
               )}
+              <Can resource="vendors" action="delete">
+                <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete
+                </DropdownMenuItem>
+              </Can>
               {row.status === 'inactive' && (
                 <DropdownMenuItem onClick={() => updateStatus(row.id, 'active')}>
                   <Star className="h-4 w-4 mr-2" /> Activate
                 </DropdownMenuItem>
               )}
-              <Can do="marketing.vendors.delete">
-                <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
-                  <Trash2 className="h-4 w-4 mr-2" /> Delete
-                </DropdownMenuItem>
-              </Can>
             </DropdownMenuContent>
           </DropdownMenu>
         </Can>
@@ -294,7 +294,7 @@ export default function MarketingVendorsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Marketing Vendors" description="Manage marketing vendors and service providers" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Vendors' }]}>
-        <Can do="marketing.vendors.create">
+        <Can resource="vendors" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditVendor(null); reset(); }}>

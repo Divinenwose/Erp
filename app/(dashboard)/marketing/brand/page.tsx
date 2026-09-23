@@ -237,7 +237,7 @@ export default function BrandManagementPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.brand.edit">
+        <Can resource="brand" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -253,16 +253,16 @@ export default function BrandManagementPage() {
                   <Archive className="h-4 w-4 mr-2" /> Archive
                 </DropdownMenuItem>
               )}
+              <Can resource="brand" action="delete">
+                <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete
+                </DropdownMenuItem>
+              </Can>
               {row.status === 'archived' && (
                 <DropdownMenuItem onClick={() => updateStatus(row.id, 'active')}>
                   <Palette className="h-4 w-4 mr-2" /> Restore
                 </DropdownMenuItem>
               )}
-              <Can do="marketing.brand.delete">
-                <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
-                  <Trash2 className="h-4 w-4 mr-2" /> Delete
-                </DropdownMenuItem>
-              </Can>
             </DropdownMenuContent>
           </DropdownMenu>
         </Can>
@@ -273,7 +273,7 @@ export default function BrandManagementPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Brand Assets" description="Manage brand assets and guidelines" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Brand Assets' }]}>
-        <Can do="marketing.brand.create">
+        <Can resource="brand" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditAsset(null); reset(); }}>

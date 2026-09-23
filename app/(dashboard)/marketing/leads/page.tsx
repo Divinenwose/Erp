@@ -263,7 +263,7 @@ export default function MarketingLeadsPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.leads.edit">
+        <Can resource="leads" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -286,7 +286,7 @@ export default function MarketingLeadsPage() {
               <DropdownMenuItem onClick={() => updateStatus(row.id, 'closed_lost')}>
                 <X className="h-4 w-4 mr-2" /> Close Lost
               </DropdownMenuItem>
-              <Can do="marketing.leads.delete">
+              <Can resource="leads" action="delete">
                 <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
                   <Trash2 className="h-4 w-4 mr-2" /> Delete
                 </DropdownMenuItem>
@@ -301,7 +301,7 @@ export default function MarketingLeadsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Marketing Leads" description="Manage marketing leads and opportunities" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Leads' }]}>
-        <Can do="marketing.leads.create">
+        <Can resource="leads" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditLead(null); reset(); }}>

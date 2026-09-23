@@ -274,7 +274,7 @@ export default function MarketingContractsPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.contracts.edit">
+        <Can resource="contracts" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -295,16 +295,16 @@ export default function MarketingContractsPage() {
                   <Calendar className="h-4 w-4 mr-2" /> Mark Expired
                 </DropdownMenuItem>
               )}
+              <Can resource="contracts" action="delete">
+                <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete
+                </DropdownMenuItem>
+              </Can>
               {row.contract_document_url && (
                 <DropdownMenuItem onClick={() => window.open(row.contract_document_url, '_blank')}>
                   <FileSignature className="h-4 w-4 mr-2" /> View Document
                 </DropdownMenuItem>
               )}
-              <Can do="marketing.contracts.delete">
-                <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
-                  <Trash2 className="h-4 w-4 mr-2" /> Delete
-                </DropdownMenuItem>
-              </Can>
             </DropdownMenuContent>
           </DropdownMenu>
         </Can>
@@ -315,7 +315,7 @@ export default function MarketingContractsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Marketing Contracts" description="Manage vendor contracts and agreements" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Contracts' }]}>
-        <Can do="marketing.contracts.create">
+        <Can resource="contracts" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditContract(null); reset(); }}>

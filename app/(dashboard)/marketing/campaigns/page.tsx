@@ -274,7 +274,7 @@ export default function CampaignsPage() {
       key: 'actions',
       header: 'Actions',
       cell: (row) => (
-        <Can do="marketing.campaigns.edit">
+        <Can resource="campaigns" action="edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -300,16 +300,16 @@ export default function CampaignsPage() {
                   <Play className="h-4 w-4 mr-2" /> Resume Campaign
                 </DropdownMenuItem>
               )}
+              <Can resource="campaigns" action="delete">
+                <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete
+                </DropdownMenuItem>
+              </Can>
               {row.status !== 'completed' && (
                 <DropdownMenuItem onClick={() => updateStatus(row.id, 'completed')}>
                   <CheckCircle className="h-4 w-4 mr-2" /> Mark Complete
                 </DropdownMenuItem>
               )}
-              <Can do="marketing.campaigns.delete">
-                <DropdownMenuItem onClick={() => setDeleteId(row.id)} className="text-red-600">
-                  <Trash2 className="h-4 w-4 mr-2" /> Delete
-                </DropdownMenuItem>
-              </Can>
             </DropdownMenuContent>
           </DropdownMenu>
         </Can>
@@ -320,7 +320,7 @@ export default function CampaignsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Campaigns" description="Manage marketing campaigns" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Campaigns' }]}>
-        <Can do="marketing.campaigns.create">
+        <Can resource="campaigns" action="create">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditCampaign(null); reset(); }}>

@@ -25,6 +25,7 @@ const DEPARTMENT_MODULE_ACCESS: Record<string, string[]> = {
   'Logistics': ['logistics'],
   'IT': ['it'],
   'Media': ['media'],
+  'Marketing': ['marketing'],
   'Internal Control': ['internal_control'],
   'Quality Assurance & Quality Control': ['qa_qc'],
   'Manufacturing': ['manufacturing'],

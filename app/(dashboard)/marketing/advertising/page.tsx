@@ -230,38 +230,46 @@ export default function AdvertisingPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Ad Name', accessor: 'ad_name' },
+    { key: 'ad_name', header: 'Ad Name' },
     { 
+      key: 'ad_type',
       header: 'Type', 
-      accessor: (row) => row.ad_type || '-'
+      cell: (row) => row.ad_type || '-'
     },
     { 
+      key: 'platform',
       header: 'Platform', 
-      accessor: (row) => row.platform || '-'
+      cell: (row) => row.platform || '-'
     },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'start_date',
       header: 'Start Date', 
-      accessor: (row) => row.start_date ? format(new Date(row.start_date), 'MMM dd, yyyy') : '-'
+      cell: (row) => row.start_date ? format(new Date(row.start_date), 'MMM dd, yyyy') : '-'
     },
     { 
+      key: 'budget',
       header: 'Budget', 
-      accessor: (row) => row.budget ? `$${row.budget.toLocaleString()}` : '-'
+      cell: (row) => row.budget ? `$${row.budget.toLocaleString()}` : '-'
     },
     { 
+      key: 'actual_spend',
       header: 'Actual Spend', 
-      accessor: (row) => row.actual_spend ? `$${row.actual_spend.toLocaleString()}` : '-'
+      cell: (row) => row.actual_spend ? `$${row.actual_spend.toLocaleString()}` : '-'
     },
     { 
+      key: 'campaign',
       header: 'Campaign', 
-      accessor: (row) => row.marketing_campaigns?.campaign_name || '-'
+      cell: (row) => row.marketing_campaigns?.campaign_name || '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.advertising.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

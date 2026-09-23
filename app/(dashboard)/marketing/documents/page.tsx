@@ -202,40 +202,47 @@ export default function MarketingDocumentsPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Document Name', accessor: 'document_name' },
+    { key: 'document_name', header: 'Document Name' },
     { 
+      key: 'document_type',
       header: 'Type', 
-      accessor: (row) => <Badge variant="outline">{row.document_type?.replace('_', ' ')}</Badge>
+      cell: (row) => <Badge variant="outline">{row.document_type?.replace('_', ' ')}</Badge>
     },
     { 
+      key: 'category',
       header: 'Category', 
-      accessor: (row) => row.category || '-'
+      cell: (row) => row.category || '-'
     },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'version',
       header: 'Version', 
-      accessor: (row) => row.version || '-'
+      cell: (row) => row.version || '-'
     },
     { 
+      key: 'document_url',
       header: 'Document URL', 
-      accessor: (row) => row.document_url ? (
+      cell: (row) => row.document_url ? (
         <a href={row.document_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
           View Document
         </a>
       ) : '-'
     },
     { 
+      key: 'created_by',
       header: 'Created By', 
-      accessor: (row) => row.created_by_profile 
+      cell: (row) => row.created_by_profile 
         ? `${row.created_by_profile.first_name} ${row.created_by_profile.last_name}` 
         : '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.documents.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

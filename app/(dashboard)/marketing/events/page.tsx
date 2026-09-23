@@ -229,46 +229,56 @@ export default function EventsPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Event Name', accessor: 'event_name' },
+    { key: 'event_name', header: 'Event Name' },
     { 
+      key: 'event_type',
       header: 'Type', 
-      accessor: (row) => row.event_type?.replace('_', ' ') || '-'
+      cell: (row) => row.event_type?.replace('_', ' ') || '-'
     },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'start_date',
       header: 'Start Date', 
-      accessor: (row) => row.start_date ? format(new Date(row.start_date), 'MMM dd, yyyy') : '-'
+      cell: (row) => row.start_date ? format(new Date(row.start_date), 'MMM dd, yyyy') : '-'
     },
     { 
+      key: 'venue',
       header: 'Venue', 
-      accessor: (row) => row.venue || '-'
+      cell: (row) => row.venue || '-'
     },
     { 
+      key: 'location',
       header: 'Location', 
-      accessor: (row) => row.location || '-'
+      cell: (row) => row.location || '-'
     },
     { 
+      key: 'expected_attendees',
       header: 'Expected', 
-      accessor: (row) => row.expected_attendees || '-'
+      cell: (row) => row.expected_attendees || '-'
     },
     { 
+      key: 'actual_attendees',
       header: 'Actual', 
-      accessor: (row) => row.actual_attendees || '-'
+      cell: (row) => row.actual_attendees || '-'
     },
     { 
+      key: 'budget',
       header: 'Budget', 
-      accessor: (row) => row.budget ? `$${row.budget.toLocaleString()}` : '-'
+      cell: (row) => row.budget ? `$${row.budget.toLocaleString()}` : '-'
     },
     { 
+      key: 'campaign',
       header: 'Campaign', 
-      accessor: (row) => row.campaigns?.campaign_name || '-'
+      cell: (row) => row.campaigns?.campaign_name || '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.events.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

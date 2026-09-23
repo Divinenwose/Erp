@@ -202,26 +202,31 @@ export default function SocialMediaPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Platform', accessor: (row) => <Badge variant="outline">{row.platform}</Badge> },
+    { key: 'platform', header: 'Platform', cell: (row) => <Badge variant="outline">{row.platform}</Badge> },
     { 
+      key: 'content',
       header: 'Content', 
-      accessor: (row) => row.content?.title || 'Standalone Post'
+      cell: (row) => row.content?.title || 'Standalone Post'
     },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'scheduled_date',
       header: 'Scheduled Date', 
-      accessor: (row) => row.scheduled_date ? format(new Date(row.scheduled_date), 'MMM dd, yyyy HH:mm') : '-'
+      cell: (row) => row.scheduled_date ? format(new Date(row.scheduled_date), 'MMM dd, yyyy HH:mm') : '-'
     },
     { 
+      key: 'published_date',
       header: 'Published Date', 
-      accessor: (row) => row.published_date ? format(new Date(row.published_date), 'MMM dd, yyyy') : '-'
+      cell: (row) => row.published_date ? format(new Date(row.published_date), 'MMM dd, yyyy') : '-'
     },
     { 
+      key: 'engagement',
       header: 'Engagement', 
-      accessor: (row) => (
+      cell: (row) => (
         <div className="flex gap-2 text-sm">
           <span title="Likes"><Heart className="h-3 w-3 inline mr-1" />{row.likes || 0}</span>
           <span title="Comments"><MessageCircle className="h-3 w-3 inline mr-1" />{row.comments || 0}</span>
@@ -230,18 +235,21 @@ export default function SocialMediaPage() {
       )
     },
     { 
+      key: 'views',
       header: 'Views', 
-      accessor: (row) => (
+      cell: (row) => (
         <span title="Views"><Eye className="h-3 w-3 inline mr-1" />{row.views || 0}</span>
       )
     },
     { 
+      key: 'engagement_rate',
       header: 'Engagement Rate', 
-      accessor: (row) => row.engagement_rate ? `${row.engagement_rate.toFixed(2)}%` : '-'
+      cell: (row) => row.engagement_rate ? `${row.engagement_rate.toFixed(2)}%` : '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.social.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

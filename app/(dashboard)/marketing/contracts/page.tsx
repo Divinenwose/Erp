@@ -232,40 +232,48 @@ export default function MarketingContractsPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Contract Number', accessor: (row) => row.contract_number || '-' },
+    { key: 'contract_number', header: 'Contract Number', cell: (row) => row.contract_number || '-' },
     { 
+      key: 'vendor',
       header: 'Vendor', 
-      accessor: (row) => row.vendors?.vendor_name || '-'
+      cell: (row) => row.vendors?.vendor_name || '-'
     },
     { 
+      key: 'contract_type',
       header: 'Type', 
-      accessor: (row) => <Badge variant="outline">{row.contract_type}</Badge>
+      cell: (row) => <Badge variant="outline">{row.contract_type}</Badge>
     },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'start_date',
       header: 'Start Date', 
-      accessor: (row) => row.start_date ? format(new Date(row.start_date), 'MMM dd, yyyy') : '-'
+      cell: (row) => row.start_date ? format(new Date(row.start_date), 'MMM dd, yyyy') : '-'
     },
     { 
+      key: 'end_date',
       header: 'End Date', 
-      accessor: (row) => row.end_date ? format(new Date(row.end_date), 'MMM dd, yyyy') : '-'
+      cell: (row) => row.end_date ? format(new Date(row.end_date), 'MMM dd, yyyy') : '-'
     },
     { 
+      key: 'contract_value',
       header: 'Value', 
-      accessor: (row) => row.contract_value ? `$${row.contract_value.toLocaleString()}` : '-'
+      cell: (row) => row.contract_value ? `$${row.contract_value.toLocaleString()}` : '-'
     },
     { 
+      key: 'approved_by',
       header: 'Approved By', 
-      accessor: (row) => row.approved_by_profile 
+      cell: (row) => row.approved_by_profile 
         ? `${row.approved_by_profile.first_name} ${row.approved_by_profile.last_name}` 
         : '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.contracts.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

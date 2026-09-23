@@ -229,32 +229,38 @@ export default function PRPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Title', accessor: 'title' },
+    { key: 'title', header: 'Title' },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'release_date',
       header: 'Release Date', 
-      accessor: (row) => row.release_date ? format(new Date(row.release_date), 'MMM dd, yyyy') : '-'
+      cell: (row) => row.release_date ? format(new Date(row.release_date), 'MMM dd, yyyy') : '-'
     },
     { 
+      key: 'contact_person',
       header: 'Contact', 
-      accessor: (row) => row.contact_person || '-'
+      cell: (row) => row.contact_person || '-'
     },
     { 
+      key: 'campaign',
       header: 'Campaign', 
-      accessor: (row) => row.campaigns?.campaign_name || '-'
+      cell: (row) => row.campaigns?.campaign_name || '-'
     },
     { 
+      key: 'created_by',
       header: 'Created By', 
-      accessor: (row) => row.created_by_profile 
+      cell: (row) => row.created_by_profile 
         ? `${row.created_by_profile.first_name} ${row.created_by_profile.last_name}` 
         : '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.pr.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

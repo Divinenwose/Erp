@@ -233,40 +233,47 @@ export default function CampaignsPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Campaign Name', accessor: 'campaign_name' },
+    { key: 'campaign_name', header: 'Campaign Name' },
     { 
+      key: 'campaign_type',
       header: 'Type', 
-      accessor: (row) => row.campaign_type?.replace('_', ' ') || '-' 
+      cell: (row) => row.campaign_type?.replace('_', ' ') || '-' 
     },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'priority',
       header: 'Priority', 
-      accessor: (row) => (
+      cell: (row) => (
         <Badge variant={row.priority === 'urgent' ? 'destructive' : row.priority === 'high' ? 'default' : 'secondary'}>
           {row.priority}
         </Badge>
       )
     },
     { 
+      key: 'start_date',
       header: 'Start Date', 
-      accessor: (row) => row.start_date ? format(new Date(row.start_date), 'MMM dd, yyyy') : '-'
+      cell: (row) => row.start_date ? format(new Date(row.start_date), 'MMM dd, yyyy') : '-'
     },
     { 
+      key: 'budget',
       header: 'Budget', 
-      accessor: (row) => row.budget ? `$${row.budget.toLocaleString()}` : '-'
+      cell: (row) => row.budget ? `$${row.budget.toLocaleString()}` : '-'
     },
     { 
+      key: 'assigned_to',
       header: 'Assigned To', 
-      accessor: (row) => row.assigned_to_profile 
+      cell: (row) => row.assigned_to_profile 
         ? `${row.assigned_to_profile.first_name} ${row.assigned_to_profile.last_name}` 
         : '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.campaigns.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

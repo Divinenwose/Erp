@@ -219,42 +219,50 @@ export default function MarketingLeadsPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Lead Name', accessor: 'lead_name' },
+    { key: 'lead_name', header: 'Lead Name' },
     { 
+      key: 'company_name',
       header: 'Company', 
-      accessor: (row) => row.company_name || '-'
+      cell: (row) => row.company_name || '-'
     },
     { 
+      key: 'lead_status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.lead_status} />
+      cell: (row) => <StatusBadge status={row.lead_status} />
     },
     { 
+      key: 'lead_source',
       header: 'Source', 
-      accessor: (row) => <Badge variant="outline">{row.lead_source?.replace('_', ' ')}</Badge>
+      cell: (row) => <Badge variant="outline">{row.lead_source?.replace('_', ' ')}</Badge>
     },
     { 
+      key: 'email',
       header: 'Email', 
-      accessor: (row) => row.email ? (
+      cell: (row) => row.email ? (
         <a href={`mailto:${row.email}`} className="text-blue-600 hover:underline flex items-center gap-1">
           <Mail className="h-3 w-3" /> {row.email}
         </a>
       ) : '-'
     },
     { 
+      key: 'phone',
       header: 'Phone', 
-      accessor: (row) => row.phone || '-'
+      cell: (row) => row.phone || '-'
     },
     { 
+      key: 'estimated_value',
       header: 'Estimated Value', 
-      accessor: (row) => row.estimated_value ? `$${row.estimated_value.toLocaleString()}` : '-'
+      cell: (row) => row.estimated_value ? `$${row.estimated_value.toLocaleString()}` : '-'
     },
     { 
+      key: 'campaign',
       header: 'Campaign', 
-      accessor: (row) => row.campaigns?.campaign_name || '-'
+      cell: (row) => row.campaigns?.campaign_name || '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.leads.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

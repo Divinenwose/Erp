@@ -223,36 +223,43 @@ export default function ContentPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Title', accessor: 'title' },
+    { key: 'title', header: 'Title' },
     { 
+      key: 'content_type',
       header: 'Type', 
-      accessor: (row) => row.content_type?.replace('_', ' ') || '-' 
+      cell: (row) => row.content_type?.replace('_', ' ') || '-' 
     },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'platform',
       header: 'Platform', 
-      accessor: (row) => row.platform || '-'
+      cell: (row) => row.platform || '-'
     },
     { 
+      key: 'publish_date',
       header: 'Publish Date', 
-      accessor: (row) => row.publish_date ? format(new Date(row.publish_date), 'MMM dd, yyyy') : '-'
+      cell: (row) => row.publish_date ? format(new Date(row.publish_date), 'MMM dd, yyyy') : '-'
     },
     { 
+      key: 'campaign',
       header: 'Campaign', 
-      accessor: (row) => row.campaigns?.campaign_name || '-'
+      cell: (row) => row.campaigns?.campaign_name || '-'
     },
     { 
+      key: 'author',
       header: 'Author', 
-      accessor: (row) => row.author_profile 
+      cell: (row) => row.author_profile 
         ? `${row.author_profile.first_name} ${row.author_profile.last_name}` 
         : '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.content.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

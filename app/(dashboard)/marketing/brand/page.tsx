@@ -201,36 +201,42 @@ export default function BrandManagementPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Asset Name', accessor: 'asset_name' },
+    { key: 'asset_name', header: 'Asset Name' },
     { 
+      key: 'asset_type',
       header: 'Type', 
-      accessor: (row) => <Badge variant="outline">{row.asset_type?.replace('_', ' ')}</Badge>
+      cell: (row) => <Badge variant="outline">{row.asset_type?.replace('_', ' ')}</Badge>
     },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'version',
       header: 'Version', 
-      accessor: (row) => row.version || '-'
+      cell: (row) => row.version || '-'
     },
     { 
+      key: 'asset_url',
       header: 'Asset URL', 
-      accessor: (row) => row.asset_url ? (
+      cell: (row) => row.asset_url ? (
         <a href={row.asset_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
           View Asset
         </a>
       ) : '-'
     },
     { 
+      key: 'created_by',
       header: 'Created By', 
-      accessor: (row) => row.created_by_profile 
+      cell: (row) => row.created_by_profile 
         ? `${row.created_by_profile.first_name} ${row.created_by_profile.last_name}` 
         : '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.brand.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

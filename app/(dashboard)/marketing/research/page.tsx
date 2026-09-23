@@ -215,40 +215,48 @@ export default function MarketResearchPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Title', accessor: 'research_title' },
+    { key: 'research_title', header: 'Title' },
     { 
+      key: 'research_type',
       header: 'Type', 
-      accessor: (row) => row.research_type?.replace('_', ' ') || '-'
+      cell: (row) => row.research_type?.replace('_', ' ') || '-'
     },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'start_date',
       header: 'Start Date', 
-      accessor: (row) => row.start_date ? format(new Date(row.start_date), 'MMM dd, yyyy') : '-'
+      cell: (row) => row.start_date ? format(new Date(row.start_date), 'MMM dd, yyyy') : '-'
     },
     { 
+      key: 'end_date',
       header: 'End Date', 
-      accessor: (row) => row.end_date ? format(new Date(row.end_date), 'MMM dd, yyyy') : '-'
+      cell: (row) => row.end_date ? format(new Date(row.end_date), 'MMM dd, yyyy') : '-'
     },
     { 
+      key: 'sample_size',
       header: 'Sample Size', 
-      accessor: (row) => row.sample_size || '-'
+      cell: (row) => row.sample_size || '-'
     },
     { 
+      key: 'budget',
       header: 'Budget', 
-      accessor: (row) => row.budget ? `$${row.budget.toLocaleString()}` : '-'
+      cell: (row) => row.budget ? `$${row.budget.toLocaleString()}` : '-'
     },
     { 
+      key: 'conducted_by',
       header: 'Conducted By', 
-      accessor: (row) => row.conducted_by_profile 
+      cell: (row) => row.conducted_by_profile 
         ? `${row.conducted_by_profile.first_name} ${row.conducted_by_profile.last_name}` 
         : '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.research.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

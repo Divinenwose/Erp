@@ -214,34 +214,40 @@ export default function MarketingVendorsPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Vendor Name', accessor: 'vendor_name' },
+    { key: 'vendor_name', header: 'Vendor Name' },
     { 
+      key: 'vendor_type',
       header: 'Type', 
-      accessor: (row) => <Badge variant="outline">{row.vendor_type}</Badge>
+      cell: (row) => <Badge variant="outline">{row.vendor_type}</Badge>
     },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'contact_person',
       header: 'Contact', 
-      accessor: (row) => row.contact_person || '-'
+      cell: (row) => row.contact_person || '-'
     },
     { 
+      key: 'email',
       header: 'Email', 
-      accessor: (row) => row.email ? (
+      cell: (row) => row.email ? (
         <a href={`mailto:${row.email}`} className="text-blue-600 hover:underline flex items-center gap-1">
           <Mail className="h-3 w-3" /> {row.email}
         </a>
       ) : '-'
     },
     { 
+      key: 'phone',
       header: 'Phone', 
-      accessor: (row) => row.phone || '-'
+      cell: (row) => row.phone || '-'
     },
     { 
+      key: 'rating',
       header: 'Rating', 
-      accessor: (row) => row.rating ? (
+      cell: (row) => row.rating ? (
         <div className="flex items-center">
           <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
           <span className="ml-1">{row.rating}</span>
@@ -249,8 +255,9 @@ export default function MarketingVendorsPage() {
       ) : '-'
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.vendors.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

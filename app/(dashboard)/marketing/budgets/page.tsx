@@ -198,30 +198,36 @@ export default function MarketingBudgetsPage() {
   };
 
   const columns: Column[] = [
-    { header: 'Fiscal Year', accessor: 'fiscal_year' },
+    { key: 'fiscal_year', header: 'Fiscal Year' },
     { 
+      key: 'quarter',
       header: 'Quarter', 
-      accessor: (row) => <Badge variant="outline">{row.quarter}</Badge>
+      cell: (row) => <Badge variant="outline">{row.quarter}</Badge>
     },
     { 
+      key: 'category',
       header: 'Category', 
-      accessor: (row) => <Badge variant="secondary">{row.category}</Badge>
+      cell: (row) => <Badge variant="secondary">{row.category}</Badge>
     },
     { 
+      key: 'status',
       header: 'Status', 
-      accessor: (row) => <StatusBadge status={row.status} />
+      cell: (row) => <StatusBadge status={row.status} />
     },
     { 
+      key: 'allocated_amount',
       header: 'Allocated', 
-      accessor: (row) => `$${row.allocated_amount?.toLocaleString() || 0}`
+      cell: (row) => `$${row.allocated_amount?.toLocaleString() || 0}`
     },
     { 
+      key: 'spent_amount',
       header: 'Spent', 
-      accessor: (row) => `$${row.spent_amount?.toLocaleString() || 0}`
+      cell: (row) => `$${row.spent_amount?.toLocaleString() || 0}`
     },
     { 
+      key: 'remaining',
       header: 'Remaining', 
-      accessor: (row) => {
+      cell: (row) => {
         const remaining = (row.allocated_amount || 0) - (row.spent_amount || 0);
         const percentage = row.allocated_amount > 0 ? (remaining / row.allocated_amount) * 100 : 0;
         return (
@@ -235,8 +241,9 @@ export default function MarketingBudgetsPage() {
       }
     },
     {
+      key: 'actions',
       header: 'Actions',
-      accessor: (row) => (
+      cell: (row) => (
         <Can do="marketing.budgets.edit">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

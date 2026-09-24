@@ -377,7 +377,6 @@ export default function MarketingBudgetsPage() {
         data={budgets}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

@@ -436,7 +436,6 @@ export default function MarketingLeadsPage() {
         data={leads}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

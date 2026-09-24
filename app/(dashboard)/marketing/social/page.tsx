@@ -378,7 +378,6 @@ export default function SocialMediaPage() {
         data={posts}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

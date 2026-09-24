@@ -354,7 +354,6 @@ export default function BrandManagementPage() {
         data={assets}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

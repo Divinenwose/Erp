@@ -364,7 +364,6 @@ export default function MarketingDocumentsPage() {
         data={documents}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

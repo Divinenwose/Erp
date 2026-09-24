@@ -475,7 +475,6 @@ export default function CampaignsPage() {
         data={campaigns}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

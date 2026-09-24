@@ -391,7 +391,6 @@ export default function MarketingVendorsPage() {
         data={vendors}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

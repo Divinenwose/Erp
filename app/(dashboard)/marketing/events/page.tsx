@@ -439,7 +439,6 @@ export default function EventsPage() {
         data={events}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

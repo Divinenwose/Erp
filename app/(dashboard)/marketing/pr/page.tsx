@@ -394,7 +394,6 @@ export default function PRPage() {
         data={pressReleases}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

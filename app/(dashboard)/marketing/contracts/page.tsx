@@ -430,7 +430,6 @@ export default function MarketingContractsPage() {
         data={contracts}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

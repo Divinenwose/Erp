@@ -408,7 +408,6 @@ export default function ContentPage() {
         data={content}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

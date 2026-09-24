@@ -385,7 +385,6 @@ export default function MarketResearchPage() {
         data={research}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

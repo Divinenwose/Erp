@@ -436,7 +436,6 @@ export default function AdvertisingPage() {
         data={adCampaigns}
         loading={loading}
         searchable
-        filterable
       />
 
       <ConfirmDialog

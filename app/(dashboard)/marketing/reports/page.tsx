@@ -46,6 +46,14 @@ export default function MarketingReportsPage() {
 
     const startDateStr = startDate.toISOString().slice(0, 10);
 
+    const pressReleasesRes = await supabase
+      .from('press_releases')
+      .select('id')
+      .eq('company_id', company.id)
+      .gte('release_date', startDateStr);
+
+    const pressReleaseIds = pressReleasesRes.data?.map(r => r.id) || [];
+
     const [
       campaignsRes,
       leadsRes,
@@ -61,9 +69,9 @@ export default function MarketingReportsPage() {
       supabase.from('ad_performance').select('*').eq('company_id', company.id).gte('metric_date', startDateStr),
       supabase.from('marketing_events').select('*').eq('company_id', company.id).gte('start_date', startDateStr),
       supabase.from('marketing_content').select('*').eq('company_id', company.id).gte('publish_date', startDateStr).eq('status', 'published'),
-      supabase.from('pr_coverage').select('*').in('press_release_id', 
-        supabase.from('press_releases').select('id').eq('company_id', company.id).gte('release_date', startDateStr)
-      ),
+      pressReleaseIds.length > 0
+        ? supabase.from('pr_coverage').select('*').in('press_release_id', pressReleaseIds)
+        : { data: [], error: null },
     ]);
 
     const campaigns = campaignsRes.data ?? [];

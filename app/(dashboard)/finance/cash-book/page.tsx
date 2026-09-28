@@ -74,7 +74,9 @@ export default function CashBookPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create entry'); return; }
-    await logAuditEvent('cash_book_entries', null, 'created', null, { entry_type: data.entry_type, amount: data.amount }, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'cash_book', entity_type: 'cash_book', new_value: { amount: data.amount, type: data.entry_type } });
+    }
     toast.success('Cash book entry created');
     reset();
     setDialogOpen(false);
@@ -85,7 +87,9 @@ export default function CashBookPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('cash_book_entries').update({ status: 'approved', approved_by: user?.id, approved_at: new Date().toISOString() }).eq('id', entry.id);
     if (error) { toast.error('Failed to approve entry'); return; }
-    await logAuditEvent('cash_book_entries', entry.id, 'approved', { status: 'approved' }, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'approved', module: 'cash_book', entity_type: 'cash_book', entity_id: entry.id, new_value: { status: 'approved' } });
+    }
     toast.success('Entry approved');
     load();
   };
@@ -94,7 +98,9 @@ export default function CashBookPage() {
     if (!company?.id || !entryToDelete) return;
     const { error } = await supabase.from('cash_book_entries').delete().eq('id', entryToDelete.id);
     if (error) { toast.error('Failed to delete entry'); return; }
-    await logAuditEvent('cash_book_entries', entryToDelete.id, 'deleted', null, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'cash_book', entity_type: 'cash_book', entity_id: entryToDelete.id });
+    }
     toast.success('Entry deleted');
     setDeleteDialogOpen(false);
     setEntryToDelete(null);
@@ -152,7 +158,7 @@ export default function CashBookPage() {
                     <div><Label>Date *</Label><Input className="mt-1" type="date" {...register('entry_date')} /></div>
                     <div><Label>Account *</Label><Input className="mt-1" {...register('account')} placeholder="e.g., Main Bank, Cash" /></div>
                     <div><Label>Reference</Label><Input className="mt-1" {...register('reference')} placeholder="e.g., REF-001" /></div>
-                    <div><Label>Description *</Label><Input className="mt-1" {...register('description')}Placeholder="Description" /></div>
+                    <div><Label>Description *</Label><Input className="mt-1" {...register('description')} placeholder="Description" /></div>
                     <div className="col-span-2"><Label>Notes</Label><Textarea className="mt-1" {...register('notes')} /></div>
                   </div>
                   <div className="flex justify-end gap-2">
@@ -190,24 +196,6 @@ export default function CashBookPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewEntry(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'pending' && (
-                      <Can resource="cash_book" action="approve">
-                        <DropdownMenuItem onClick={() => approveEntry(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Approve</DropdownMenuItem>
-                      </Can>
-                    )}
-                    <Can resource="cash_book" action="delete">
-                      <DropdownMenuItem onClick={() => { setEntryToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                    </Can>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -236,7 +224,7 @@ export default function CashBookPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Entry"
           description="Are you sure you want to delete this cash book entry? This action cannot be undone."
           onConfirm={deleteEntry}

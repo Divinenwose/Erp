@@ -73,7 +73,7 @@ export default function PettyCashPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create fund'); return; }
-    await logAuditEvent('petty_cash_funds', null, 'created', null, { fund_name: data.fund_name, amount: data.initial_amount }, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'created', module: 'petty_cash', entity_type: 'petty_cash_funds', new_value: { fund_name: data.fund_name, amount: data.initial_amount } });
     toast.success('Petty cash fund created');
     reset();
     setDialogOpen(false);
@@ -85,7 +85,7 @@ export default function PettyCashPage() {
     const newBalance = selectedFund.current_balance + replenishAmount;
     const { error } = await supabase.from('petty_cash_funds').update({ current_balance: newBalance }).eq('id', selectedFund.id);
     if (error) { toast.error('Failed to replenish fund'); return; }
-    await logAuditEvent('petty_cash_funds', selectedFund.id, 'replenished', { amount: replenish_amount, new_balance }, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'replenished', module: 'petty_cash', entity_type: 'petty_cash_funds', entity_id: selectedFund.id, new_value: { amount: replenishAmount, new_balance } });
     toast.success('Fund replenished');
     setReplenishDialogOpen(false);
     setReplenishAmount(0);
@@ -97,7 +97,7 @@ export default function PettyCashPage() {
     if (!company?.id || !fundToDelete) return;
     const { error } = await supabase.from('petty_cash_funds').delete().eq('id', fundToDelete.id);
     if (error) { toast.error('Failed to delete fund'); return; }
-    await logAuditEvent('petty_cash_funds', fundToDelete.id, 'deleted', null, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'deleted', module: 'petty_cash', entity_type: 'petty_cash_funds', entity_id: fundToDelete.id });
     toast.success('Fund deleted');
     setDeleteDialogOpen(false);
     setFundToDelete(null);

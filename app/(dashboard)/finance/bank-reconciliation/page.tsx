@@ -77,7 +77,7 @@ export default function BankReconciliationPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create reconciliation'); return; }
-    await logAuditEvent('bank_reconciliations', null, 'created', null, { statement_date: data.statement_date, difference }, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'created', module: 'bank_reconciliations', entity_type: 'bank_reconciliations', new_value: { statement_date: data.statement_date, difference } });
     toast.success('Reconciliation created');
     reset();
     setDialogOpen(false);
@@ -88,7 +88,7 @@ export default function BankReconciliationPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('bank_reconciliations').update({ status: 'completed', completed_by: user?.id, completed_at: new Date().toISOString() }).eq('id', reconciliation.id);
     if (error) { toast.error('Failed to complete reconciliation'); return; }
-    await logAuditEvent('bank_reconciliations', reconciliation.id, 'completed', { status: 'completed' }, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'completed', module: 'bank_reconciliations', entity_type: 'bank_reconciliations', entity_id: reconciliation.id, new_value: { status: 'completed' } });
     toast.success('Reconciliation completed');
     load();
   };
@@ -97,7 +97,7 @@ export default function BankReconciliationPage() {
     if (!company?.id || !reconciliationToDelete) return;
     const { error } = await supabase.from('bank_reconciliations').delete().eq('id', reconciliationToDelete.id);
     if (error) { toast.error('Failed to delete reconciliation'); return; }
-    await logAuditEvent('bank_reconciliations', reconciliationToDelete.id, 'deleted', null, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'deleted', module: 'bank_reconciliations', entity_type: 'bank_reconciliations', entity_id: reconciliationToDelete.id });
     toast.success('Reconciliation deleted');
     setDeleteDialogOpen(false);
     setReconciliationToDelete(null);

@@ -73,7 +73,7 @@ export default function TaxCompliancePage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create tax record'); return; }
-    await logAuditEvent('tax_compliance', null, 'created', null, { tax_type: data.tax_type, tax_period: data.tax_period }, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'created', module: 'tax_compliance', entity_type: 'tax_compliance', new_value: { tax_type: data.tax_type, tax_period: data.tax_period } });
     toast.success('Tax record created');
     reset();
     setDialogOpen(false);
@@ -84,7 +84,7 @@ export default function TaxCompliancePage() {
     if (!company?.id) return;
     const { error } = await supabase.from('tax_compliance').update({ status: 'filed', filed_at: new Date().toISOString() }).eq('id', tax.id);
     if (error) { toast.error('Failed to mark as filed'); return; }
-    await logAuditEvent('tax_compliance', tax.id, 'filed', { status: 'filed' }, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'filed', module: 'tax_compliance', entity_type: 'tax_compliance', entity_id: tax.id, new_value: { status: 'filed' } });
     toast.success('Tax marked as filed');
     load();
   };
@@ -93,7 +93,7 @@ export default function TaxCompliancePage() {
     if (!company?.id) return;
     const { error } = await supabase.from('tax_compliance').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', tax.id);
     if (error) { toast.error('Failed to mark as paid'); return; }
-    await logAuditEvent('tax_compliance', tax.id, 'paid', { status: 'paid' }, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'paid', module: 'tax_compliance', entity_type: 'tax_compliance', entity_id: tax.id, new_value: { status: 'paid' } });
     toast.success('Tax marked as paid');
     load();
   };
@@ -102,7 +102,7 @@ export default function TaxCompliancePage() {
     if (!company?.id || !taxToDelete) return;
     const { error } = await supabase.from('tax_compliance').delete().eq('id', taxToDelete.id);
     if (error) { toast.error('Failed to delete tax record'); return; }
-    await logAuditEvent('tax_compliance', taxToDelete.id, 'deleted', null, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'deleted', module: 'tax_compliance', entity_type: 'tax_compliance', entity_id: taxToDelete.id });
     toast.success('Tax record deleted');
     setDeleteDialogOpen(false);
     setTaxToDelete(null);

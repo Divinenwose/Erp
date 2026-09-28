@@ -81,7 +81,7 @@ export default function ReimbursementsPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create reimbursement'); return; }
-    await logAuditEvent('reimbursements', null, 'created', null, { amount: data.amount, category: data.category }, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'created', module: 'reimbursements', entity_type: 'reimbursements', new_value: { amount: data.amount, category: data.category } });
     toast.success('Reimbursement submitted');
     reset();
     setDialogOpen(false);
@@ -92,7 +92,7 @@ export default function ReimbursementsPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('reimbursements').update({ status: 'approved', approved_by: user?.id, approved_at: new Date().toISOString() }).eq('id', reimbursement.id);
     if (error) { toast.error('Failed to approve reimbursement'); return; }
-    await logAuditEvent('reimbursements', reimbursement.id, 'approved', { status: 'approved' }, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'approved', module: 'reimbursements', entity_type: 'reimbursements', entity_id: reimbursement.id, new_value: { status: 'approved' } });
     toast.success('Reimbursement approved');
     load();
   };
@@ -101,7 +101,7 @@ export default function ReimbursementsPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('reimbursements').update({ status: 'rejected' }).eq('id', reimbursement.id);
     if (error) { toast.error('Failed to reject reimbursement'); return; }
-    await logAuditEvent('reimbursements', reimbursement.id, 'rejected', { status: 'rejected' }, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'rejected', module: 'reimbursements', entity_type: 'reimbursements', entity_id: reimbursement.id, new_value: { status: 'rejected' } });
     toast.success('Reimbursement rejected');
     load();
   };
@@ -110,7 +110,7 @@ export default function ReimbursementsPage() {
     if (!company?.id || !selectedReimbursement) return;
     const { error } = await supabase.from('reimbursements').update({ status: 'paid', paid_amount: paymentAmount, paid_at: new Date().toISOString() }).eq('id', selectedReimbursement.id);
     if (error) { toast.error('Failed to process payment'); return; }
-    await logAuditEvent('reimbursements', selectedReimbursement.id, 'paid', { amount: paymentAmount }, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'paid', module: 'reimbursements', entity_type: 'reimbursements', entity_id: selectedReimbursement.id, new_value: { amount: paymentAmount } });
     toast.success('Payment processed');
     setPaymentDialogOpen(false);
     setPaymentAmount(0);
@@ -122,7 +122,7 @@ export default function ReimbursementsPage() {
     if (!company?.id || !reimbursementToDelete) return;
     const { error } = await supabase.from('reimbursements').delete().eq('id', reimbursementToDelete.id);
     if (error) { toast.error('Failed to delete reimbursement'); return; }
-    await logAuditEvent('reimbursements', reimbursementToDelete.id, 'deleted', null, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'deleted', module: 'reimbursements', entity_type: 'reimbursements', entity_id: reimbursementToDelete.id });
     toast.success('Reimbursement deleted');
     setDeleteDialogOpen(false);
     setReimbursementToDelete(null);

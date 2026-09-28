@@ -74,7 +74,7 @@ export default function BankAccountsPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create account'); return; }
-    await logAuditEvent('bank_accounts', null, 'created', null, { account_name: data.account_name, bank_name: data.bank_name }, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'created', module: 'bank_accounts', entity_type: 'bank_accounts', new_value: { account_name: data.account_name, bank_name: data.bank_name } });
     toast.success('Bank account created');
     reset();
     setDialogOpen(false);
@@ -85,7 +85,7 @@ export default function BankAccountsPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('bank_accounts').update({ status: 'active' }).eq('id', account.id);
     if (error) { toast.error('Failed to activate account'); return; }
-    await logAuditEvent('bank_accounts', account.id, 'activated', { status: 'active' }, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'activated', module: 'bank_accounts', entity_type: 'bank_accounts', entity_id: account.id, new_value: { status: 'active' } });
     toast.success('Account activated');
     load();
   };
@@ -94,7 +94,7 @@ export default function BankAccountsPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('bank_accounts').update({ status: 'inactive' }).eq('id', account.id);
     if (error) { toast.error('Failed to deactivate account'); return; }
-    await logAuditEvent('bank_accounts', account.id, 'deactivated', { status: 'inactive' }, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'deactivated', module: 'bank_accounts', entity_type: 'bank_accounts', entity_id: account.id, new_value: { status: 'inactive' } });
     toast.success('Account deactivated');
     load();
   };
@@ -103,7 +103,7 @@ export default function BankAccountsPage() {
     if (!company?.id || !accountToDelete) return;
     const { error } = await supabase.from('bank_accounts').delete().eq('id', accountToDelete.id);
     if (error) { toast.error('Failed to delete account'); return; }
-    await logAuditEvent('bank_accounts', accountToDelete.id, 'deleted', null, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'deleted', module: 'bank_accounts', entity_type: 'bank_accounts', entity_id: accountToDelete.id });
     toast.success('Account deleted');
     setDeleteDialogOpen(false);
     setAccountToDelete(null);

@@ -71,7 +71,9 @@ export default function CashFlowPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create entry'); return; }
-    await logAuditEvent('cash_flow_entries', null, 'created', null, { flow_type: data.flow_type, amount: data.amount }, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'cash_flow', entity_type: 'cash_flow', new_value: { amount: data.amount, type: data.flow_type } });
+    }
     toast.success('Cash flow entry created');
     reset();
     setDialogOpen(false);
@@ -82,7 +84,9 @@ export default function CashFlowPage() {
     if (!company?.id || !entryToDelete) return;
     const { error } = await supabase.from('cash_flow_entries').delete().eq('id', entryToDelete.id);
     if (error) { toast.error('Failed to delete entry'); return; }
-    await logAuditEvent('cash_flow_entries', entryToDelete.id, 'deleted', null, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'cash_flow', entity_type: 'cash_flow', entity_id: entryToDelete.id });
+    }
     toast.success('Entry deleted');
     setDeleteDialogOpen(false);
     setEntryToDelete(null);
@@ -103,10 +107,10 @@ export default function CashFlowPage() {
   const columns: Column<any>[] = [
     { key: 'entry_date', header: 'Date', cell: (row) => formatDate(row.entry_date) },
     { key: 'flow_type', header: 'Type', cell: (row) => <span className={row.flow_type === 'inflow' ? 'text-emerald-600' : 'text-rose-600'}>{row.flow_type}</span> },
-    { key: 'category', header: 'Category' },
-    { key: 'description', header: 'Description' },
+    { key: 'category', header: 'Category', cell: (row) => row.category },
+    { key: 'amount', header: 'Amount', cell: (row) => <span className="font-medium">{formatCurrency(row.amount)}</span> },
+    { key: 'description', header: 'Description', cell: (row) => row.description },
     { key: 'reference', header: 'Reference', cell: (row) => row.reference || '-' },
-    { key: 'amount', header: 'Amount', cell: (row) => <span className={`font-medium ${row.flow_type === 'inflow' ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(row.amount)}</span> },
   ];
 
   const totalInflow = entries.filter(e => e.flow_type === 'inflow').reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -176,19 +180,6 @@ export default function CashFlowPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewEntry(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    <Can resource="cash_flow" action="delete">
-                      <DropdownMenuItem onClick={() => { setEntryToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                    </Can>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -215,7 +206,7 @@ export default function CashFlowPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Entry"
           description="Are you sure you want to delete this cash flow entry? This action cannot be undone."
           onConfirm={deleteEntry}

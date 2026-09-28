@@ -67,7 +67,7 @@ export default function ApprovalWorkflowsPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create workflow'); return; }
-    await logAuditEvent('approval_workflows', null, 'created', null, { workflow_name: data.workflow_name, entity_type: data.entity_type }, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'created', module: 'approval_workflows', entity_type: 'approval_workflows', new_value: { workflow_name: data.workflow_name, entity_type: data.entity_type } });
     toast.success('Approval workflow created');
     reset();
     setDialogOpen(false);
@@ -78,7 +78,7 @@ export default function ApprovalWorkflowsPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('approval_workflows').update({ status: 'active' }).eq('id', workflow.id);
     if (error) { toast.error('Failed to activate workflow'); return; }
-    await logAuditEvent('approval_workflows', workflow.id, 'activated', { status: 'active' }, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'activated', module: 'approval_workflows', entity_type: 'approval_workflows', entity_id: workflow.id, new_value: { status: 'active' } });
     toast.success('Workflow activated');
     load();
   };
@@ -87,7 +87,7 @@ export default function ApprovalWorkflowsPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('approval_workflows').update({ status: 'inactive' }).eq('id', workflow.id);
     if (error) { toast.error('Failed to deactivate workflow'); return; }
-    await logAuditEvent('approval_workflows', workflow.id, 'deactivated', { status: 'inactive' }, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'deactivated', module: 'approval_workflows', entity_type: 'approval_workflows', entity_id: workflow.id, new_value: { status: 'inactive' } });
     toast.success('Workflow deactivated');
     load();
   };
@@ -96,7 +96,7 @@ export default function ApprovalWorkflowsPage() {
     if (!company?.id || !workflowToDelete) return;
     const { error } = await supabase.from('approval_workflows').delete().eq('id', workflowToDelete.id);
     if (error) { toast.error('Failed to delete workflow'); return; }
-    await logAuditEvent('approval_workflows', workflowToDelete.id, 'deleted', null, null, company.id, user?.id);
+    await logAuditEvent(company.id, user?.id, { action: 'deleted', module: 'approval_workflows', entity_type: 'approval_workflows', entity_id: workflowToDelete.id });
     toast.success('Workflow deleted');
     setDeleteDialogOpen(false);
     setWorkflowToDelete(null);

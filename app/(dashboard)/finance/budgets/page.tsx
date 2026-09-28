@@ -80,7 +80,9 @@ export default function BudgetsPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create budget'); return; }
-    await logAuditEvent('budgets', null, 'created', null, { budgeted_amount: data.budgeted_amount, fiscal_year: data.fiscal_year }, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'budgets', entity_type: 'budgets', new_value: { budgeted_amount: data.budgeted_amount, fiscal_year: data.fiscal_year } });
+    }
     toast.success('Budget created');
     reset();
     setDialogOpen(false);
@@ -91,7 +93,9 @@ export default function BudgetsPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('budgets').update({ status: 'approved', approved_by: user?.id, approved_at: new Date().toISOString() }).eq('id', budget.id);
     if (error) { toast.error('Failed to approve budget'); return; }
-    await logAuditEvent('budgets', budget.id, 'approved', { status: 'approved' }, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'approved', module: 'budgets', entity_type: 'budgets', entity_id: budget.id, new_value: { status: 'approved' } });
+    }
     toast.success('Budget approved');
     load();
   };
@@ -100,7 +104,9 @@ export default function BudgetsPage() {
     if (!company?.id || !budgetToDelete) return;
     const { error } = await supabase.from('budgets').delete().eq('id', budgetToDelete.id);
     if (error) { toast.error('Failed to delete budget'); return; }
-    await logAuditEvent('budgets', budgetToDelete.id, 'deleted', null, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'budgets', entity_type: 'budgets', entity_id: budgetToDelete.id });
+    }
     toast.success('Budget deleted');
     setDeleteDialogOpen(false);
     setBudgetToDelete(null);
@@ -209,24 +215,6 @@ export default function BudgetsPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewBudget(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'draft' && (
-                      <Can resource="budgets" action="approve">
-                        <DropdownMenuItem onClick={() => approveBudget(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Approve</DropdownMenuItem>
-                      </Can>
-                    )}
-                    <Can resource="budgets" action="delete">
-                      <DropdownMenuItem onClick={() => { setBudgetToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                    </Can>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -257,7 +245,7 @@ export default function BudgetsPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Budget"
           description="Are you sure you want to delete this budget? This action cannot be undone."
           onConfirm={deleteBudget}

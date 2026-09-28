@@ -84,7 +84,9 @@ export default function ReceivablesPage() {
     });
 
     if (error) { toast.error('Failed to create receivable'); return; }
-    await logAuditEvent('invoices', null, 'created', null, { invoice_number: data.invoice_number, amount: data.amount }, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'invoices', entity_type: 'invoices', new_value: { invoice_number: data.invoice_number, amount: data.amount } });
+    }
     toast.success('Receivable created');
     reset();
     setDialogOpen(false);
@@ -95,7 +97,9 @@ export default function ReceivablesPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('invoices').update({ status: 'paid', paid_amount: receivable.balance_due, balance_due: 0 }).eq('id', receivable.id);
     if (error) { toast.error('Failed to record payment'); return; }
-    await logAuditEvent('invoices', receivable.id, 'paid', { status: 'paid' }, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'paid', module: 'invoices', entity_type: 'invoices', entity_id: receivable.id, new_value: { status: 'paid' } });
+    }
     toast.success('Payment recorded');
     load();
   };
@@ -104,7 +108,9 @@ export default function ReceivablesPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('invoices').update({ status: 'written_off', balance_due: 0 }).eq('id', receivable.id);
     if (error) { toast.error('Failed to write off'); return; }
-    await logAuditEvent('invoices', receivable.id, 'written_off', { status: 'written_off' }, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'written_off', module: 'invoices', entity_type: 'invoices', entity_id: receivable.id, new_value: { status: 'written_off' } });
+    }
     toast.success('Invoice written off');
     load();
   };
@@ -113,7 +119,9 @@ export default function ReceivablesPage() {
     if (!company?.id || !receivableToDelete) return;
     const { error } = await supabase.from('invoices').delete().eq('id', receivableToDelete.id);
     if (error) { toast.error('Failed to delete receivable'); return; }
-    await logAuditEvent('invoices', receivableToDelete.id, 'deleted', null, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'invoices', entity_type: 'invoices', entity_id: receivableToDelete.id });
+    }
     toast.success('Receivable deleted');
     setDeleteDialogOpen(false);
     setReceivableToDelete(null);
@@ -226,33 +234,10 @@ export default function ReceivablesPage() {
             </div>
             <DataTable
               columns={columns}
-              data={receivables.filter(r => !search || r.invoice_number.toLowerCase().includes(search.toLowerCase()) || r.customers?.name?.toLowerCase().includes(search.toLowerCase()))}
+              data={filteredReceivables}
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewReceivable(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status !== 'paid' && row.status !== 'written_off' && (
-                      < >
-                        <Can resource="receivables" action="collect">
-                          <DropdownMenuItem onClick={() => recordPayment(row)}><DollarSign className="h-4 w-4 mr-2" />Record Payment</DropdownMenuItem>
-                        </Can>
-                        <Can resource="receivables" action="write_off">
-                          <DropdownMenuItem onClick={() => writeOff(row)}><XCircle className="h-4 w-4 mr-2" />Write Off</DropdownMenuItem>
-                        </Can>
-                        <Can resource="receivables" action="delete">
-                          <DropdownMenuItem onClick={() => { setReceivableToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                        </Can>
-                      </ >
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -283,7 +268,7 @@ export default function ReceivablesPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Receivable"
           description="Are you sure you want to delete this receivable? This action cannot be undone."
           onConfirm={deleteReceivable}

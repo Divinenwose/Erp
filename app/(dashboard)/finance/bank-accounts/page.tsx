@@ -197,29 +197,6 @@ export default function BankAccountsPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewAccount(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'inactive' && (
-                      <Can resource="bank_accounts" action="activate">
-                        <DropdownMenuItem onClick={() => activateAccount(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Activate</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status === 'active' && (
-                      <Can resource="bank_accounts" action="deactivate">
-                        <DropdownMenuItem onClick={() => deactivateAccount(row)}><XCircle className="h-4 w-4 mr-2" />Deactivate</DropdownMenuItem>
-                      </Can>
-                    )}
-                    <Can resource="bank_accounts" action="delete">
-                      <DropdownMenuItem onClick={() => { setAccountToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                    </Can>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -249,7 +226,7 @@ export default function BankAccountsPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Account"
           description="Are you sure you want to delete this bank account? This action cannot be undone."
           onConfirm={deleteAccount}

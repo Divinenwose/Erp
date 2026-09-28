@@ -226,36 +226,6 @@ export default function ReimbursementsPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewReimbursement(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'pending' && (
-                      <>
-                        <Can resource="reimbursements" action="approve">
-                          <DropdownMenuItem onClick={() => approveReimbursement(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Approve</DropdownMenuItem>
-                        </Can>
-                        <Can resource="reimbursements" action="reject">
-                          <DropdownMenuItem onClick={() => rejectReimbursement(row)}><XCircle className="h-4 w-4 mr-2" />Reject</DropdownMenuItem>
-                        </Can>
-                      </>
-                    )}
-                    {row.status === 'approved' && (
-                      <Can resource="reimbursements" action="pay">
-                        <DropdownMenuItem onClick={() => openPaymentDialog(row)}><DollarSign className="h-4 w-4 mr-2" />Process Payment</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status !== 'paid' && (
-                      <Can resource="reimbursements" action="delete">
-                        <DropdownMenuItem onClick={() => { setReimbursementToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                      </Can>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -307,7 +277,7 @@ export default function ReimbursementsPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Reimbursement"
           description="Are you sure you want to delete this reimbursement? This action cannot be undone."
           onConfirm={deleteReimbursement}

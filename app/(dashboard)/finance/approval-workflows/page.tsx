@@ -67,7 +67,9 @@ export default function ApprovalWorkflowsPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create workflow'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'created', module: 'approval_workflows', entity_type: 'approval_workflows', new_value: { workflow_name: data.workflow_name, entity_type: data.entity_type } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'approval_workflows', entity_type: 'approval_workflows', new_value: { workflow_name: data.workflow_name, entity_type: data.entity_type } });
+    }
     toast.success('Approval workflow created');
     reset();
     setDialogOpen(false);
@@ -78,7 +80,9 @@ export default function ApprovalWorkflowsPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('approval_workflows').update({ status: 'active' }).eq('id', workflow.id);
     if (error) { toast.error('Failed to activate workflow'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'activated', module: 'approval_workflows', entity_type: 'approval_workflows', entity_id: workflow.id, new_value: { status: 'active' } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'activated', module: 'approval_workflows', entity_type: 'approval_workflows', entity_id: workflow.id, new_value: { status: 'active' } });
+    }
     toast.success('Workflow activated');
     load();
   };
@@ -87,7 +91,9 @@ export default function ApprovalWorkflowsPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('approval_workflows').update({ status: 'inactive' }).eq('id', workflow.id);
     if (error) { toast.error('Failed to deactivate workflow'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'deactivated', module: 'approval_workflows', entity_type: 'approval_workflows', entity_id: workflow.id, new_value: { status: 'inactive' } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deactivated', module: 'approval_workflows', entity_type: 'approval_workflows', entity_id: workflow.id, new_value: { status: 'inactive' } });
+    }
     toast.success('Workflow deactivated');
     load();
   };
@@ -96,7 +102,9 @@ export default function ApprovalWorkflowsPage() {
     if (!company?.id || !workflowToDelete) return;
     const { error } = await supabase.from('approval_workflows').delete().eq('id', workflowToDelete.id);
     if (error) { toast.error('Failed to delete workflow'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'deleted', module: 'approval_workflows', entity_type: 'approval_workflows', entity_id: workflowToDelete.id });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'approval_workflows', entity_type: 'approval_workflows', entity_id: workflowToDelete.id });
+    }
     toast.success('Workflow deleted');
     setDeleteDialogOpen(false);
     setWorkflowToDelete(null);
@@ -179,29 +187,6 @@ export default function ApprovalWorkflowsPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewWorkflow(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'inactive' && (
-                      <Can resource="approval_workflows" action="activate">
-                        <DropdownMenuItem onClick={() => activateWorkflow(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Activate</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status === 'active' && (
-                      <Can resource="approval_workflows" action="deactivate">
-                        <DropdownMenuItem onClick={() => deactivateWorkflow(row)}><XCircle className="h-4 w-4 mr-2" />Deactivate</DropdownMenuItem>
-                      </Can>
-                    )}
-                    <Can resource="approval_workflows" action="delete">
-                      <DropdownMenuItem onClick={() => { setWorkflowToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                    </Can>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -227,7 +212,7 @@ export default function ApprovalWorkflowsPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Workflow"
           description="Are you sure you want to delete this approval workflow? This action cannot be undone."
           onConfirm={deleteWorkflow}

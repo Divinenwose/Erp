@@ -94,7 +94,7 @@ export default function LedgerPage() {
 
     const { error: entryError } = await supabase.from('journal_entries').insert({
       company_id: company.id,
-      entry_number,
+      entry_number: entryNumber,
       date: data.date,
       description: data.description,
       reference: data.reference,
@@ -122,7 +122,9 @@ export default function LedgerPage() {
       await supabase.from('journal_entry_lines').insert(linesToInsert);
     }
 
-    await logAuditEvent('journal_entries', newEntry?.id, 'created', null, { entry_number, entry_date: data.date }, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'journal_entries', entity_type: 'journal_entries', entity_id: newEntry?.id, new_value: { entry_number: entryNumber, entry_date: data.date } });
+    }
     toast.success('Journal entry created');
     reset();
     setEntryLines([]);
@@ -148,7 +150,9 @@ export default function LedgerPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('journal_entries').update({ status: 'posted', posted_at: new Date().toISOString() }).eq('id', entry.id);
     if (error) { toast.error('Failed to post entry'); return; }
-    await logAuditEvent('journal_entries', entry.id, 'posted', { status: 'posted' }, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'posted', module: 'journal_entries', entity_type: 'journal_entries', entity_id: entry.id, new_value: { status: 'posted' } });
+    }
     toast.success('Journal entry posted');
     load();
   };
@@ -157,7 +161,9 @@ export default function LedgerPage() {
     if (!company?.id || !entryToDelete) return;
     const { error } = await supabase.from('journal_entries').delete().eq('id', entryToDelete.id);
     if (error) { toast.error('Failed to delete entry'); return; }
-    await logAuditEvent('journal_entries', entryToDelete.id, 'deleted', null, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'journal_entries', entity_type: 'journal_entries', entity_id: entryToDelete.id });
+    }
     toast.success('Journal entry deleted');
     setDeleteDialogOpen(false);
     setEntryToDelete(null);
@@ -264,26 +270,6 @@ export default function LedgerPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewEntry(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'draft' && (
-                      <>
-                        <Can resource="ledger" action="post">
-                          <DropdownMenuItem onClick={() => postEntry(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Post Entry</DropdownMenuItem>
-                        </Can>
-                        <Can resource="ledger" action="delete">
-                          <DropdownMenuItem onClick={() => { setEntryToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                        </Can>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -336,7 +322,7 @@ export default function LedgerPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Journal Entry"
           description="Are you sure you want to delete this journal entry? This action cannot be undone."
           onConfirm={deleteEntry}

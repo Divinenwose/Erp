@@ -202,34 +202,6 @@ export default function TaxCompliancePage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewTax(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'pending' && (
-                      <>
-                        <Can resource="tax_compliance" action="file">
-                          <DropdownMenuItem onClick={() => markFiled(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Mark Filed</DropdownMenuItem>
-                        </Can>
-                        <Can resource="tax_compliance" action="pay">
-                          <DropdownMenuItem onClick={() => markPaid(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Mark Paid</DropdownMenuItem>
-                        </Can>
-                      </>
-                    )}
-                    {row.status === 'filed' && (
-                      <Can resource="tax_compliance" action="pay">
-                        <DropdownMenuItem onClick={() => markPaid(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Mark Paid</DropdownMenuItem>
-                      </Can>
-                    )}
-                    <Can resource="tax_compliance" action="delete">
-                      <DropdownMenuItem onClick={() => { setTaxToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                    </Can>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -259,7 +231,7 @@ export default function TaxCompliancePage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Tax Record"
           description="Are you sure you want to delete this tax record? This action cannot be undone."
           onConfirm={deleteTax}

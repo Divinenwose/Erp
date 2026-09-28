@@ -84,7 +84,9 @@ export default function PayablesPage() {
     });
 
     if (error) { toast.error('Failed to create payable'); return; }
-    await logAuditEvent('invoices', null, 'created', null, { invoice_number: data.invoice_number, amount: data.amount }, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'invoices', entity_type: 'invoices', new_value: { invoice_number: data.invoice_number, amount: data.amount } });
+    }
     toast.success('Payable created');
     reset();
     setDialogOpen(false);
@@ -95,7 +97,9 @@ export default function PayablesPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('invoices').update({ status: 'approved', approved_by: user?.id, approved_at: new Date().toISOString() }).eq('id', payable.id);
     if (error) { toast.error('Failed to approve payable'); return; }
-    await logAuditEvent('invoices', payable.id, 'approved', { status: 'approved' }, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'approved', module: 'invoices', entity_type: 'invoices', entity_id: payable.id, new_value: { status: 'approved' } });
+    }
     toast.success('Payable approved');
     load();
   };
@@ -104,7 +108,9 @@ export default function PayablesPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('invoices').update({ status: 'paid', paid_amount: payable.balance_due, balance_due: 0 }).eq('id', payable.id);
     if (error) { toast.error('Failed to process payment'); return; }
-    await logAuditEvent('invoices', payable.id, 'paid', { status: 'paid' }, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'paid', module: 'invoices', entity_type: 'invoices', entity_id: payable.id, new_value: { status: 'paid' } });
+    }
     toast.success('Payment processed');
     load();
   };
@@ -113,7 +119,9 @@ export default function PayablesPage() {
     if (!company?.id || !payableToDelete) return;
     const { error } = await supabase.from('invoices').delete().eq('id', payableToDelete.id);
     if (error) { toast.error('Failed to delete payable'); return; }
-    await logAuditEvent('invoices', payableToDelete.id, 'deleted', null, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'invoices', entity_type: 'invoices', entity_id: payableToDelete.id });
+    }
     toast.success('Payable deleted');
     setDeleteDialogOpen(false);
     setPayableToDelete(null);
@@ -225,35 +233,10 @@ export default function PayablesPage() {
             </div>
             <DataTable
               columns={columns}
-              data={payables.filter(p => !search || p.invoice_number.toLowerCase().includes(search.toLowerCase()) || p.vendors?.name?.toLowerCase().includes(search.toLowerCase()))}
+              data={filteredBills}
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewPayable(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'pending' && (
-                      <Can resource="payables" action="approve">
-                        <DropdownMenuItem onClick={() => approvePayable(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Approve</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status === 'approved' && (
-                      <Can resource="payables" action="pay">
-                        <DropdownMenuItem onClick={() => processPayment(row)}><DollarSign className="h-4 w-4 mr-2" />Process Payment</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status !== 'paid' && (
-                      <Can resource="payables" action="delete">
-                        <DropdownMenuItem onClick={() => { setPayableToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                      </Can>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -284,9 +267,9 @@ export default function PayablesPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          title="Delete Payable"
-          description="Are you sure you want to delete this payable? This action cannot be undone."
+          onClose={() => setDeleteDialogOpen(false)}
+          title="Delete Bill"
+          description="Are you sure you want to delete this bill? This action cannot be undone."
           onConfirm={deletePayable}
         />
       </div>

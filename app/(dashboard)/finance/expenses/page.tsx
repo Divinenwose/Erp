@@ -81,7 +81,9 @@ export default function ExpensesPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create expense'); return; }
-    await logAuditEvent('expenses', null, 'created', null, { amount: data.amount, category: data.category }, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'expenses', entity_type: 'expenses', new_value: { amount: data.amount, category: data.category } });
+    }
     toast.success('Expense submitted');
     reset();
     setDialogOpen(false);
@@ -92,7 +94,9 @@ export default function ExpensesPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('expenses').update({ status: 'approved', approved_by: user?.id, approved_at: new Date().toISOString() }).eq('id', expense.id);
     if (error) { toast.error('Failed to approve expense'); return; }
-    await logAuditEvent('expenses', expense.id, 'approved', { status: 'approved' }, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'approved', module: 'expenses', entity_type: 'expenses', entity_id: expense.id, new_value: { status: 'approved' } });
+    }
     toast.success('Expense approved');
     load();
   };
@@ -101,7 +105,9 @@ export default function ExpensesPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('expenses').update({ status: 'rejected' }).eq('id', expense.id);
     if (error) { toast.error('Failed to reject expense'); return; }
-    await logAuditEvent('expenses', expense.id, 'rejected', { status: 'rejected' }, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'rejected', module: 'expenses', entity_type: 'expenses', entity_id: expense.id, new_value: { status: 'rejected' } });
+    }
     toast.success('Expense rejected');
     load();
   };
@@ -110,7 +116,9 @@ export default function ExpensesPage() {
     if (!company?.id || !selectedExpense) return;
     const { error } = await supabase.from('expenses').update({ status: 'reimbursed', reimbursed_amount: paymentAmount, reimbursed_at: new Date().toISOString() }).eq('id', selectedExpense.id);
     if (error) { toast.error('Failed to process reimbursement'); return; }
-    await logAuditEvent('expenses', selectedExpense.id, 'reimbursed', { amount: paymentAmount }, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'reimbursed', module: 'expenses', entity_type: 'expenses', entity_id: selectedExpense.id, new_value: { amount: paymentAmount } });
+    }
     toast.success('Reimbursement processed');
     setPaymentDialogOpen(false);
     setPaymentAmount(0);
@@ -122,7 +130,9 @@ export default function ExpensesPage() {
     if (!company?.id || !expenseToDelete) return;
     const { error } = await supabase.from('expenses').delete().eq('id', expenseToDelete.id);
     if (error) { toast.error('Failed to delete expense'); return; }
-    await logAuditEvent('expenses', expenseToDelete.id, 'deleted', null, null, company.id, user?.id);
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'expenses', entity_type: 'expenses', entity_id: expenseToDelete.id });
+    }
     toast.success('Expense deleted');
     setDeleteDialogOpen(false);
     setExpenseToDelete(null);
@@ -227,36 +237,6 @@ export default function ExpensesPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewExpense(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'pending' && (
-                      <>
-                        <Can resource="expenses" action="approve">
-                          <DropdownMenuItem onClick={() => approveExpense(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Approve</DropdownMenuItem>
-                        </Can>
-                        <Can resource="expenses" action="reject">
-                          <DropdownMenuItem onClick={() => rejectExpense(row)}><XCircle className="h-4 w-4 mr-2" />Reject</DropdownMenuItem>
-                        </Can>
-                      </>
-                    )}
-                    {row.status === 'approved' && (
-                      <Can resource="expenses" action="pay">
-                        <DropdownMenuItem onClick={() => openPaymentDialog(row)}><DollarSign className="h-4 w-4 mr-2" />Process Reimbursement</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status !== 'reimbursed' && (
-                      <Can resource="expenses" action="delete">
-                        <DropdownMenuItem onClick={() => { setExpenseToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                      </Can>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -308,7 +288,7 @@ export default function ExpensesPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Expense"
           description="Are you sure you want to delete this expense? This action cannot be undone."
           onConfirm={deleteExpense}

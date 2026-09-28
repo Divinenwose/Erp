@@ -186,24 +186,6 @@ export default function BankReconciliationPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewReconciliation(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'pending' && (
-                      <Can resource="bank_reconciliation" action="complete">
-                        <DropdownMenuItem onClick={() => completeReconciliation(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Complete</DropdownMenuItem>
-                      </Can>
-                    )}
-                    <Can resource="bank_reconciliation" action="delete">
-                      <DropdownMenuItem onClick={() => { setReconciliationToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                    </Can>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -231,7 +213,7 @@ export default function BankReconciliationPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Reconciliation"
           description="Are you sure you want to delete this reconciliation? This action cannot be undone."
           onConfirm={deleteReconciliation}

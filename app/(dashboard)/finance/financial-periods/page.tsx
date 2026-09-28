@@ -180,31 +180,6 @@ export default function FinancialPeriodsPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewPeriod(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'open' && (
-                      <Can resource="financial_periods" action="close">
-                        <DropdownMenuItem onClick={() => closePeriod(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Close Period</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status === 'closed' && (
-                      <Can resource="financial_periods" action="lock">
-                        <DropdownMenuItem onClick={() => lockPeriod(row)}><Lock className="h-4 w-4 mr-2" />Lock Period</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status === 'open' && (
-                      <Can resource="financial_periods" action="delete">
-                        <DropdownMenuItem onClick={() => { setPeriodToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                      </Can>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -233,7 +208,7 @@ export default function FinancialPeriodsPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Period"
           description="Are you sure you want to delete this financial period? This action cannot be undone."
           onConfirm={deletePeriod}

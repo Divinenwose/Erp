@@ -185,22 +185,6 @@ export default function PettyCashPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewFund(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    <Can resource="petty_cash" action="replenish">
-                      <DropdownMenuItem onClick={() => openReplenishDialog(row)}><RefreshCw className="h-4 w-4 mr-2" />Replenish</DropdownMenuItem>
-                    </Can>
-                    <Can resource="petty_cash" action="delete">
-                      <DropdownMenuItem onClick={() => { setFundToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                    </Can>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -251,7 +235,7 @@ export default function PettyCashPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Fund"
           description="Are you sure you want to delete this petty cash fund? This action cannot be undone."
           onConfirm={deleteFund}

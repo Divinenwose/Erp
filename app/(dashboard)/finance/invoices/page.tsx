@@ -86,7 +86,9 @@ export default function InvoicesPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create invoice'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'created', module: 'invoices', entity_type: 'invoices', new_value: { invoice_number: data.invoice_number, amount: totalAmount } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'invoices', entity_type: 'invoices', new_value: { invoice_number: data.invoice_number, amount: totalAmount } });
+    }
     toast.success('Invoice created');
     reset();
     setDialogOpen(false);
@@ -97,7 +99,9 @@ export default function InvoicesPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('invoices').update({ status: 'approved', approved_by: user?.id, approved_at: new Date().toISOString() }).eq('id', invoice.id);
     if (error) { toast.error('Failed to approve invoice'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'approved', module: 'invoices', entity_type: 'invoices', entity_id: invoice.id, new_value: { status: 'approved' } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'approved', module: 'invoices', entity_type: 'invoices', entity_id: invoice.id, new_value: { status: 'approved' } });
+    }
     toast.success('Invoice approved');
     load();
   };
@@ -106,7 +110,9 @@ export default function InvoicesPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('invoices').update({ status: 'sent' }).eq('id', invoice.id);
     if (error) { toast.error('Failed to send invoice'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'sent', module: 'invoices', entity_type: 'invoices', entity_id: invoice.id, new_value: { status: 'sent' } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'sent', module: 'invoices', entity_type: 'invoices', entity_id: invoice.id, new_value: { status: 'sent' } });
+    }
     toast.success('Invoice sent');
     load();
   };
@@ -124,7 +130,9 @@ export default function InvoicesPage() {
     }).eq('id', selectedInvoice.id);
     
     if (error) { toast.error('Failed to record payment'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'payment_recorded', module: 'invoices', entity_type: 'invoices', entity_id: selectedInvoice.id, new_value: { amount: paymentAmount, new_balance: Math.max(0, newBalance) } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'payment_recorded', module: 'invoices', entity_type: 'invoices', entity_id: selectedInvoice.id, new_value: { amount: paymentAmount, new_balance: Math.max(0, newBalance) } });
+    }
     toast.success('Payment recorded');
     setPaymentDialogOpen(false);
     setPaymentAmount(0);
@@ -136,7 +144,9 @@ export default function InvoicesPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('invoices').update({ status: 'voided' }).eq('id', invoice.id);
     if (error) { toast.error('Failed to void invoice'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'voided', module: 'invoices', entity_type: 'invoices', entity_id: invoice.id, new_value: { status: 'voided' } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'voided', module: 'invoices', entity_type: 'invoices', entity_id: invoice.id, new_value: { status: 'voided' } });
+    }
     toast.success('Invoice voided');
     load();
   };
@@ -145,7 +155,9 @@ export default function InvoicesPage() {
     if (!company?.id || !invoiceToDelete) return;
     const { error } = await supabase.from('invoices').delete().eq('id', invoiceToDelete.id);
     if (error) { toast.error('Failed to delete invoice'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'deleted', module: 'invoices', entity_type: 'invoices', entity_id: invoiceToDelete.id });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'invoices', entity_type: 'invoices', entity_id: invoiceToDelete.id });
+    }
     toast.success('Invoice deleted');
     setDeleteDialogOpen(false);
     setInvoiceToDelete(null);

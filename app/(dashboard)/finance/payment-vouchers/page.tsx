@@ -203,31 +203,6 @@ export default function PaymentVouchersPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewVoucher(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'pending' && (
-                      <Can resource="payment_vouchers" action="approve">
-                        <DropdownMenuItem onClick={() => approveVoucher(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Approve</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status === 'approved' && (
-                      <Can resource="payment_vouchers" action="pay">
-                        <DropdownMenuItem onClick={() => processPayment(row)}><Printer className="h-4 w-4 mr-2" />Process Payment</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status !== 'paid' && (
-                      <Can resource="payment_vouchers" action="delete">
-                        <DropdownMenuItem onClick={() => { setVoucherToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                      </Can>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -258,7 +233,7 @@ export default function PaymentVouchersPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Voucher"
           description="Are you sure you want to delete this payment voucher? This action cannot be undone."
           onConfirm={deleteVoucher}

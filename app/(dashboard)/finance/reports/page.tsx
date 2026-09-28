@@ -1,68 +1,62 @@
 'use client';
 
+import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { PermissionGuard } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
-import EmptyState from '@/components/common/EmptyState';
+import KPICard from '@/components/common/KPICard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, TrendingUp, BarChart3, PieChart, Download, Plus } from 'lucide-react';
+import { BarChart3, Download, Calendar, TrendingUp, Scale, PieChart, FileText, DollarSign, Users, Activity } from 'lucide-react';
 
-const REPORT_TYPES = [
-  { icon: TrendingUp, title: 'Profit & Loss', description: 'Income statement showing revenue, expenses, and net profit for any period.', color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/50' },
-  { icon: BarChart3, title: 'Balance Sheet', description: 'Snapshot of assets, liabilities, and equity at a specific date.', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/50' },
-  { icon: PieChart, title: 'Cash Flow Statement', description: 'Track cash inflows and outflows across operating, investing, and financing activities.', color: 'text-violet-600', bg: 'bg-violet-50 dark:bg-violet-950/50' },
-  { icon: FileText, title: 'Trial Balance', description: 'List all debit and credit balances for every account to verify the ledger.', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/50' },
-  { icon: TrendingUp, title: 'Budget vs Actual', description: 'Compare planned budget against actual spending across departments.', color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-950/50' },
-  { icon: BarChart3, title: 'Expense Analysis', description: 'Detailed breakdown of expenses by category, department, and time period.', color: 'text-teal-600', bg: 'bg-teal-50 dark:bg-teal-950/50' },
+const reportTypes = [
+  { id: 'cash_flow', title: 'Cash Flow Statement', description: 'Analyze cash inflows and outflows', icon: TrendingUp, color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600' },
+  { id: 'balance_sheet', title: 'Balance Sheet', description: 'Snapshot of assets, liabilities, and equity', icon: Scale, color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600' },
+  { id: 'income_statement', title: 'Income Statement', description: 'Revenue, expenses, and profit over a period', icon: BarChart3, color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600' },
+  { id: 'ar_aging', title: 'Accounts Receivable Aging', description: 'Track overdue customer invoices', icon: Calendar, color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600' },
+  { id: 'ap_aging', title: 'Accounts Payable Aging', description: 'Monitor outstanding vendor bills', icon: FileText, color: 'bg-rose-50 dark:bg-rose-950/30', iconColor: 'text-rose-600' },
+  { id: 'budget_vs_actual', title: 'Budget vs. Actual', description: 'Compare planned vs. actual expenditures', icon: PieChart, color: 'bg-cyan-50 dark:bg-cyan-950/30', iconColor: 'text-cyan-600' },
+  { id: 'expense_analysis', title: 'Expense Analysis', description: 'Detailed expense breakdown by category', icon: DollarSign, color: 'bg-pink-50 dark:bg-pink-950/30', iconColor: 'text-pink-600' },
+  { id: 'revenue_analysis', title: 'Revenue Analysis', description: 'Revenue trends and performance metrics', icon: Activity, color: 'bg-indigo-50 dark:bg-indigo-950/30', iconColor: 'text-indigo-600' },
+  { id: 'vendor_performance', title: 'Vendor Performance', description: 'Track vendor metrics and relationships', icon: Users, color: 'bg-orange-50 dark:bg-orange-950/30', iconColor: 'text-orange-600' },
 ];
 
-export default function FinancialReportsPage() {
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Financial Reports"
-        description="Generate and export financial statements and analytics"
-        breadcrumbs={[{ label: 'Finance' }, { label: 'Reports' }]}
-      >
-        <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" />Export All</Button>
-        <Button size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Custom Report</Button>
-      </PageHeader>
+export default function FinanceReportsPage() {
+  const { company } = useAuth();
+  const [loading] = useState(false);
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {REPORT_TYPES.map((report, i) => {
-          const Icon = report.icon;
-          return (
-            <Card key={i} className="dark:bg-gray-900 dark:border-gray-800 hover:shadow-md transition-shadow cursor-pointer group">
-              <CardContent className="p-5">
-                <div className="flex items-start gap-4">
-                  <div className={`p-2.5 rounded-lg shrink-0 ${report.bg}`}>
-                    <Icon className={`h-5 w-5 ${report.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{report.title}</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{report.description}</p>
-                  </div>
+  return (
+    <PermissionGuard permission="finance.reports.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view finance reports</div>}>
+      <div className="space-y-6">
+        <PageHeader title="Finance Reports" description="Generate and view financial reports" breadcrumbs={[{ label: 'Finance' }, { label: 'Reports' }]}>
+          <Button variant="outline" size="sm"><Calendar className="h-4 w-4 mr-2" />Date Range</Button>
+        </PageHeader>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICard title="Total Reports" value={reportTypes.length} icon={<BarChart3 className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Available Reports" value={reportTypes.length} icon={<FileText className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {reportTypes.map((report) => (
+            <Card key={report.id} className="dark:bg-gray-900 dark:border-gray-800 hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader className="pb-3">
+                <div className={`w-12 h-12 rounded-lg ${report.color} flex items-center justify-center mb-3`}>
+                  <report.icon className={`h-6 w-6 ${report.iconColor}`} />
                 </div>
-                <div className="mt-4 flex gap-2">
-                  <Button variant="outline" size="sm" className="text-xs flex-1">Preview</Button>
-                  <Button size="sm" className="text-xs flex-1 bg-blue-600 hover:bg-blue-700">
-                    <Download className="h-3 w-3 mr-1" />Export
-                  </Button>
+                <CardTitle className="text-base font-semibold">{report.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{report.description}</p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1"><Download className="h-4 w-4 mr-2" />Generate</Button>
+                  <Button variant="outline" size="sm"><Calendar className="h-4 w-4" /></Button>
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
+          ))}
+        </div>
       </div>
-
-      <Card className="dark:bg-gray-900 dark:border-gray-800">
-        <CardContent className="py-10">
-          <EmptyState
-            icon={<FileText className="h-12 w-12" />}
-            title="Full Financial Reporting Suite Coming Soon"
-            description="The complete module includes scheduled reports, custom date ranges, multi-currency consolidation, audit trails, and one-click export to PDF, Excel, and CSV."
-          />
-        </CardContent>
-      </Card>
-    </div>
+    </PermissionGuard>
   );
 }

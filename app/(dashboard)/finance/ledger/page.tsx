@@ -73,15 +73,15 @@ export default function LedgerPage() {
     if (!company?.id) return;
     
     // Generate entry number
-    const { data: maxEntry } = await supabase
+    const { data: maxEntry, error: maxError } = await supabase
       .from('journal_entries')
       .select('entry_number')
       .eq('company_id', company.id)
       .order('entry_number', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
     
-    const lastNum = maxEntry?.entry_number ? parseInt(maxEntry.entry_number.replace('JE-', '')) : 0;
+    const lastNum = maxEntry?.entry_number ? parseInt(String(maxEntry.entry_number).replace('JE-', '')) : 0;
     const entryNumber = `JE-${String(lastNum + 1).padStart(4, '0')}`;
     
     const totalDebit = entryLines.reduce((sum, line) => sum + (line.debit || 0), 0);

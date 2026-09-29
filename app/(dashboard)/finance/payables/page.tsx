@@ -160,6 +160,11 @@ export default function PayablesPage() {
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={getPayableStatus(row.due_date, row.status)} /> },
   ];
 
+  const filteredPayables = payables.filter(p => {
+    const matchesSearch = !search || p.invoice_number?.toLowerCase().includes(search.toLowerCase()) || p.vendors?.name?.toLowerCase().includes(search.toLowerCase());
+    return matchesSearch;
+  });
+
   const totalPayables = payables.reduce((sum, p) => sum + (p.balance_due || 0), 0);
   const overduePayables = payables.filter(p => getPayableStatus(p.due_date, p.status) === 'overdue').reduce((sum, p) => sum + (p.balance_due || 0), 0);
   const dueThisWeek = payables.filter(p => {
@@ -233,7 +238,7 @@ export default function PayablesPage() {
             </div>
             <DataTable
               columns={columns}
-              data={filteredBills}
+              data={filteredPayables}
               loading={loading}
               searchable={false}
               rowKey="id"

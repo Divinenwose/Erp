@@ -77,7 +77,9 @@ export default function PaymentVouchersPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create voucher'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'created', module: 'payment_vouchers', entity_type: 'payment_vouchers', new_value: { amount: data.amount, payee: data.payee } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'payment_vouchers', entity_type: 'payment_vouchers', new_value: { amount: data.amount, payee: data.payee } });
+    }
     toast.success('Payment voucher created');
     reset();
     setDialogOpen(false);
@@ -88,7 +90,9 @@ export default function PaymentVouchersPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('payment_vouchers').update({ status: 'approved', approved_by: user?.id, approved_at: new Date().toISOString() }).eq('id', voucher.id);
     if (error) { toast.error('Failed to approve voucher'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'approved', module: 'payment_vouchers', entity_type: 'payment_vouchers', entity_id: voucher.id, new_value: { status: 'approved' } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'approved', module: 'payment_vouchers', entity_type: 'payment_vouchers', entity_id: voucher.id, new_value: { status: 'approved' } });
+    }
     toast.success('Voucher approved');
     load();
   };
@@ -97,7 +101,9 @@ export default function PaymentVouchersPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('payment_vouchers').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', voucher.id);
     if (error) { toast.error('Failed to process payment'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'paid', module: 'payment_vouchers', entity_type: 'payment_vouchers', entity_id: voucher.id, new_value: { status: 'paid' } });
+    if (company?.id && user?.id && voucher.id) {
+      await logAuditEvent(company.id, user.id, { action: 'paid', module: 'payment_vouchers', entity_type: 'payment_vouchers', entity_id: voucher.id, new_value: { status: 'paid' } });
+    }
     toast.success('Payment processed');
     load();
   };
@@ -106,7 +112,9 @@ export default function PaymentVouchersPage() {
     if (!company?.id || !voucherToDelete) return;
     const { error } = await supabase.from('payment_vouchers').delete().eq('id', voucherToDelete.id);
     if (error) { toast.error('Failed to delete voucher'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'deleted', module: 'payment_vouchers', entity_type: 'payment_vouchers', entity_id: voucherToDelete.id });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'payment_vouchers', entity_type: 'payment_vouchers', entity_id: voucherToDelete.id });
+    }
     toast.success('Voucher deleted');
     setDeleteDialogOpen(false);
     setVoucherToDelete(null);

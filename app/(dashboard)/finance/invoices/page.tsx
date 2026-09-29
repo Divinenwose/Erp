@@ -264,41 +264,6 @@ export default function InvoicesPage() {
               loading={loading}
               searchable={false}
               rowKey="id"
-              actions={(row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewInvoice(row)}><Edit className="h-4 w-4 mr-2" />View</DropdownMenuItem>
-                    {row.status === 'draft' && (
-                      <Can resource="invoices" action="approve">
-                        <DropdownMenuItem onClick={() => approveInvoice(row)}><CheckCircle2 className="h-4 w-4 mr-2" />Approve</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status === 'approved' && (
-                      <Can resource="invoices" action="send">
-                        <DropdownMenuItem onClick={() => sendInvoice(row)}><Send className="h-4 w-4 mr-2" />Send</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.balance_due > 0 && row.status !== 'voided' && (
-                      <Can resource="invoices" action="record_payment">
-                        <DropdownMenuItem onClick={() => openPaymentDialog(row)}><DollarSign className="h-4 w-4 mr-2" />Record Payment</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status !== 'paid' && row.status !== 'voided' && (
-                      <Can resource="invoices" action="void">
-                        <DropdownMenuItem onClick={() => voidInvoice(row)}><XCircle className="h-4 w-4 mr-2" />Void</DropdownMenuItem>
-                      </Can>
-                    )}
-                    {row.status !== 'paid' && row.status !== 'voided' && (
-                      <Can resource="invoices" action="delete">
-                        <DropdownMenuItem onClick={() => { setInvoiceToDelete(row); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                      </Can>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             />
           </CardContent>
         </Card>
@@ -353,7 +318,7 @@ export default function InvoicesPage() {
         {/* Delete Dialog */}
         <ConfirmDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
           title="Delete Invoice"
           description="Are you sure you want to delete this invoice? This action cannot be undone."
           onConfirm={deleteInvoice}

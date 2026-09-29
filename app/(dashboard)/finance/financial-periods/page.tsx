@@ -69,7 +69,9 @@ export default function FinancialPeriodsPage() {
       created_by: user?.id,
     });
     if (error) { toast.error('Failed to create period'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'created', module: 'financial_periods', entity_type: 'financial_periods', new_value: { period_name: data.period_name, fiscal_year: data.fiscal_year } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'financial_periods', entity_type: 'financial_periods', new_value: { period_name: data.period_name, fiscal_year: data.fiscal_year } });
+    }
     toast.success('Financial period created');
     reset();
     setDialogOpen(false);
@@ -80,7 +82,9 @@ export default function FinancialPeriodsPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('financial_periods').update({ status: 'closed', closed_by: user?.id, closed_at: new Date().toISOString() }).eq('id', period.id);
     if (error) { toast.error('Failed to close period'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'closed', module: 'financial_periods', entity_type: 'financial_periods', entity_id: period.id, new_value: { status: 'closed' } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'closed', module: 'financial_periods', entity_type: 'financial_periods', entity_id: period.id, new_value: { status: 'closed' } });
+    }
     toast.success('Period closed');
     load();
   };
@@ -89,7 +93,9 @@ export default function FinancialPeriodsPage() {
     if (!company?.id) return;
     const { error } = await supabase.from('financial_periods').update({ status: 'locked', locked_by: user?.id, locked_at: new Date().toISOString() }).eq('id', period.id);
     if (error) { toast.error('Failed to lock period'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'locked', module: 'financial_periods', entity_type: 'financial_periods', entity_id: period.id, new_value: { status: 'locked' } });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'locked', module: 'financial_periods', entity_type: 'financial_periods', entity_id: period.id, new_value: { status: 'locked' } });
+    }
     toast.success('Period locked');
     load();
   };
@@ -98,7 +104,9 @@ export default function FinancialPeriodsPage() {
     if (!company?.id || !periodToDelete) return;
     const { error } = await supabase.from('financial_periods').delete().eq('id', periodToDelete.id);
     if (error) { toast.error('Failed to delete period'); return; }
-    await logAuditEvent(company.id, user?.id, { action: 'deleted', module: 'financial_periods', entity_type: 'financial_periods', entity_id: periodToDelete.id });
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'financial_periods', entity_type: 'financial_periods', entity_id: periodToDelete.id });
+    }
     toast.success('Period deleted');
     setDeleteDialogOpen(false);
     setPeriodToDelete(null);

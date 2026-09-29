@@ -161,6 +161,11 @@ export default function ReceivablesPage() {
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={getReceivableStatus(row.due_date, row.status)} /> },
   ];
 
+  const filteredReceivables = receivables.filter(r => {
+    const matchesSearch = !search || r.invoice_number?.toLowerCase().includes(search.toLowerCase()) || r.customers?.name?.toLowerCase().includes(search.toLowerCase());
+    return matchesSearch;
+  });
+
   const totalReceivables = receivables.reduce((sum, r) => sum + (r.balance_due || 0), 0);
   const overdueReceivables = receivables.filter(r => getReceivableStatus(r.due_date, r.status) === 'overdue').reduce((sum, r) => sum + (r.balance_due || 0), 0);
   const dueThisWeek = receivables.filter(r => {

@@ -519,8 +519,6 @@ ALTER TABLE invoices ADD COLUMN IF NOT EXISTS approved_at timestamptz;
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS audit_log_id uuid REFERENCES finance_audit_logs(id);
 
 ALTER TABLE budgets ADD COLUMN IF NOT EXISTS approved_by uuid REFERENCES employees(id);
-ALTER TABLE ADD COLUMN IF NOT EXISTS approved_at timestamptz;
--- Fix the previous line
 ALTER TABLE budgets ADD COLUMN IF NOT EXISTS approved_at timestamptz;
 
 ALTER TABLE vendors ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES auth.users(id);

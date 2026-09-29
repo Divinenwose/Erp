@@ -203,13 +203,13 @@ ON CONFLICT (resource, action) DO NOTHING;
 -- Update Finance Manager role with all new Finance permissions
 DO $$
 DECLARE
-  role_id uuid;
+  v_role_id uuid;
 BEGIN
-  SELECT id INTO role_id FROM roles WHERE name = 'Finance Manager' LIMIT 1;
+  SELECT id INTO v_role_id FROM roles WHERE name = 'Finance Manager' LIMIT 1;
   
-  IF role_id IS NOT NULL THEN
+  IF v_role_id IS NOT NULL THEN
     INSERT INTO role_permissions (role_id, permission_id)
-    SELECT role_id, p.id FROM permissions p
+    SELECT v_role_id, p.id FROM permissions p
     WHERE p.resource = 'finance' 
        OR p.resource LIKE 'finance.%'
     ON CONFLICT (role_id, permission_id) DO NOTHING;

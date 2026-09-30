@@ -34,9 +34,11 @@ export default function BuyingActivitiesPage() {
 
   const filteredActivities = activities.filter(a => {
     if (periodFilter === 'all') return true;
+    if (!a.activity_date) return false;
     const now = new Date();
     const activityDate = new Date(a.activity_date);
-    const daysDiff = Math.floor((now - activityDate) / (1000 * 60 * 60 * 24));
+    if (isNaN(activityDate.getTime())) return false;
+    const daysDiff = Math.floor((now.getTime() - activityDate.getTime()) / (1000 * 60 * 60 * 24));
     if (periodFilter === '7') return daysDiff <= 7;
     if (periodFilter === '30') return daysDiff <= 30;
     if (periodFilter === '90') return daysDiff <= 90;

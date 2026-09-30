@@ -276,16 +276,16 @@ export default function PurchaseRequestsPage() {
                 {selectedRequest.justification && <div><span className="text-gray-500">Justification:</span> {selectedRequest.justification}</div>}
                 {selectedRequest.status === 'draft' && (
                   <div className="flex justify-end gap-2 pt-4">
-                    <Button size="sm" onClick={() => { viewDialogOpen(false); submitRequest(selectedRequest); }}>Submit for Approval</Button>
+                    <Button size="sm" onClick={() => { setViewDialogOpen(false); submitRequest(selectedRequest); }}>Submit for Approval</Button>
                   </div>
                 )}
                 {selectedRequest.status === 'pending' && (
                   <div className="flex justify-end gap-2 pt-4">
                     <Can resource="requests" action="approve">
-                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => { viewDialogOpen(false); approveRequest(selectedRequest); }}>Approve</Button>
+                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => { setViewDialogOpen(false); approveRequest(selectedRequest); }}>Approve</Button>
                     </Can>
                     <Can resource="requests" action="reject">
-                      <Button size="sm" variant="destructive" onClick={() => { viewDialogOpen(false); rejectRequest(selectedRequest); }}>Reject</Button>
+                      <Button size="sm" variant="destructive" onClick={() => { setViewDialogOpen(false); rejectRequest(selectedRequest); }}>Reject</Button>
                     </Can>
                   </div>
                 )}

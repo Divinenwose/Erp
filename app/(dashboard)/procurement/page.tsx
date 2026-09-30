@@ -42,7 +42,7 @@ export default function ProcurementOverviewPage() {
     { title: 'Supplier Performance', description: 'Vendor metrics', icon: TrendingDown, href: '/procurement/supplier-performance', color: 'bg-rose-50 dark:bg-rose-950/30', iconColor: 'text-rose-600', permission: 'procurement.supplier_performance.view' },
     { title: 'Buying Activities', description: 'Daily activities', icon: CheckCircle2, href: '/procurement/buying-activities', color: 'bg-indigo-50 dark:bg-indigo-950/30', iconColor: 'text-indigo-600', permission: 'procurement.buying_activities.view' },
     { title: 'Reports', description: 'Analytics & reports', icon: FileText, href: '/procurement/reports', color: 'bg-teal-50 dark:bg-teal-950/30', iconColor: 'text-teal-600', permission: 'procurement.reports.view' },
-  ].filter(m => isAdmin || hasPermission(m.permission));
+  ];
 
   const loadKPIs = async () => {
     if (!company?.id) return;

@@ -38,6 +38,10 @@ export default function ProcurementOverviewPage() {
     { title: 'Purchase Orders', description: 'Formal POs to vendors', icon: ShoppingCart, href: '/procurement/orders', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600', permission: 'procurement.orders.view' },
     { title: 'Goods Received Notes', description: 'Delivery verification', icon: Package, href: '/procurement/grn', color: 'bg-orange-50 dark:bg-orange-950/30', iconColor: 'text-orange-600', permission: 'procurement.grn.view' },
     { title: 'Invoice Verification', description: 'PO & GRN matching', icon: DollarSign, href: '/procurement/invoice-verification', color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600', permission: 'procurement.invoice_verification.view' },
+    { title: 'Replenishment', description: 'Stock requests', icon: FileText, href: '/procurement/replenishment', color: 'bg-cyan-50 dark:bg-cyan-950/30', iconColor: 'text-cyan-600', permission: 'procurement.replenishment.view' },
+    { title: 'Supplier Performance', description: 'Vendor metrics', icon: TrendingDown, href: '/procurement/supplier-performance', color: 'bg-rose-50 dark:bg-rose-950/30', iconColor: 'text-rose-600', permission: 'procurement.supplier_performance.view' },
+    { title: 'Buying Activities', description: 'Daily activities', icon: CheckCircle2, href: '/procurement/buying-activities', color: 'bg-indigo-50 dark:bg-indigo-950/30', iconColor: 'text-indigo-600', permission: 'procurement.buying_activities.view' },
+    { title: 'Reports', description: 'Analytics & reports', icon: FileText, href: '/procurement/reports', color: 'bg-teal-50 dark:bg-teal-950/30', iconColor: 'text-teal-600', permission: 'procurement.reports.view' },
   ].filter(m => isAdmin || hasPermission(m.permission));
 
   const loadKPIs = async () => {

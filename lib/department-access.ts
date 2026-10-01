@@ -103,9 +103,9 @@ export function getModuleFromPath(pathname: string): string | null {
  * Returns true if a user with the given department can access the given route.
  */
 export function isRouteAllowedForDepartment(pathname: string, departmentName?: string): boolean {
-  const module = getModuleFromPath(pathname);
-  if (!module) return true; // unknown routes are not department-restricted
-  return isModuleAllowed(module, departmentName);
+  const moduleId = getModuleFromPath(pathname);
+  if (!moduleId) return true; // unknown routes are not department-restricted
+  return isModuleAllowed(moduleId, departmentName);
 }
 
 /** Map department name → its dedicated overview/landing page, where one exists. */
@@ -115,6 +115,7 @@ const DEPARTMENT_LANDING_ROUTE: Record<string, string> = {
   'Finance & Accounts': '/finance',
   'Inventory': '/inventory',
   'Procurement': '/procurement',
+  'IT': '/it',
   'Sales & CRM': '/crm',
   'Manufacturing': '/manufacturing',
 };

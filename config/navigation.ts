@@ -555,6 +555,13 @@ export const navigationConfig: NavItem[] = [
       { title: 'Vendors', href: '/procurement/vendors', icon: Building2, permission: 'procurement.vendors.view' },
       { title: 'Purchase Requests', href: '/procurement/requests', icon: Clipboard, permission: 'procurement.requests.view' },
       { title: 'Purchase Orders', href: '/procurement/orders', icon: ShoppingCart, permission: 'procurement.orders.view' },
+      { title: 'Contracts', href: '/procurement/contracts', icon: FileSignature, permission: 'procurement.contracts.view' },
+      { title: 'Goods Received Notes', href: '/procurement/grn', icon: Package, permission: 'procurement.grn.view' },
+      { title: 'Invoice Verification', href: '/procurement/invoice-verification', icon: DollarSign, permission: 'procurement.invoice_verification.view' },
+      { title: 'Replenishment', href: '/procurement/replenishment', icon: FileText, permission: 'procurement.replenishment.view' },
+      { title: 'Supplier Performance', href: '/procurement/supplier-performance', icon: TrendingDown, permission: 'procurement.supplier_performance.view' },
+      { title: 'Buying Activities', href: '/procurement/buying-activities', icon: Activity, permission: 'procurement.buying_activities.view' },
+      { title: 'Reports', href: '/procurement/reports', icon: BarChart3, permission: 'procurement.reports.view' },
     ],
   },
   {

@@ -152,7 +152,7 @@ export default function OperationsWorkspace({ section = 'overview' }: { section?
       supabase.from('stock_movements').select('*, products(name, sku), warehouses(name, code)').eq('company_id', company.id).order('created_at', { ascending: false }).limit(250),
       supabase.from('purchase_requests').select('*').eq('company_id', company.id).order('created_at', { ascending: false }),
       supabase.from('purchase_orders').select('*, vendors(name)').eq('company_id', company.id).order('created_at', { ascending: false }),
-      supabase.from('deliveries').select('*, vendors(name), purchase_orders(po_number)').eq('company_id', company.id).order('created_at', { ascending: false }),
+      supabase.from('deliveries').select('*, vendors(name), purchase_orders!deliveries_po_id_fkey(po_number)').eq('company_id', company.id).order('created_at', { ascending: false }),
       supabase.from('vendors').select('id, name, category, status, rating, total_orders, total_spend').eq('company_id', company.id).order('name'),
       supabase.from('employees').select('id, user_id, first_name, last_name, employee_number, department_id, employment_status').eq('company_id', company.id).order('first_name'),
       supabase.from('attendance_records').select('*, profiles(display_name, first_name, last_name, email), departments(name)').eq('company_id', company.id).order('attendance_date', { ascending: false }).limit(500),

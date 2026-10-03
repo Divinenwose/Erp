@@ -933,9 +933,15 @@ export const navigationConfig: NavItem[] = [
     permission: 'logistics.view',
     children: [
       { title: 'Overview', href: '/logistics', icon: LayoutDashboard, permission: 'logistics.view' },
-      { title: 'Deliveries', href: '/logistics/deliveries', icon: Truck, permission: 'logistics.deliveries.view' },
-      { title: 'Fleet', href: '/logistics/fleet', icon: Car, permission: 'logistics.fleet.view' },
-      { title: 'Dispatch', href: '/logistics/dispatch', icon: ShoppingCart, permission: 'logistics.dispatch.view' },
+      { title: 'Shipments', href: '/logistics/shipments', icon: Truck, permission: 'logistics.view' },
+      { title: 'Warehouses', href: '/logistics/warehouses', icon: Warehouse, permission: 'logistics.view' },
+      { title: 'Routes', href: '/logistics/routes', icon: MapPin, permission: 'logistics.view' },
+      { title: 'Carriers', href: '/logistics/carriers', icon: Building2, permission: 'logistics.view' },
+      { title: 'Carrier Communications', href: '/logistics/communications', icon: Mail, permission: 'logistics.view' },
+      { title: 'Incidents', href: '/logistics/incidents', icon: AlertTriangle, permission: 'logistics.view' },
+      { title: 'Documents & Compliance', href: '/logistics/compliance', icon: ShieldCheck, permission: 'logistics.view' },
+      { title: 'Approvals', href: '/logistics/requests', icon: ClipboardCheck, permission: 'logistics.view' },
+      { title: 'Reports', href: '/logistics/reports', icon: BarChart3, permission: 'logistics.view' },
     ],
   },
   {

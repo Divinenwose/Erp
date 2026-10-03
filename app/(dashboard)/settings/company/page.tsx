@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { Country, State } from 'country-state-city';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,11 +16,23 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
+const AFRICAN_COUNTRY_CODES = new Set([
+  'AO', 'BF', 'BI', 'BJ', 'BW', 'CD', 'CF', 'CG', 'CI', 'CM', 'CV', 'DJ', 'DZ', 'EG', 'ER', 'ET',
+  'GA', 'GH', 'GM', 'GN', 'GQ', 'GW', 'KE', 'KM', 'LR', 'LS', 'LY', 'MA', 'MG', 'ML', 'MR', 'MU',
+  'MW', 'MZ', 'NA', 'NE', 'NG', 'RW', 'SC', 'SD', 'SL', 'SN', 'SO', 'SS', 'ST', 'SZ', 'TD', 'TG',
+  'TN', 'TZ', 'UG', 'ZA', 'ZM', 'ZW',
+]);
+
 export default function CompanySettingsPage() {
   const { company, refreshProfile } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState('');
+  const [stateCities, setStateCities] = useState<string[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const logoInput = useRef<HTMLInputElement>(null);
 
-  const { register, handleSubmit, reset, formState: { isDirty } } = useForm({
+  const { register, handleSubmit, reset, watch, setValue, formState: { isDirty } } = useForm({
     defaultValues: {
       name: '',
       email: '',
@@ -29,8 +42,8 @@ export default function CompanySettingsPage() {
       city: '',
       state: '',
       country: '',
-      currency: 'USD',
-      timezone: 'UTC',
+      currency: 'NGN',
+      timezone: 'Africa/Lagos',
       industry: '',
     },
   });
@@ -46,12 +59,67 @@ export default function CompanySettingsPage() {
         city: company.city ?? '',
         state: company.state ?? '',
         country: company.country ?? '',
-        currency: company.currency ?? 'USD',
-        timezone: company.timezone ?? 'UTC',
+        currency: company.currency ?? 'NGN',
+        timezone: company.timezone ?? 'Africa/Lagos',
         industry: company.industry ?? '',
       });
+      setLogoUrl(company.logo_url ?? '');
     }
   }, [company, reset]);
+
+  const africanCountries = useMemo(
+    () => Country.getAllCountries().filter(country => AFRICAN_COUNTRY_CODES.has(country.isoCode)).sort((a, b) => a.name.localeCompare(b.name)),
+    [],
+  );
+  const countryValue = watch('country') ?? '';
+  const selectedCountry = africanCountries.find(country => country.name === countryValue || country.isoCode === countryValue);
+  const countryStates = selectedCountry ? State.getStatesOfCountry(selectedCountry.isoCode) : [];
+  const stateValue = watch('state') ?? '';
+  const selectedState = countryStates.find(state => state.name === stateValue || state.isoCode === stateValue);
+  const cityValue = watch('city') ?? '';
+
+  useEffect(() => {
+    if (!selectedCountry || !selectedState) {
+      setStateCities([]);
+      setCitiesLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    setStateCities([]);
+    setCitiesLoading(true);
+    const params = new URLSearchParams({ country: selectedCountry.isoCode, state: selectedState.isoCode });
+    fetch(`/api/locations/cities?${params}`, { signal: controller.signal })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Could not load cities')))
+      .then((cities: string[]) => setStateCities(cities))
+      .catch(error => { if (error.name !== 'AbortError') setStateCities([]); })
+      .finally(() => { if (!controller.signal.aborted) setCitiesLoading(false); });
+    return () => controller.abort();
+  }, [selectedCountry?.isoCode, selectedState?.isoCode]);
+
+  const uploadLogo = async (file?: File) => {
+    if (!file || !company?.id) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return toast.error('Choose a PNG, JPG or WebP image');
+    if (file.size > 2 * 1024 * 1024) return toast.error('Logo must be 2 MB or smaller');
+    setLogoUploading(true);
+    const extension = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
+    const path = `${company.id}/logo.${extension}`;
+    const { error: uploadError } = await supabase.storage.from('company-logos').upload(path, file, { upsert: true, contentType: file.type });
+    if (uploadError) {
+      toast.error(`Logo upload failed: ${uploadError.message}`);
+      setLogoUploading(false);
+      return;
+    }
+    const { data: publicUrl } = supabase.storage.from('company-logos').getPublicUrl(path);
+    const nextLogoUrl = `${publicUrl.publicUrl}?updated=${Date.now()}`;
+    const { error: updateError } = await supabase.from('companies').update({ logo_url: nextLogoUrl, updated_at: new Date().toISOString() }).eq('id', company.id);
+    if (updateError) toast.error(`Logo uploaded but company settings could not be updated: ${updateError.message}`);
+    else {
+      setLogoUrl(nextLogoUrl);
+      toast.success('Company logo updated');
+      await refreshProfile();
+    }
+    setLogoUploading(false);
+  };
 
   const onSubmit = async (data: any) => {
     if (!company?.id) return;
@@ -116,9 +184,30 @@ export default function CompanySettingsPage() {
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2"><Label>Street Address</Label><Input className="mt-1" {...register('address')} /></div>
-                      <div><Label>City</Label><Input className="mt-1" {...register('city')} /></div>
-                      <div><Label>State / Province</Label><Input className="mt-1" {...register('state')} /></div>
-                      <div><Label>Country</Label><Input className="mt-1" {...register('country')} /></div>
+                      <div>
+                        <Label>Country</Label>
+                        <select value={selectedCountry?.name || countryValue} className="mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950" {...register('country', { onChange: () => { setValue('state', '', { shouldDirty: true }); setValue('city', '', { shouldDirty: true }); } })}>
+                          <option value="">Select an African country</option>
+                          {countryValue && !selectedCountry && <option value={countryValue}>Current: {countryValue}</option>}
+                          {africanCountries.map(country => <option key={country.isoCode} value={country.name}>{country.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <Label>State / Region</Label>
+                        {selectedCountry && countryStates.length > 0 ? <select value={selectedState?.name || stateValue} className="mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950" {...register('state', { onChange: () => setValue('city', '', { shouldDirty: true }) })}>
+                          <option value="">Select a state or region</option>
+                          {stateValue && !countryStates.some(state => state.name === stateValue || state.isoCode === stateValue) && <option value={stateValue}>Current: {stateValue}</option>}
+                          {countryStates.map(state => <option key={state.isoCode} value={state.name}>{state.name}</option>)}
+                        </select> : <Input className="mt-1" {...register('state')} />}
+                      </div>
+                      <div>
+                        <Label>City</Label>
+                        {selectedState && (stateCities.length > 0 || citiesLoading) ? <select disabled={citiesLoading} className="mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm disabled:opacity-60 dark:border-gray-700 dark:bg-gray-950" {...register('city')}>
+                          <option value="">{citiesLoading ? 'Loading cities...' : 'Select a city'}</option>
+                          {cityValue && !stateCities.includes(cityValue) && <option value={cityValue}>Current: {cityValue}</option>}
+                          {stateCities.map((city, index) => <option key={`${city}-${index}`} value={city}>{city}</option>)}
+                        </select> : <Input className="mt-1" {...register('city')} />}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -129,10 +218,12 @@ export default function CompanySettingsPage() {
                   <CardHeader><CardTitle className="text-sm font-semibold">Company Logo</CardTitle></CardHeader>
                   <CardContent>
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center">
-                        <span className="text-white text-2xl font-bold">{company?.name?.charAt(0) ?? 'N'}</span>
+                      <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-950">
+                        {logoUrl ? <img src={logoUrl} alt={`${company?.name ?? 'Company'} logo`} className="h-full w-full object-contain" /> : <span className="text-2xl font-bold text-gray-500">{company?.name?.charAt(0) ?? 'N'}</span>}
                       </div>
-                      <Button type="button" variant="outline" size="sm"><Upload className="h-4 w-4 mr-2" />Upload Logo</Button>
+                      <input ref={logoInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event => { void uploadLogo(event.target.files?.[0]); event.target.value = ''; }} />
+                      <Button type="button" variant="outline" size="sm" disabled={logoUploading} onClick={() => logoInput.current?.click()}><Upload className="h-4 w-4 mr-2" />{logoUploading ? 'Uploading...' : logoUrl ? 'Change Logo' : 'Upload Logo'}</Button>
+                      <p className="text-xs text-gray-500">PNG, JPG or WebP · up to 2 MB</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -173,6 +264,7 @@ export default function CompanySettingsPage() {
                 <div>
                   <Label>Default Currency</Label>
                   <select className="mt-1 w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950" {...register('currency')}>
+                    <option value="NGN">NGN - Nigerian Naira</option>
                     <option value="USD">USD - US Dollar</option>
                     <option value="EUR">EUR - Euro</option>
                     <option value="GBP">GBP - British Pound</option>
@@ -188,6 +280,7 @@ export default function CompanySettingsPage() {
                 <div>
                   <Label>Timezone</Label>
                   <select className="mt-1 w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950" {...register('timezone')}>
+                    <option value="Africa/Lagos">West Africa Time (WAT, GMT+1)</option>
                     <option value="UTC">UTC</option>
                     <option value="America/New_York">Eastern Time (ET)</option>
                     <option value="America/Chicago">Central Time (CT)</option>

@@ -70,6 +70,7 @@ export const defaultNavigationConfig: NavItem[] = [
       { title: 'Performance', href: '/hr/performance', icon: Award, permission: 'hr.performance.view' },
       { title: 'Org Chart', href: '/hr/org-chart', icon: GitBranch, permission: 'hr.view' },
       { title: 'Payroll', href: '/hr/payroll', icon: CreditCard, permission: 'hr.payroll.view' },
+      { title: 'Reports', href: '/hr/reports', icon: BarChart3, permission: 'hr.view' },
     ],
   },
   {
@@ -1028,4 +1029,3 @@ export const navigationConfig: NavItem[] = [
 ];
 
 export type { NavItem as NavItemType };
-

@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BarChart3, Download, FileText, Calendar, Users, DollarSign, TrendingUp, Printer, Briefcase } from 'lucide-react';
 import { format, subMonths } from 'date-fns';
 import Link from 'next/link';
+import { exportExcel } from '@/lib/excel-export';
+import { toast } from 'sonner';
 
 export default function AdministrationReportsPage() {
   const { company } = useAuth();
@@ -239,6 +241,29 @@ export default function AdministrationReportsPage() {
     a.click();
   };
 
+  const exportQuickReport = async (kind: 'attendance' | 'assets' | 'spending') => {
+    if (!company?.id) return;
+    const result = kind === 'attendance'
+      ? await supabase.from('attendance_records')
+        .select('*, profiles(first_name, last_name), departments(name), branches(name)')
+        .eq('company_id', company.id)
+        .gte('attendance_date', `${selectedMonth}-01`)
+        .lte('attendance_date', `${selectedMonth}-31`)
+      : kind === 'assets'
+        ? await supabase.from('assets').select('*, departments(name), branches(name)').eq('company_id', company.id)
+        : await supabase.from('purchase_requests')
+          .select('*, employees:requested_by(first_name, last_name), departments(name)')
+          .eq('company_id', company.id)
+          .gte('created_at', `${selectedMonth}-01`)
+          .lte('created_at', `${selectedMonth}-31`);
+    if (result.error) {
+      toast.error(`Could not export the ${kind} report`);
+      return;
+    }
+    const sheetName = kind === 'spending' ? 'Spending' : kind === 'assets' ? 'Assets' : 'Attendance';
+    exportExcel(`${kind}-report-${selectedMonth}`, [{ name: sheetName, rows: result.data ?? [] }]);
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -343,13 +368,25 @@ export default function AdministrationReportsPage() {
               <FileText className="h-5 w-5" />
               <span className="text-sm">Attendance CSV</span>
             </Button>
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => void exportQuickReport('attendance')}>
+              <FileText className="h-5 w-5" />
+              <span className="text-sm">Attendance Excel</span>
+            </Button>
             <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={exportAssetsCSV}>
               <BarChart3 className="h-5 w-5" />
               <span className="text-sm">Assets CSV</span>
             </Button>
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => void exportQuickReport('assets')}>
+              <BarChart3 className="h-5 w-5" />
+              <span className="text-sm">Assets Excel</span>
+            </Button>
             <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={exportSpendingCSV}>
               <DollarSign className="h-5 w-5" />
               <span className="text-sm">Spending CSV</span>
+            </Button>
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => void exportQuickReport('spending')}>
+              <DollarSign className="h-5 w-5" />
+              <span className="text-sm">Spending Excel</span>
             </Button>
             <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={handlePrint}>
               <Printer className="h-5 w-5" />

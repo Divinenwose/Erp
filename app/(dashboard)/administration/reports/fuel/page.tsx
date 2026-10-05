@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import PageHeader from '@/components/common/PageHeader';
+import ExcelExportButton from '@/components/common/ExcelExportButton';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
@@ -65,6 +66,7 @@ export default function FuelReportPage() {
         <div className="flex gap-2">
           <Input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="w-auto" />
           <Button variant="outline" onClick={exportCSV}><Download className="h-4 w-4 mr-2" />Export CSV</Button>
+          <ExcelExportButton filename={`fuel-report-${selectedMonth}`} sheetName="Fuel Records" rows={records} disabled={loading} />
         </div>
       </PageHeader>
 

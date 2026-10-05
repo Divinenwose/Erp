@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { exportExcel } from '@/lib/excel-export';
 import { PermissionGuard } from '@/components/rbac/PermissionGuard';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import PageHeader from '@/components/common/PageHeader';
@@ -109,7 +110,21 @@ export default function ProcurementReportsPage() {
     <PermissionGuard permission="procurement.reports.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view procurement reports</div>}>
       <div className="space-y-6">
         <PageHeader title="Procurement Reports" description="Comprehensive procurement analytics and reports" breadcrumbs={[{ label: 'Procurement' }, { label: 'Reports' }]}>
-          <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" />Export All</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportExcel('procurement-operations-report', [
+              { name: 'Purchase Orders', rows: poStatusData },
+              { name: 'Deliveries', rows: deliveryData },
+              { name: 'Invoice Verification', rows: invoiceData },
+              { name: 'Supplier Performance', rows: supplierPerfData },
+              { name: 'Replenishment', rows: replenishmentData },
+              { name: 'Buying Activities', rows: buyingActivityData },
+            ])}
+            disabled={loading}
+          >
+            <Download className="h-4 w-4 mr-2" />Export Excel
+          </Button>
         </PageHeader>
 
         <Tabs defaultValue="po-status" className="space-y-4">

@@ -12,6 +12,7 @@ import { Download, FileText, Calendar, BarChart3, TrendingUp, Loader2 } from 'lu
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { exportExcel } from '@/lib/excel-export';
 
 export default function AttendanceReportsPage() {
   const { company } = useAuth();
@@ -116,8 +117,8 @@ export default function AttendanceReportsPage() {
       toast.error('No data to export');
       return;
     }
+    exportExcel(`attendance-${reportType}-report-${selectedMonth}`, [{ name: 'Attendance', rows: reportData }]);
     toast.success('Excel export initiated');
-    // TODO: Implement actual Excel export
   };
 
   const handlePrint = () => {

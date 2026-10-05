@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart3, Download, TrendingUp, Target, DollarSign, Users, Calendar, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import { exportExcel, ExcelSheet } from '@/lib/excel-export';
 
 export default function MarketingReportsPage() {
   const { company } = useAuth();
@@ -28,6 +29,7 @@ export default function MarketingReportsPage() {
     publishedContent: 0,
     mediaCoverage: 0,
   });
+  const [reportSheets, setReportSheets] = useState<ExcelSheet[]>([]);
 
   const loadReportData = async () => {
     if (!company?.id) return;
@@ -48,7 +50,7 @@ export default function MarketingReportsPage() {
 
     const pressReleasesRes = await supabase
       .from('press_releases')
-      .select('id')
+      .select('*')
       .eq('company_id', company.id)
       .gte('release_date', startDateStr);
 
@@ -103,6 +105,16 @@ export default function MarketingReportsPage() {
       publishedContent: content.length,
       mediaCoverage: coverage.length,
     });
+    setReportSheets([
+      { name: 'Campaigns', rows: campaigns },
+      { name: 'Leads', rows: leads },
+      { name: 'Campaign Metrics', rows: metrics },
+      { name: 'Ad Performance', rows: adMetrics },
+      { name: 'Events', rows: events },
+      { name: 'Published Content', rows: content },
+      { name: 'Press Releases', rows: pressReleasesRes.data ?? [] },
+      { name: 'Media Coverage', rows: coverage },
+    ]);
 
     setLoading(false);
   };
@@ -133,6 +145,10 @@ export default function MarketingReportsPage() {
     window.URL.revokeObjectURL(url);
   };
 
+  const exportReportExcel = () => {
+    exportExcel(`marketing-operations-${period}-${format(new Date(), 'yyyy-MM-dd')}`, reportSheets);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title="Marketing Reports" description="Marketing performance analytics and reports" breadcrumbs={[{ label: 'Marketing', href: '/marketing' }, { label: 'Reports' }]}>
@@ -150,6 +166,9 @@ export default function MarketingReportsPage() {
           <Can resource="reports" action="export">
             <Button variant="outline" onClick={exportReport}>
               <Download className="h-4 w-4 mr-2" /> Export CSV
+            </Button>
+            <Button variant="outline" onClick={exportReportExcel} disabled={loading}>
+              <Download className="h-4 w-4 mr-2" /> Export Excel
             </Button>
           </Can>
         </div>

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileText, Users, Wrench, ShoppingCart, AlertTriangle, Lightbulb, ListChecks, Save, Download } from 'lucide-react';
 import { startOfWeek, endOfWeek } from 'date-fns';
 import { toast } from 'sonner';
+import { exportExcel } from '@/lib/excel-export';
 
 export default function TGIFReportPage() {
   const { company, user: currentUser, hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
@@ -185,6 +186,14 @@ export default function TGIFReportPage() {
     await pptx.writeFile({ fileName: `TGIF-Report-${weekStartStr}.pptx` });
   };
 
+  const exportReportExcel = () => exportExcel(`tgif-report-${weekStartStr}`, [
+    { name: 'Attendance', rows: [{ ...attendance, compliance_rate: attendanceRate }] },
+    { name: 'Activities', rows: [activitiesCompleted] },
+    { name: 'Purchases', rows: [purchaseSummary] },
+    { name: 'Completed Work Orders', rows: completedWorkOrders },
+    { name: 'Executive Summary', rows: [{ executiveSummary, challenges, recommendations, actionPlan }] },
+  ]);
+
   const attendanceRate = attendance.total > 0 ? Math.round(((attendance.present + attendance.late) / attendance.total) * 100) : 0;
 
   return (
@@ -196,6 +205,7 @@ export default function TGIFReportPage() {
       >
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={exportPPTX}><Download className="h-4 w-4 mr-2" />Download PowerPoint</Button>
+          <Button size="sm" variant="outline" onClick={exportReportExcel} disabled={loading}><Download className="h-4 w-4 mr-2" />Export Excel</Button>
           {canManage && <Button size="sm" onClick={saveNarrative} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? 'Saving…' : 'Save Report'}</Button>}
         </div>
       </PageHeader>

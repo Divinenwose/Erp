@@ -10,12 +10,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download, FileText, Calendar, TrendingUp, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
+import { exportExcel } from '@/lib/excel-export';
 
 export default function PurchaseRequestsReportsPage() {
   const { company } = useAuth();
   const [reportType, setReportType] = useState('monthly');
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [summary, setSummary] = useState({ total: 0, pending: 0, approved: 0, value: 0 });
+  const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,11 +26,12 @@ export default function PurchaseRequestsReportsPage() {
       setLoading(true);
       const { data } = await supabase
         .from('purchase_requests')
-        .select('status, estimated_cost')
+        .select('*, employees:requested_by(first_name, last_name, employee_number), departments(name)')
         .eq('company_id', company.id)
         .gte('created_at', `${selectedMonth}-01`)
         .lte('created_at', `${selectedMonth}-31`);
       const rows = data ?? [];
+      setRequests(rows);
       setSummary({
         total: rows.length,
         pending: rows.filter(row => ['pending', 'submitted', 'under_review', 'md_approval', 'accounts_review'].includes(row.status)).length,
@@ -77,6 +80,10 @@ export default function PurchaseRequestsReportsPage() {
 
   const selectedReport = reports.find(r => r.id === reportType);
   const ReportIcon = selectedReport?.icon ?? Calendar;
+  const exportReport = () => exportExcel(`purchase-requests-${reportType}-${selectedMonth}`, [{
+    name: selectedReport?.title ?? 'Requests',
+    rows: requests,
+  }]);
 
   return (
     <div className="space-y-6">
@@ -127,7 +134,7 @@ export default function PurchaseRequestsReportsPage() {
         <CardContent>
           <div className="flex gap-4 mb-6">
             <Input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="w-[200px]" />
-            <Button variant="outline">
+            <Button variant="outline" onClick={exportReport} disabled={loading}>
               <Download className="h-4 w-4 mr-2" />
               Export Excel
             </Button>

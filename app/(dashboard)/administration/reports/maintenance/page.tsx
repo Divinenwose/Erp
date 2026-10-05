@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import PageHeader from '@/components/common/PageHeader';
+import ExcelExportButton from '@/components/common/ExcelExportButton';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
@@ -54,6 +55,7 @@ export default function MaintenanceReportPage() {
     <div className="space-y-6">
       <PageHeader title="Maintenance Report" description="Facility maintenance costs and performance" breadcrumbs={[{ label: 'Administration', href: '/administration' }, { label: 'Reports', href: '/administration/reports' }, { label: 'Maintenance' }]}>
         <Button variant="outline" onClick={exportCSV}><Download className="h-4 w-4 mr-2" />Export CSV</Button>
+        <ExcelExportButton filename="maintenance-report" sheetName="Work Orders" rows={workOrders} disabled={loading} />
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

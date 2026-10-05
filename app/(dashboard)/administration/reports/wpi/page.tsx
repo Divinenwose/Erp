@@ -9,9 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Target, Edit2, Check, X } from 'lucide-react';
+import { Target, Edit2, Check, X, Download } from 'lucide-react';
 import { startOfWeek, endOfWeek, subWeeks, format as formatDF } from 'date-fns';
 import { toast } from 'sonner';
+import { exportExcel } from '@/lib/excel-export';
 
 // Each KPI: how to compute "achieved" for the current week from real
 // tables, and the target's storage key in kpi_targets. Achieved values are
@@ -130,13 +131,31 @@ export default function WPIReportPage() {
     loadAll();
   };
 
+  const exportReport = () => exportExcel('weekly-performance-report', [
+    {
+      name: 'KPIs',
+      rows: KPI_DEFINITIONS.map(definition => ({
+        KPI: definition.label,
+        Target: targets[definition.key] ?? 0,
+        Achieved: achieved[definition.key] ?? 0,
+        Unit: definition.unit,
+      })),
+    },
+    { name: 'Weekly Trend', rows: weeklyTrend },
+    { name: 'Department Scorecard', rows: deptScorecard },
+  ]);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Weekly Performance Indicator (WPI) Report"
         description={`Week of ${formatDate(weekStart.toISOString())} – ${formatDate(weekEnd.toISOString())}`}
         breadcrumbs={[{ label: 'Administration', href: '/administration' }, { label: 'Reports', href: '/administration/reports' }, { label: 'WPI' }]}
-      />
+      >
+        <Button variant="outline" onClick={exportReport} disabled={loading}>
+          <Download className="mr-2 h-4 w-4" />Export Excel
+        </Button>
+      </PageHeader>
 
       <Card>
         <CardHeader><CardTitle className="text-base font-medium flex items-center gap-2"><Target className="h-4 w-4" />KPIs</CardTitle></CardHeader>

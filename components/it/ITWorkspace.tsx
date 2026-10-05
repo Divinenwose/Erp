@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { exportExcel } from '@/lib/excel-export';
 import { logAuditEvent } from '@/lib/audit';
 import { sendNotification } from '@/lib/notifications';
 import PageHeader from '@/components/common/PageHeader';
@@ -781,7 +782,7 @@ export default function ITWorkspace({ section = 'overview' }: { section?: string
     <div className="space-y-6">
       <PageHeader title={activeModule.title} description={sectionDescription(section)} breadcrumbs={[{ label: 'Information Technology', href: '/it' }, { label: activeModule.title }]}>
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}><RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Refresh</Button>
-        {section === 'reports' && selectedReport !== null && can('it.reports.export') && <Button variant="outline" size="sm" onClick={() => downloadCsv(`${REPORTS[selectedReport].title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`, recordsForReport)}><Download className="mr-2 h-4 w-4" />Export CSV</Button>}
+        {section === 'reports' && selectedReport !== null && can('it.reports.export') && <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => downloadCsv(`${REPORTS[selectedReport].title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`, recordsForReport)}><Download className="mr-2 h-4 w-4" />Export CSV</Button><Button variant="outline" size="sm" onClick={() => exportExcel(`${REPORTS[selectedReport].title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, [{ name: REPORTS[selectedReport].title, rows: recordsForReport }])}><Download className="mr-2 h-4 w-4" />Export Excel</Button></div>}
         {section === 'access' && can('settings.users.view') && <Button variant="outline" size="sm" asChild><Link href="/settings/users"><Users className="mr-2 h-4 w-4" />User Administration</Link></Button>}
         {section === 'vendors' && can('procurement.vendors.view') && <Button variant="outline" size="sm" asChild><Link href="/procurement/vendors"><Building2 className="mr-2 h-4 w-4" />Procurement Vendors</Link></Button>}
         {canCreate && section !== 'reports' && <Button size="sm" onClick={openCreate}><Plus className="mr-2 h-4 w-4" />New {createLabel(section)}</Button>}

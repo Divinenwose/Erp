@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDate } from '@/lib/utils';
 import PageHeader from '@/components/common/PageHeader';
+import ExcelExportButton from '@/components/common/ExcelExportButton';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
@@ -66,6 +67,7 @@ export default function InspectionsReportPage() {
     <div className="space-y-6">
       <PageHeader title="Inspection Reports" description="Office inspection findings and compliance" breadcrumbs={[{ label: 'Administration', href: '/administration' }, { label: 'Reports', href: '/administration/reports' }, { label: 'Inspections' }]}>
         <Button variant="outline" onClick={exportCSV}><Download className="h-4 w-4 mr-2" />Export CSV</Button>
+        <ExcelExportButton filename="inspections-report" sheetName="Inspections" rows={inspections} disabled={loading} />
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

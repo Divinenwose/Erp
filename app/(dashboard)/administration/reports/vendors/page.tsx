@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import PageHeader from '@/components/common/PageHeader';
+import ExcelExportButton from '@/components/common/ExcelExportButton';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
@@ -58,6 +59,7 @@ export default function VendorsReportPage() {
     <div className="space-y-6">
       <PageHeader title="Vendor Performance Report" description="Vendor ratings, reliability, and spend" breadcrumbs={[{ label: 'Administration', href: '/administration' }, { label: 'Reports', href: '/administration/reports' }, { label: 'Vendors' }]}>
         <Button variant="outline" onClick={exportCSV}><Download className="h-4 w-4 mr-2" />Export CSV</Button>
+        <ExcelExportButton filename="vendor-performance-report" sheetName="Vendor Performance" rows={records} disabled={loading} />
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

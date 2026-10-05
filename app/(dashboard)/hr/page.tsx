@@ -76,6 +76,7 @@ export default function HROverviewPage() {
     { title: 'Payroll', description: 'Process employee payroll', icon: CreditCard, href: '/hr/payroll', color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600', permission: 'hr.payroll.view' },
     { title: 'Performance', description: 'Reviews and appraisals', icon: Award, href: '/hr/performance', color: 'bg-pink-50 dark:bg-pink-950/30', iconColor: 'text-pink-600', permission: 'hr.performance.view' },
     { title: 'Training', description: 'Learning and development', icon: BookOpen, href: '/hr/training', color: 'bg-orange-50 dark:bg-orange-950/30', iconColor: 'text-orange-600', permission: 'hr.training.view' },
+    { title: 'HR Operations Report', description: 'Export complete HR records to Excel', icon: BarChart3, href: '/hr/reports', color: 'bg-cyan-50 dark:bg-cyan-950/30', iconColor: 'text-cyan-600', permission: 'hr.view' },
   ].filter(m => isAdmin || hasPermission(m.permission));
 
   return (

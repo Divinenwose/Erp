@@ -14,39 +14,25 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import {
-  Users, DollarSign, ShoppingCart, Activity, AlertTriangle,
-  FileText, CheckCircle2, Clock, TrendingUp, Building2, FolderKanban, Target
+  Users, DollarSign, ShoppingCart,
+  FileText, CheckCircle2, Clock, Building2, FolderKanban, Target
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface DashboardStats {
   employees: number; customers: number; projects: number; vendors: number;
-  pendingLeaves: number; openInvoices: number; pendingPOs: number; lowStock: number;
-  totalRevenue: number; totalExpenses: number; activeLeads: number;
+  pendingLeaves: number; openInvoices: number; pendingPOs: number;
+  totalRevenue: number; activeLeads: number;
 }
 
 interface RecentActivity { id: string; type: string; title: string; subtitle: string; time: string; status: string; }
 
-const revenueData = [
-  { month: 'Jul', revenue: 285000, expenses: 198000 },
-  { month: 'Aug', revenue: 312000, expenses: 215000 },
-  { month: 'Sep', revenue: 295000, expenses: 204000 },
-  { month: 'Oct', revenue: 348000, expenses: 231000 },
-  { month: 'Nov', revenue: 372000, expenses: 248000 },
-  { month: 'Dec', revenue: 398000, expenses: 265000 },
-];
-
-const pipelineData = [
-  { name: 'Prospecting', value: 18, color: '#3B82F6' },
-  { name: 'Qualified', value: 12, color: '#8B5CF6' },
-  { name: 'Proposal', value: 8, color: '#F59E0B' },
-  { name: 'Negotiation', value: 5, color: '#EF4444' },
-  { name: 'Won', value: 22, color: '#10B981' },
-];
+const chartColors = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#06B6D4', '#F97316'];
 
 export default function DashboardPage() {
   const { profile, company, departmentName, hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
@@ -77,15 +63,25 @@ export default function DashboardPage() {
   const canProjects = isAdmin || hasPermission('projects.view');
   const canProcurement = isAdmin || hasPermission('procurement.vendors.view');
   const canPurchaseRequests = isAdmin || hasPermission('procurement.requests.view');
+  const canInventory = isAdmin || hasPermission('inventory.products.view');
+  const canAdministration = isAdmin || hasPermission('facilities.view');
+  const canMarketing = isAdmin || hasPermission('marketing.reports.view');
+  const canIT = isAdmin || hasPermission('it.reports.view');
+  const canOperations = isAdmin || hasPermission('operations.reports.view');
+  const canLogistics = isAdmin || hasPermission('logistics.view');
 
   const [stats, setStats] = useState<DashboardStats>({
     employees: 0, customers: 0, projects: 0, vendors: 0,
-    pendingLeaves: 0, openInvoices: 0, pendingPOs: 0, lowStock: 0,
-    totalRevenue: 0, totalExpenses: 0, activeLeads: 0,
+    pendingLeaves: 0, openInvoices: 0, pendingPOs: 0,
+    totalRevenue: 0, activeLeads: 0,
   });
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
   const [recentEmployees, setRecentEmployees] = useState<any[]>([]);
+  const [revenueData, setRevenueData] = useState<{ month: string; revenue: number; expenses: number }[]>([]);
+  const [pipelineData, setPipelineData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [deptSpend, setDeptSpend] = useState<{ dept: string; budget: number; spent: number }[]>([]);
+  const [departmentActivity, setDepartmentActivity] = useState<{ department: string; records: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -100,24 +96,103 @@ export default function DashboardPage() {
         empRes, custRes, projRes, vendRes,
         leaveRes, invoiceRes, prRes,
         revenueRes, expenseRes, leadRes,
-        recentEmpRes,
+        recentEmpRes, deptRes, invoiceCountRes, expenseCountRes, inventoryRes,
+        assetsRes, workOrdersRes, marketingRes, itRes, operationsRes,
+        logisticsRoutesRes, deliveriesRes, logisticsIncidentsRes, logisticsRequestsRes,
       ] = await Promise.all([
         canHR ? supabase.from('employees').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('employment_status', 'active') : Promise.resolve({ count: 0 } as any),
-        canCRM ? supabase.from('customers').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canCRM ? supabase.from('customers').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'active') : Promise.resolve({ count: 0 } as any),
         canProjects ? supabase.from('projects').select('id', { count: 'exact', head: true }).eq('company_id', id).in('status', ['in_progress', 'planning']) : Promise.resolve({ count: 0 } as any),
         canProcurement ? supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'active') : Promise.resolve({ count: 0 } as any),
         canLeave ? supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending') : Promise.resolve({ count: 0 } as any),
         canFinance ? supabase.from('invoices').select('id, total_amount, status', { count: 'exact' }).eq('company_id', id).in('status', ['pending', 'overdue']) : Promise.resolve({ data: [] } as any),
         canPurchaseRequests ? supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending') : Promise.resolve({ count: 0 } as any),
-        canFinance ? supabase.from('invoices').select('total_amount').eq('company_id', id).eq('status', 'paid') : Promise.resolve({ data: [] } as any),
-        canFinance ? supabase.from('expenses').select('amount').eq('company_id', id).eq('status', 'approved') : Promise.resolve({ data: [] } as any),
-        canLeads ? supabase.from('leads').select('id', { count: 'exact', head: true }).eq('company_id', id).in('status', ['new', 'contacted', 'qualified']) : Promise.resolve({ count: 0 } as any),
+        canFinance ? supabase.from('invoices').select('total_amount, issue_date').eq('company_id', id).eq('status', 'paid') : Promise.resolve({ data: [] } as any),
+        canFinance ? supabase.from('expenses').select('amount, expense_date, employees(department_id)').eq('company_id', id).eq('status', 'approved') : Promise.resolve({ data: [] } as any),
+        canPipeline || canLeads ? supabase.from('leads').select('status').eq('company_id', id) : Promise.resolve({ data: [] } as any),
         canHR ? supabase.from('employees').select('id, first_name, last_name, job_title, hire_date, avatar_url').eq('company_id', id).eq('employment_status', 'active').order('hire_date', { ascending: false }).limit(4) : Promise.resolve({ data: [] } as any),
+        isAdmin ? supabase.from('departments').select('id, name, budget').eq('company_id', id).eq('is_active', true).order('name') : Promise.resolve({ data: [] } as any),
+        canFinance ? supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canFinance ? supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canInventory ? supabase.from('products').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canAdministration ? supabase.from('assets').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canAdministration ? supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canMarketing ? supabase.from('marketing_campaigns').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canIT ? supabase.from('it_tickets').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canOperations ? supabase.from('operations_records').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canLogistics ? supabase.from('logistics_routes').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canLogistics ? supabase.from('deliveries').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canLogistics ? supabase.from('logistics_incidents').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canLogistics ? supabase.from('logistics_requests').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
       ]);
 
-      const totalRevenue = (revenueRes.data ?? []).reduce((a: number, i: any) => a + (i.total_amount ?? 0), 0);
-      const totalExpenses = (expenseRes.data ?? []).reduce((a: number, i: any) => a + (i.amount ?? 0), 0);
+      const departmentQueryErrors = [
+        { department: 'Inventory', error: inventoryRes.error },
+        { department: 'Administration', error: assetsRes.error ?? workOrdersRes.error },
+        { department: 'Marketing', error: marketingRes.error },
+        { department: 'IT', error: itRes.error },
+        { department: 'Operations', error: operationsRes.error },
+        { department: 'Logistics', error: logisticsRoutesRes.error ?? deliveriesRes.error ?? logisticsIncidentsRes.error ?? logisticsRequestsRes.error },
+      ].filter(result => result.error);
+      if (departmentQueryErrors.length > 0) {
+        toast.error(`Could not load dashboard data for: ${departmentQueryErrors.map(result => result.department).join(', ')}.`);
+      }
+
+      const invoices = revenueRes.data ?? [];
+      const expenses = expenseRes.data ?? [];
+      const yearStart = `${new Date().getFullYear()}-01-01`;
+      const totalRevenue = invoices
+        .filter((invoice: any) => invoice.issue_date >= yearStart)
+        .reduce((sum: number, invoice: any) => sum + Number(invoice.total_amount ?? 0), 0);
       const openInvoices = (invoiceRes.data ?? []).length;
+      const months = Array.from({ length: 6 }, (_, index) => {
+        const date = new Date();
+        date.setDate(1);
+        date.setMonth(date.getMonth() - (5 - index));
+        return { key: date.toISOString().slice(0, 7), label: date.toLocaleDateString('en-US', { month: 'short' }) };
+      });
+      setRevenueData(months.map(month => ({
+        month: month.label,
+        revenue: invoices
+          .filter((invoice: any) => invoice.issue_date?.slice(0, 7) === month.key)
+          .reduce((sum: number, invoice: any) => sum + Number(invoice.total_amount ?? 0), 0),
+        expenses: expenses
+          .filter((expense: any) => expense.expense_date?.slice(0, 7) === month.key)
+          .reduce((sum: number, expense: any) => sum + Number(expense.amount ?? 0), 0),
+      })));
+      const leadsByStatus: Record<string, number> = {};
+      (leadRes.data ?? []).forEach((lead: any) => {
+        const status = lead.status || 'Unspecified';
+        leadsByStatus[status] = (leadsByStatus[status] ?? 0) + 1;
+      });
+      setPipelineData(Object.entries(leadsByStatus).map(([name, value], index) => ({
+        name,
+        value,
+        color: chartColors[index % chartColors.length],
+      })));
+      const departmentExpenses = expenses.reduce((totals: Record<string, number>, expense: any) => {
+        const departmentId = expense.employees?.department_id;
+        if (departmentId) totals[departmentId] = (totals[departmentId] ?? 0) + Number(expense.amount ?? 0);
+        return totals;
+      }, {});
+      setDeptSpend((deptRes.data ?? []).map((department: any) => ({
+        dept: department.name,
+        budget: Number(department.budget ?? 0),
+        spent: departmentExpenses[department.id] ?? 0,
+      })));
+      setDepartmentActivity([
+        ...(canHR ? [{ department: 'HR', records: empRes.count ?? 0 }] : []),
+        ...(canFinance ? [{ department: 'Finance', records: (invoiceCountRes.count ?? 0) + (expenseCountRes.count ?? 0) }] : []),
+        ...(canCRM || canLeads ? [{ department: 'Sales & CRM', records: (custRes.count ?? 0) + (leadRes.data ?? []).length }] : []),
+        ...(canProjects ? [{ department: 'Projects', records: projRes.count ?? 0 }] : []),
+        ...(canProcurement || canPurchaseRequests ? [{ department: 'Procurement', records: (vendRes.count ?? 0) + (prRes.count ?? 0) }] : []),
+        ...(canInventory ? [{ department: 'Inventory', records: inventoryRes.count ?? 0 }] : []),
+        ...(canAdministration ? [{ department: 'Administration', records: (assetsRes.count ?? 0) + (workOrdersRes.count ?? 0) }] : []),
+        ...(canMarketing ? [{ department: 'Marketing', records: marketingRes.count ?? 0 }] : []),
+        ...(canIT ? [{ department: 'IT', records: itRes.count ?? 0 }] : []),
+        ...(canOperations ? [{ department: 'Operations', records: operationsRes.count ?? 0 }] : []),
+        ...(canLogistics ? [{ department: 'Logistics', records: (logisticsRoutesRes.count ?? 0) + (deliveriesRes.count ?? 0) + (logisticsIncidentsRes.count ?? 0) + (logisticsRequestsRes.count ?? 0) }] : []),
+      ]);
 
       setStats({
         employees: empRes.count ?? 0,
@@ -127,10 +202,8 @@ export default function DashboardPage() {
         pendingLeaves: leaveRes.count ?? 0,
         openInvoices,
         pendingPOs: prRes.count ?? 0,
-        lowStock: 3,
         totalRevenue,
-        totalExpenses,
-        activeLeads: leadRes.count ?? 0,
+        activeLeads: (leadRes.data ?? []).filter((lead: any) => ['new', 'contacted', 'qualified'].includes(lead.status)).length,
       });
 
       setRecentEmployees(recentEmpRes.data ?? []);
@@ -175,8 +248,34 @@ export default function DashboardPage() {
       setLoading(false);
     };
 
-    loadAll();
-  }, [company?.id, departmentLandingPath, canHR, canLeave, canFinance, canCRM, canLeads, canProjects, canProcurement, canPurchaseRequests]);
+    void loadAll();
+    const channel = supabase.channel(`company-dashboard-${id}`);
+    [
+      'employees', 'departments', 'attendance', 'attendance_records', 'leave_requests',
+      'payroll_items', 'payroll_runs', 'invoices', 'expenses', 'budgets', 'customers',
+      'leads', 'projects', 'vendors', 'purchase_requests', 'purchase_orders', 'products',
+      'inventory_items', 'stock_movements', 'job_requisitions', 'vacancies', 'candidates',
+      'training_courses', 'training_enrollments', 'performance_reviews', 'onboarding_tasks',
+      'employee_requests', 'assets', 'work_orders', 'marketing_campaigns', 'campaign_metrics',
+      'ad_performance', 'marketing_leads', 'marketing_events', 'marketing_content', 'press_releases', 'pr_coverage',
+      'it_tickets', 'it_assets', 'it_licenses', 'it_records', 'operations_records', 'operations_requests',
+      'logistics_routes', 'logistics_incidents', 'logistics_documents', 'logistics_communications',
+      'logistics_requests', 'logistics_approval_history', 'deliveries', 'warehouses',
+    ].forEach(table => {
+      channel.on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table,
+        filter: `company_id=eq.${id}`,
+      }, () => { void loadAll(); });
+    });
+    channel.subscribe(status => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        toast.error('Live dashboard updates are unavailable. Refresh the page to load current data.');
+      }
+    });
+    return () => { void supabase.removeChannel(channel); };
+  }, [company?.id, departmentLandingPath, canHR, canLeave, canFinance, canCRM, canLeads, canPipeline, canProjects, canProcurement, canPurchaseRequests, canInventory, canAdministration, canMarketing, canIT, canOperations, canLogistics, isAdmin]);
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -184,13 +283,6 @@ export default function DashboardPage() {
     if (h < 17) return 'Good afternoon';
     return 'Good evening';
   };
-
-  const deptSpend = [
-    { dept: 'Engineering', budget: 450000, spent: 312000 },
-    { dept: 'Sales', budget: 180000, spent: 142000 },
-    { dept: 'Finance', budget: 120000, spent: 89000 },
-    { dept: 'Operations', budget: 200000, spent: 168000 },
-  ];
 
   // Being redirected to a department-specific landing page — render nothing
   // rather than flashing this company-wide view first.
@@ -205,15 +297,15 @@ export default function DashboardPage() {
       >
         <div className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-full">
           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-          All systems operational
+          Live department data
         </div>
       </PageHeader>
 
       {/* Primary KPIs — each card only shown if the viewer has the underlying permission */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {canFinance && <KPICard title="Total Revenue (YTD)" value={formatCurrency(stats.totalRevenue + 2010000)} change={12.4} changeLabel="vs last year" icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
-        {canHR && <KPICard title="Active Employees" value={stats.employees} change={3.2} changeLabel="this month" icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
-        {canCRM && <KPICard title="Active Customers" value={stats.customers} change={8.1} changeLabel="this month" icon={<Building2 className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />}
+        {canFinance && <KPICard title="Total Revenue (YTD)" value={formatCurrency(stats.totalRevenue)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
+        {canHR && <KPICard title="Active Employees" value={stats.employees} icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
+        {canCRM && <KPICard title="Active Customers" value={stats.customers} icon={<Building2 className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />}
         {canProjects && <KPICard title="Active Projects" value={stats.projects} icon={<FolderKanban className="h-4 w-4 text-orange-600" />} iconBg="bg-orange-50 dark:bg-orange-950/50" loading={loading} />}
       </div>
 
@@ -259,7 +351,7 @@ export default function DashboardPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => formatCurrency(v)} />
                 <Tooltip formatter={(v: number) => formatCurrency(v)} />
                 <Legend iconType="circle" iconSize={8} />
                 <Area type="monotone" dataKey="revenue" stroke="#3B82F6" fill="url(#colRev)" strokeWidth={2} name="Revenue" />
@@ -272,7 +364,7 @@ export default function DashboardPage() {
         {canPipeline && <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Sales Pipeline</CardTitle>
-            <CardDescription>{pipelineData.reduce((a, d) => a + d.value, 0)} total opportunities</CardDescription>
+            <CardDescription>{pipelineData.reduce((sum, item) => sum + item.value, 0)} leads by current status</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={120} minHeight={120}>
@@ -307,16 +399,16 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {deptSpend.map(d => {
-              const pct = Math.round((d.spent / d.budget) * 100);
+              const pct = d.budget > 0 ? Math.round((d.spent / d.budget) * 100) : 0;
               return (
                 <div key={d.dept}>
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="text-gray-700 dark:text-gray-300 font-medium">{d.dept}</span>
-                    <span className={`font-semibold ${pct > 85 ? 'text-red-600' : pct > 70 ? 'text-amber-600' : 'text-emerald-600'}`}>{pct}%</span>
+                    <span className={`font-semibold ${pct > 85 ? 'text-red-600' : pct > 70 ? 'text-amber-600' : 'text-emerald-600'}`}>{d.budget > 0 ? `${pct}%` : 'No budget'}</span>
                   </div>
                   <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full transition-all ${pct > 85 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                      style={{ width: `${pct}%` }} />
+                      style={{ width: `${Math.min(100, pct)}%` }} />
                   </div>
                   <div className="flex justify-between text-xs text-gray-400 mt-0.5">
                     <span>{formatCurrency(d.spent)}</span>
@@ -325,6 +417,24 @@ export default function DashboardPage() {
                 </div>
               );
             })}
+          </CardContent>
+        </Card>}
+
+        {isAdmin && <Card className="dark:bg-gray-900 dark:border-gray-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Company-wide Department Records</CardTitle>
+            <CardDescription>Live record counts across departments</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={240} minHeight={240}>
+              <BarChart data={departmentActivity} margin={{ top: 8, right: 8, left: -20, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="department" tick={{ fontSize: 10 }} interval={0} angle={-35} textAnchor="end" />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Bar dataKey="records" name="Records" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>}
 

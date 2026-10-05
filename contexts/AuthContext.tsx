@@ -405,18 +405,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Don't fail signup, but log the error
     }
 
-    console.log('[SIGNUP] STEP 10: Seeding demo data');
-    // Seed demo data in background (employees, customers, etc.)
-    try {
-      const { seedDemoData } = await import('@/lib/seed');
-      await seedDemoData(companyData.id, data.companyName);
-      console.log('[SIGNUP] Demo data seeded successfully');
-    } catch (seedError) {
-      console.error('[SIGNUP] Demo data seeding failed:', seedError);
-      // Don't fail signup, but log the error
-    }
-
-    console.log('[SIGNUP] STEP 10: Signup completed successfully');
+    console.log('[SIGNUP] Signup completed successfully');
     return { error: null };
   };
 

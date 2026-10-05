@@ -21,6 +21,7 @@ const routePermissions: Record<string, string> = {
   '/hr/performance': 'hr.performance.view',
   '/hr/training': 'hr.training.view',
   '/hr/org-chart': 'hr.view',
+  '/hr/reports': 'hr.view',
   '/finance': 'finance.view',
   '/finance/ledger': 'finance.ledger.view',
   '/finance/invoices': 'finance.invoices.view',

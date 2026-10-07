@@ -177,19 +177,20 @@ export default function ActivitiesPage() {
   const columns: Column<any>[] = [
     {
       key: 'title', header: 'Activity',
-      cell: (row) => (
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${typeColors[row.activity_type] ?? 'bg-gray-100'}`}>
-            {activityTypes.find(t => t.id === row.activity_type)?.icon ? (
-              <activityTypes.find(t => t.id === row.activity_type)!.icon className="h-4 w-4" />
-            ) : <Clock className="h-4 w-4" />}
+      cell: (row) => {
+        const IconComponent = activityTypes.find(t => t.id === row.activity_type)?.icon || Clock;
+        return (
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${typeColors[row.activity_type] ?? 'bg-gray-100'}`}>
+              <IconComponent className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">{row.title}</p>
+              <p className="text-xs text-gray-500">{row.activity_type}</p>
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-sm">{row.title}</p>
-            <p className="text-xs text-gray-500">{row.activity_type}</p>
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     { key: 'activity_date', header: 'Date', sortable: true, cell: (row) => <span className="text-sm">{formatDate(row.activity_date)}</span> },
     { key: 'activity_time', header: 'Time', cell: (row) => <span className="text-sm">{row.activity_time ?? '—'}</span> },

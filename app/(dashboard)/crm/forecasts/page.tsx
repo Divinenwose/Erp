@@ -93,6 +93,7 @@ export default function ForecastsPage() {
       
       toast.success('Forecast updated');
     } else {
+      if (!company?.id) return;
       const { error } = await supabase.from('sales_forecasts').insert({ 
         ...data, 
         company_id: company.id, 

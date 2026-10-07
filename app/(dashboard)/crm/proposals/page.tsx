@@ -107,6 +107,7 @@ export default function ProposalsPage() {
       
       toast.success('Proposal updated');
     } else {
+      if (!company?.id) return;
       const { error } = await supabase.from('sales_proposals').insert({ 
         ...data, 
         company_id: company.id, 

@@ -130,6 +130,7 @@ export default function ActivitiesPage() {
       
       toast.success('Activity updated');
     } else {
+      if (!company?.id) return;
       const { error } = await supabase.from('sales_activities').insert({ ...data, company_id: company.id, status: 'scheduled', created_by: user?.id });
       if (error) { toast.error('Failed to create activity'); return; }
       

@@ -116,6 +116,7 @@ export default function ContractsPage() {
       
       toast.success('Contract updated');
     } else {
+      if (!company?.id) return;
       const { error } = await supabase.from('sales_contracts').insert({ 
         ...data, 
         company_id: company.id, 
@@ -151,7 +152,7 @@ export default function ContractsPage() {
     }
     
     // Finance integration: Create invoice when contract is approved
-    if (cont.contract_value > 0) {
+    if (cont.contract_value > 0 && company?.id) {
       const invoiceNumber = `INV-${String(Date.now()).slice(-8)}`;
       await supabase.from('invoices').insert({
         company_id: company.id,

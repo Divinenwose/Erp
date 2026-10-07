@@ -94,6 +94,7 @@ export default function LeadsPage() {
       
       toast.success('Lead updated');
     } else {
+      if (!company?.id) return;
       const { error } = await supabase.from('leads').insert({ ...data, company_id: company.id, status: 'new' });
       if (error) { toast.error('Failed to create lead'); return; }
       

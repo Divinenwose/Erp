@@ -91,6 +91,7 @@ export default function CustomersPage() {
       
       toast.success('Customer updated');
     } else {
+      if (!company?.id) return;
       const num = `CUS-${String(customers.length + 1).padStart(4, '0')}`;
       const { error } = await supabase.from('customers').insert({ ...data, company_id: company.id, customer_number: num });
       if (error) { toast.error('Failed to create customer'); return; }

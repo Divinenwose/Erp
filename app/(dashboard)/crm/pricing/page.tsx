@@ -102,6 +102,7 @@ export default function PricingPage() {
       
       toast.success('Request updated');
     } else {
+      if (!company?.id) return;
       const { error } = await supabase.from('pricing_requests').insert({ 
         ...data, 
         company_id: company.id, 

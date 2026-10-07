@@ -103,6 +103,7 @@ export default function TargetsPage() {
       
       toast.success('Target updated');
     } else {
+      if (!company?.id) return;
       const { error } = await supabase.from('sales_targets').insert({ 
         ...data, 
         company_id: company.id, 

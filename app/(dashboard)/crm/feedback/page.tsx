@@ -98,6 +98,7 @@ export default function FeedbackPage() {
       
       toast.success('Feedback updated');
     } else {
+      if (!company?.id) return;
       const { error } = await supabase.from('customer_feedback').insert({ 
         ...data, 
         company_id: company.id, 

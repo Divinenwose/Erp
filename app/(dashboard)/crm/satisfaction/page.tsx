@@ -96,6 +96,7 @@ export default function SatisfactionPage() {
       
       toast.success('Satisfaction record updated');
     } else {
+      if (!company?.id) return;
       const { error } = await supabase.from('customer_satisfaction').insert({ 
         ...data, 
         company_id: company.id, 

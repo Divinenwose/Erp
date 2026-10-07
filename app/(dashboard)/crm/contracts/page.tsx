@@ -126,7 +126,7 @@ export default function ContractsPage() {
       if (error) { toast.error('Failed to create contract'); return; }
       
       if (company?.id && user?.id) {
-        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'sales_contracts', new_value: { title: data.title, contract_number } });
+        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'sales_contracts', new_value: { title: data.title, contract_number: contractNumber } });
       }
       
       toast.success('Contract created');

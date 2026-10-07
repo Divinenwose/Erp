@@ -2,19 +2,9 @@
 
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
-import StatusBadge from '@/components/common/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen, Tag, Eye, ThumbsUp, Plus, Search } from 'lucide-react';
-
-const MOCK_ARTICLES = [
-  { id: 1, title: 'Getting Started with the Dashboard', category: 'Onboarding', views: 1842, helpful: 96, updated: 'Dec 15, 2024', status: 'published' },
-  { id: 2, title: 'How to Create and Send Invoices', category: 'Finance', views: 2340, helpful: 94, updated: 'Dec 10, 2024', status: 'published' },
-  { id: 3, title: 'Managing Employee Payroll', category: 'HR', views: 1120, helpful: 91, updated: 'Dec 8, 2024', status: 'published' },
-  { id: 4, title: 'Setting Up Multi-Warehouse Inventory', category: 'Inventory', views: 680, helpful: 89, updated: 'Dec 5, 2024', status: 'published' },
-  { id: 5, title: 'Configuring User Roles and Permissions', category: 'Settings', views: 940, helpful: 92, updated: 'Dec 3, 2024', status: 'published' },
-  { id: 6, title: 'Integrating Third-Party Accounting Tools', category: 'Integrations', views: 420, helpful: 88, updated: 'Nov 28, 2024', status: 'draft' },
-];
 
 export default function KnowledgeBasePage() {
   return (
@@ -31,31 +21,25 @@ export default function KnowledgeBasePage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           title="Total Articles"
-          value={84}
-          change={7.7}
-          changeLabel="this month"
+          value={0}
           icon={<BookOpen className="h-4 w-4 text-blue-600" />}
           iconBg="bg-blue-50 dark:bg-blue-950/50"
         />
         <KPICard
           title="Categories"
-          value={12}
+          value={0}
           icon={<Tag className="h-4 w-4 text-violet-600" />}
           iconBg="bg-violet-50 dark:bg-violet-950/50"
         />
         <KPICard
           title="Total Views"
-          value="12,450"
-          change={14.2}
-          changeLabel="this month"
+          value="0"
           icon={<Eye className="h-4 w-4 text-emerald-600" />}
           iconBg="bg-emerald-50 dark:bg-emerald-950/50"
         />
         <KPICard
           title="Helpful Rating"
-          value="93%"
-          change={1.1}
-          changeLabel="vs last month"
+          value="0%"
           icon={<ThumbsUp className="h-4 w-4 text-amber-600" />}
           iconBg="bg-amber-50 dark:bg-amber-950/50"
         />
@@ -79,21 +63,12 @@ export default function KnowledgeBasePage() {
                 </tr>
               </thead>
               <tbody className="divide-y dark:divide-gray-800">
-                {MOCK_ARTICLES.map(row => (
-                  <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors cursor-pointer">
-                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.title}</td>
-                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{row.category}</td>
-                    <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{row.views.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">{row.helpful}%</td>
-                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{row.updated}</td>
-                    <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
-                  </tr>
-                ))}
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">No knowledge base articles recorded.</td></tr>
               </tbody>
             </table>
           </div>
           <div className="px-4 py-3 border-t dark:border-gray-800 text-center">
-            <p className="text-xs text-gray-400">Full knowledge base with rich text editor, versioning, and AI-suggested articles available in the complete module.</p>
+            <p className="text-xs text-gray-400">Articles will appear here when added.</p>
           </div>
         </CardContent>
       </Card>

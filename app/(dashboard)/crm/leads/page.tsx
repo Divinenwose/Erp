@@ -3,20 +3,26 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { logAuditEvent } from '@/lib/audit';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import StatusBadge from '@/components/common/StatusBadge';
 import EmptyState from '@/components/common/EmptyState';
+import DataTable, { Column } from '@/components/common/DataTable';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Target, Plus, Search, TrendingUp, Users, DollarSign, Award, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Target, Plus, Search, TrendingUp, Users, DollarSign, Award, MoreHorizontal, Edit, Trash2, Eye, Send, Check, X, Download } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -27,8 +33,12 @@ const leadSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional(),
   company_name: z.string().optional(),
+  job_title: z.string().optional(),
   source: z.string().optional(),
+  marketing_campaign_id: z.string().optional(),
   rating: z.string().default('warm'),
+  assigned_to: z.string().optional(),
+  notes: z.string().optional(),
 });
 type LeadForm = z.infer<typeof leadSchema>;
 
@@ -42,19 +52,30 @@ const sourceColors: Record<string, string> = {
 };
 
 export default function LeadsPage() {
-  const { company } = useAuth();
+  const { company, user } = useAuth();
   const [leads, setLeads] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [leadToDelete, setLeadToDelete] = useState<any>(null);
+  const [editLead, setEditLead] = useState<any | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<LeadForm>({ resolver: zodResolver(leadSchema), defaultValues: { rating: 'warm' } });
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<LeadForm>({ resolver: zodResolver(leadSchema), defaultValues: { rating: 'warm' } });
 
   const load = async () => {
     if (!company?.id) return;
-    const { data } = await supabase.from('leads').select('*').eq('company_id', company.id).order('created_at', { ascending: false });
-    setLeads(data ?? []);
+    const [leadRes, empRes, campRes] = await Promise.all([
+      supabase.from('leads').select('*, employees(full_name), marketing_campaigns(name)').eq('company_id', company.id).order('created_at', { ascending: false }),
+      supabase.from('employees').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
+      supabase.from('marketing_campaigns').select('id, name').eq('company_id', company.id).eq('status', 'active'),
+    ]);
+    setLeads(leadRes.data ?? []);
+    setEmployees(empRes.data ?? []);
+    setCampaigns(campRes.data ?? []);
     setLoading(false);
   };
 
@@ -62,17 +83,90 @@ export default function LeadsPage() {
 
   const onSubmit = async (data: LeadForm) => {
     if (!company?.id) return;
-    const { error } = await supabase.from('leads').insert({ ...data, company_id: company.id, status: 'new' });
-    if (error) { toast.error('Failed to create lead'); return; }
-    toast.success('Lead created');
-    reset(); setDialogOpen(false); load();
+    
+    if (editLead) {
+      const { error } = await supabase.from('leads').update({ ...data, updated_at: new Date().toISOString() }).eq('id', editLead.id);
+      if (error) { toast.error('Failed to update lead'); return; }
+      
+      if (company?.id && user?.id) {
+        await logAuditEvent(company.id, user.id, { action: 'updated', module: 'crm', entity_type: 'leads', entity_id: editLead.id, new_value: { first_name: data.first_name, last_name: data.last_name } });
+      }
+      
+      toast.success('Lead updated');
+    } else {
+      const { error } = await supabase.from('leads').insert({ ...data, company_id: company.id, status: 'new' });
+      if (error) { toast.error('Failed to create lead'); return; }
+      
+      if (company?.id && user?.id) {
+        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'leads', new_value: { first_name: data.first_name, last_name: data.last_name } });
+      }
+      
+      toast.success('Lead created');
+    }
+    
+    reset(); setEditLead(null); setDialogOpen(false); load();
   };
 
-  const filtered = leads.filter(l => {
-    const matchSearch = !search || `${l.first_name} ${l.last_name ?? ''} ${l.company_name ?? ''}`.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'all' || l.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const convertToOpportunity = async (lead: any) => {
+    if (!company?.id) return;
+    const { error } = await supabase.from('opportunities').insert({
+      company_id: company.id,
+      title: `${lead.first_name} ${lead.last_name ?? ''} - ${lead.company_name ?? 'Opportunity'}`,
+      lead_id: lead.id,
+      stage: 'prospecting',
+      probability: 20,
+      status: 'open',
+      created_by: user?.id,
+    });
+    if (error) { toast.error('Failed to convert to opportunity'); return; }
+    
+    await supabase.from('leads').update({ status: 'converted', converted_at: new Date().toISOString() }).eq('id', lead.id);
+    
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'converted', module: 'crm', entity_type: 'leads', entity_id: lead.id, new_value: { status: 'converted' } });
+    }
+    
+    toast.success('Lead converted to opportunity');
+    load();
+  };
+
+  const deleteLead = async () => {
+    if (!company?.id || !leadToDelete) return;
+    const { error } = await supabase.from('leads').delete().eq('id', leadToDelete.id);
+    if (error) { toast.error('Failed to delete lead'); return; }
+    
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'crm', entity_type: 'leads', entity_id: leadToDelete.id });
+    }
+    
+    toast.success('Lead deleted');
+    setDeleteDialogOpen(false);
+    setLeadToDelete(null);
+    load();
+  };
+
+  const viewLead = (lead: any) => {
+    setSelectedLead(lead);
+    setViewDialogOpen(true);
+  };
+
+  const openEdit = (lead: any) => {
+    setEditLead(lead);
+    reset({ 
+      first_name: lead.first_name, 
+      last_name: lead.last_name ?? '', 
+      email: lead.email ?? '', 
+      phone: lead.phone ?? '', 
+      company_name: lead.company_name ?? '', 
+      job_title: lead.job_title ?? '', 
+      source: lead.source ?? '', 
+      marketing_campaign_id: lead.marketing_campaign_id ?? '',
+      rating: lead.rating, 
+      assigned_to: lead.assigned_to ?? '', 
+      notes: lead.notes ?? '' 
+    });
+    setDialogOpen(true);
+  };
 
   const newLeads = leads.filter(l => l.status === 'new').length;
   const converted = leads.filter(l => l.status === 'converted').length;
@@ -84,48 +178,95 @@ export default function LeadsPage() {
     cold: 'text-blue-600',
   };
 
+  const columns: Column<any>[] = [
+    {
+      key: 'name', header: 'Name',
+      cell: (row) => <span className="font-medium text-sm">{row.first_name} {row.last_name ?? ''}</span>,
+    },
+    { key: 'company_name', header: 'Company', cell: (row) => <span className="text-sm text-gray-500">{row.company_name ?? '—'}</span> },
+    { key: 'email', header: 'Email', cell: (row) => <span className="text-sm text-gray-500">{row.email ?? '—'}</span> },
+    { key: 'phone', header: 'Phone', cell: (row) => <span className="text-sm text-gray-500">{row.phone ?? '—'}</span> },
+    { key: 'source', header: 'Source', cell: (row) => row.source ? <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sourceColors[row.source] ?? 'bg-gray-100 text-gray-600'}`}>{row.source.replace(/_/g, ' ')}</span> : <span className="text-gray-400">—</span> },
+    { key: 'rating', header: 'Rating', cell: (row) => <span className={`text-xs font-semibold ${ratingColors[row.rating] ?? 'text-gray-500'}`}>{row.rating}</span> },
+    { key: 'employees', header: 'Assigned To', cell: (row) => <span className="text-sm text-gray-500">{row.employees?.full_name ?? '—'}</span> },
+    { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
+  ];
+
   return (
-    <div className="space-y-6">
+    <PermissionGuard permission="crm.leads.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view leads</div>}>
+      <div className="space-y-6">
       <PageHeader title="Leads" description="Track and manage sales leads" breadcrumbs={[{ label: 'CRM' }, { label: 'Leads' }]}>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Add Lead</Button>
-          </DialogTrigger>
+        <Can resource="leads" action="export">
+          <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" />Export</Button>
+        </Can>
+        <Can resource="leads" action="create">
+          <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditLead(null); reset(); } setDialogOpen(open); }}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Add Lead</Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-xl">
             <DialogHeader><DialogTitle>New Lead</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>First Name *</Label><Input className="mt-1" {...register('first_name')} /></div>
+                <div><Label>First Name *</Label><Input className="mt-1" {...register('first_name')} />{errors.first_name && <p className="text-xs text-red-500 mt-1">{errors.first_name.message}</p>}</div>
                 <div><Label>Last Name</Label><Input className="mt-1" {...register('last_name')} /></div>
                 <div><Label>Email</Label><Input className="mt-1" type="email" {...register('email')} /></div>
                 <div><Label>Phone</Label><Input className="mt-1" {...register('phone')} /></div>
                 <div><Label>Company</Label><Input className="mt-1" {...register('company_name')} /></div>
+                <div><Label>Job Title</Label><Input className="mt-1" {...register('job_title')} /></div>
                 <div><Label>Source</Label>
-                  <select className="mt-1 w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950" {...register('source')}>
-                    <option value="">Select source</option>
-                    <option value="website">Website</option>
-                    <option value="referral">Referral</option>
-                    <option value="email">Email Campaign</option>
-                    <option value="social">Social Media</option>
-                    <option value="cold_call">Cold Call</option>
-                    <option value="event">Event</option>
-                  </select>
+                  <Controller name="source" control={control} render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Select source" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="website">Website</SelectItem>
+                        <SelectItem value="referral">Referral</SelectItem>
+                        <SelectItem value="email">Email Campaign</SelectItem>
+                        <SelectItem value="social">Social Media</SelectItem>
+                        <SelectItem value="cold_call">Cold Call</SelectItem>
+                        <SelectItem value="event">Event</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )} />
+                </div>
+                <div><Label>Marketing Campaign</Label>
+                  <Controller name="marketing_campaign_id" control={control} render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Select campaign" /></SelectTrigger>
+                      <SelectContent>{campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  )} />
                 </div>
                 <div><Label>Rating</Label>
-                  <select className="mt-1 w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950" {...register('rating')}>
-                    <option value="hot">Hot</option>
-                    <option value="warm">Warm</option>
-                    <option value="cold">Cold</option>
-                  </select>
+                  <Controller name="rating" control={control} render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hot">Hot</SelectItem>
+                        <SelectItem value="warm">Warm</SelectItem>
+                        <SelectItem value="cold">Cold</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )} />
+                </div>
+                <div><Label>Assigned To</Label>
+                  <Controller name="assigned_to" control={control} render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Assign to" /></SelectTrigger>
+                      <SelectContent>{employees.map(e => <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  )} />
                 </div>
               </div>
+              <div><Label>Notes</Label><Textarea className="mt-1" {...register('notes')} /></div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>Add Lead</Button>
+                <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); reset(); setEditLead(null); }}>Cancel</Button>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>{editLead ? 'Update Lead' : 'Add Lead'}</Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
+        </Can>
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -137,57 +278,61 @@ export default function LeadsPage() {
 
       <Card className="dark:bg-gray-900 dark:border-gray-800">
         <CardContent className="p-0">
-          <div className="flex items-center gap-3 p-4 border-b dark:border-gray-800">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search leads..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <select className="border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="all">All Status</option>
-              <option value="new">New</option>
-              <option value="contacted">Contacted</option>
-              <option value="qualified">Qualified</option>
-              <option value="converted">Converted</option>
-              <option value="lost">Lost</option>
-            </select>
-          </div>
-          {filtered.length === 0 ? (
-            <EmptyState icon={<Target className="h-12 w-12" />} title="No leads found" description="Add your first lead to start building your pipeline" action={<Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-2" />Add Lead</Button>} />
-          ) : (
-            <div className="divide-y dark:divide-gray-800">
-              {filtered.map(l => (
-                <div key={l.id} className="flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 group">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{l.first_name} {l.last_name ?? ''}</p>
-                      <span className={`text-xs font-semibold ${ratingColors[l.rating] ?? 'text-gray-500'}`}>{l.rating}</span>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{l.company_name ?? '—'} · {l.email ?? l.phone ?? '—'}</p>
-                  </div>
-                  {l.source && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium hidden md:inline-flex ${sourceColors[l.source] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {l.source.replace(/_/g, ' ')}
-                    </span>
-                  )}
-                  <StatusBadge status={l.status} />
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem><Edit className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
-                      <DropdownMenuItem>Convert to Opportunity</DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600"><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
-            </div>
-          )}
+          <DataTable
+            columns={columns}
+            data={leads}
+            loading={loading}
+            searchable={true}
+            searchPlaceholder="Search leads..."
+            searchKeys={['first_name', 'last_name', 'company_name', 'email', 'phone']}
+            rowKey="id"
+            emptyTitle="No leads yet"
+            emptyDescription="Add your first lead to start building your pipeline"
+            emptyAction={<Can resource="leads" action="create"><Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-2" />Add Lead</Button></Can>}
+          />
         </CardContent>
       </Card>
+
+      {/* View Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>Lead Details</DialogTitle></DialogHeader>
+          {selectedLead && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-4">
+                <div><span className="text-gray-500">Name:</span> {selectedLead.first_name} {selectedLead.last_name ?? ''}</div>
+                <div><span className="text-gray-500">Status:</span> <StatusBadge status={selectedLead.status} /></div>
+                <div><span className="text-gray-500">Company:</span> {selectedLead.company_name ?? '—'}</div>
+                <div><span className="text-gray-500">Job Title:</span> {selectedLead.job_title ?? '—'}</div>
+                <div><span className="text-gray-500">Email:</span> {selectedLead.email ?? '—'}</div>
+                <div><span className="text-gray-500">Phone:</span> {selectedLead.phone ?? '—'}</div>
+                <div><span className="text-gray-500">Source:</span> {selectedLead.source?.replace(/_/g, ' ') ?? '—'}</div>
+                <div><span className="text-gray-500">Rating:</span> {selectedLead.rating}</div>
+                <div><span className="text-gray-500">Assigned To:</span> {selectedLead.employees?.full_name ?? '—'}</div>
+                <div><span className="text-gray-500">Campaign:</span> {selectedLead.marketing_campaigns?.name ?? '—'}</div>
+              </div>
+              {selectedLead.notes && <div><span className="text-gray-500">Notes:</span> {selectedLead.notes}</div>}
+              {selectedLead.status === 'new' || selectedLead.status === 'contacted' || selectedLead.status === 'qualified' ? (
+                <div className="flex justify-end gap-2 pt-4 border-t dark:border-gray-800">
+                  <Can resource="leads" action="convert">
+                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => { setViewDialogOpen(false); convertToOpportunity(selectedLead); }}>Convert to Opportunity</Button>
+                  </Can>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        title="Delete Lead"
+        description="Are you sure you want to delete this lead? This action cannot be undone."
+        onConfirm={deleteLead}
+      />
     </div>
+    </PermissionGuard>
   );
 }

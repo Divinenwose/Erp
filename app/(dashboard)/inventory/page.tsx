@@ -10,14 +10,6 @@ import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const stockData = [
-  { category: 'Electronics', inStock: 450, reorderPoint: 100 },
-  { category: 'Furniture', inStock: 120, reorderPoint: 30 },
-  { category: 'Supplies', inStock: 890, reorderPoint: 200 },
-  { category: 'Machinery', inStock: 45, reorderPoint: 10 },
-  { category: 'Raw Mat.', inStock: 2400, reorderPoint: 500 },
-];
-
 export default function InventoryOverviewPage() {
   const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
@@ -39,10 +31,10 @@ export default function InventoryOverviewPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {canProducts && <KPICard title="Total Products" value={284} icon={<Package className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" />}
-        {canProducts && <KPICard title="Total Stock Value" value={formatCurrency(2840000)} change={3.4} changeLabel="vs last month" icon={<TrendingDown className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" />}
-        {canMovements && <KPICard title="Low Stock Items" value={12} icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" />}
-        {canWarehouses && <KPICard title="Warehouses" value={4} icon={<Warehouse className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" />}
+        {canProducts && <KPICard title="Total Products" value={0} icon={<Package className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" />}
+        {canProducts && <KPICard title="Total Stock Value" value={formatCurrency(0)} icon={<TrendingDown className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" />}
+        {canMovements && <KPICard title="Low Stock Items" value={0} icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" />}
+        {canWarehouses && <KPICard title="Warehouses" value={0} icon={<Warehouse className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" />}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -61,7 +53,7 @@ export default function InventoryOverviewPage() {
         <CardHeader><CardTitle className="text-sm font-semibold">Stock Levels by Category</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={stockData}>
+            <BarChart data={[]}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="category" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
@@ -69,6 +61,7 @@ export default function InventoryOverviewPage() {
               <Bar dataKey="inStock" fill="#3B82F6" radius={[4, 4, 0, 0]} name="In Stock" />
               <Bar dataKey="reorderPoint" fill="#FCA5A5" radius={[4, 4, 0, 0]} name="Reorder Point" />
             </BarChart>
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400">No stock records yet.</p>
           </ResponsiveContainer>
         </CardContent>
       </Card>}

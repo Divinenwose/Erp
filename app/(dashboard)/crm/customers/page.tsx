@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { logAuditEvent } from '@/lib/audit';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import { formatCurrency } from '@/lib/utils';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
@@ -14,7 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Plus, Download, Building2, TrendingUp, MoreHorizontal, Edit, Trash2, Mail, Phone } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, Plus, Download, Building2, TrendingUp, MoreHorizontal, Edit, Trash2, Mail, Phone, MessageSquare, Clock } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -39,12 +43,15 @@ const custSchema = z.object({
 type CustForm = z.infer<typeof custSchema>;
 
 export default function CustomersPage() {
-  const { company } = useAuth();
+  const { company, user } = useAuth();
   const [customers, setCustomers] = useState<any[]>([]);
+  const [communications, setCommunications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [commDialogOpen, setCommDialogOpen] = useState(false);
   const [editCustomer, setEditCustomer] = useState<any | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<CustForm>({
     resolver: zodResolver(custSchema),
@@ -56,6 +63,12 @@ export default function CustomersPage() {
     const { data } = await supabase.from('customers').select('*').eq('company_id', company.id).order('name');
     setCustomers(data ?? []);
     setLoading(false);
+  };
+
+  const loadCommunications = async (customerId: string) => {
+    if (!company?.id) return;
+    const { data } = await supabase.from('customer_communications').select('*').eq('company_id', company.id).eq('customer_id', customerId).order('sent_at', { ascending: false });
+    setCommunications(data ?? []);
   };
 
   useEffect(() => { load(); }, [company?.id]);
@@ -71,11 +84,21 @@ export default function CustomersPage() {
     if (editCustomer) {
       const { error } = await supabase.from('customers').update({ ...data, updated_at: new Date().toISOString() }).eq('id', editCustomer.id);
       if (error) { toast.error('Failed to update'); return; }
+      
+      if (company?.id && user?.id) {
+        await logAuditEvent(company.id, user.id, { action: 'updated', module: 'crm', entity_type: 'customers', entity_id: editCustomer.id, new_value: { name: data.name } });
+      }
+      
       toast.success('Customer updated');
     } else {
       const num = `CUS-${String(customers.length + 1).padStart(4, '0')}`;
       const { error } = await supabase.from('customers').insert({ ...data, company_id: company.id, customer_number: num });
       if (error) { toast.error('Failed to create customer'); return; }
+      
+      if (company?.id && user?.id) {
+        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'customers', new_value: { name: data.name, customer_number: num } });
+      }
+      
       toast.success('Customer created');
     }
     reset(); setEditCustomer(null); setDialogOpen(false); load();
@@ -85,8 +108,19 @@ export default function CustomersPage() {
     if (!deleteId) return;
     await supabase.from('customers').update({ status: 'inactive' }).eq('id', deleteId);
     setCustomers(prev => prev.map(c => c.id === deleteId ? { ...c, status: 'inactive' } : c));
+    
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'crm', entity_type: 'customers', entity_id: deleteId });
+    }
+    
     setDeleteId(null);
     toast.success('Customer deactivated');
+  };
+
+  const viewCommunications = (customer: any) => {
+    setSelectedCustomer(customer);
+    loadCommunications(customer.id);
+    setCommDialogOpen(true);
   };
 
   const active = customers.filter(c => c.status === 'active').length;
@@ -127,10 +161,14 @@ export default function CustomersPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <PermissionGuard permission="crm.customers.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view customers</div>}>
+      <div className="space-y-6">
       <PageHeader title="Customers" description="Manage your customer accounts" breadcrumbs={[{ label: 'CRM' }, { label: 'Customers' }]}>
-        <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" />Export</Button>
-        <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditCustomer(null); reset(); } setDialogOpen(open); }}>
+        <Can resource="customers" action="export">
+          <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" />Export</Button>
+        </Can>
+        <Can resource="customers" action="create">
+          <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditCustomer(null); reset(); } setDialogOpen(open); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Add Customer</Button>
           </DialogTrigger>
@@ -169,6 +207,7 @@ export default function CustomersPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </Can>
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -191,6 +230,37 @@ export default function CustomersPage() {
       />
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="Deactivate Customer?" description="The customer will be marked as inactive. All related records are preserved." confirmLabel="Deactivate" variant="warning" />
+
+      {/* Communications Dialog */}
+      <Dialog open={commDialogOpen} onOpenChange={setCommDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Communication History - {selectedCustomer?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            {communications.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">No communications recorded yet</div>
+            ) : (
+              <div className="space-y-3">
+                {communications.map(comm => (
+                  <div key={comm.id} className="border dark:border-gray-800 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded ${comm.direction === 'inbound' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>{comm.direction}</span>
+                      <span className="text-xs text-gray-500 flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(comm.sent_at).toLocaleDateString()}</span>
+                    </div>
+                    {comm.subject && <p className="font-medium text-sm mb-1">{comm.subject}</p>}
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{comm.message}</p>
+                    {comm.follow_up_required && (
+                      <div className="mt-2 text-xs text-amber-600 flex items-center gap-1">
+                        <MessageSquare className="h-3 w-3" /> Follow-up required: {comm.follow_up_date ? new Date(comm.follow_up_date).toLocaleDateString() : 'TBD'}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
+    </PermissionGuard>
   );
 }

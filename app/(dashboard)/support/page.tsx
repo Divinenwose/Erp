@@ -23,33 +23,25 @@ export default function SupportPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           title="Open Tickets"
-          value={34}
-          change={-8.1}
-          changeLabel="vs last week"
+          value={0}
           icon={<Headphones className="h-4 w-4 text-blue-600" />}
           iconBg="bg-blue-50 dark:bg-blue-950/50"
         />
         <KPICard
           title="Resolved"
-          value={248}
-          change={5.4}
-          changeLabel="this month"
+          value={0}
           icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
           iconBg="bg-emerald-50 dark:bg-emerald-950/50"
         />
         <KPICard
           title="Avg Response"
-          value="4h"
-          change={-12.5}
-          changeLabel="vs last month"
+          value="0h"
           icon={<Clock className="h-4 w-4 text-amber-600" />}
           iconBg="bg-amber-50 dark:bg-amber-950/50"
         />
         <KPICard
           title="CSAT Score"
-          value="4.5 / 5"
-          change={2.3}
-          changeLabel="vs last month"
+          value="0 / 5"
           icon={<Star className="h-4 w-4 text-violet-600" />}
           iconBg="bg-violet-50 dark:bg-violet-950/50"
         />
@@ -69,15 +61,15 @@ export default function SupportPage() {
             </p>
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="text-center p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30">
-                <p className="text-xl font-bold text-amber-700 dark:text-amber-400">34</p>
+                <p className="text-xl font-bold text-amber-700 dark:text-amber-400">0</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Open</p>
               </div>
               <div className="text-center p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30">
-                <p className="text-xl font-bold text-blue-700 dark:text-blue-400">18</p>
+                <p className="text-xl font-bold text-blue-700 dark:text-blue-400">0</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">In Progress</p>
               </div>
               <div className="text-center p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
-                <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">248</p>
+                <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">0</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Resolved</p>
               </div>
             </div>
@@ -102,15 +94,15 @@ export default function SupportPage() {
             </p>
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="text-center p-2 rounded-lg bg-violet-50 dark:bg-violet-950/30">
-                <p className="text-xl font-bold text-violet-700 dark:text-violet-400">84</p>
+                <p className="text-xl font-bold text-violet-700 dark:text-violet-400">0</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Articles</p>
               </div>
               <div className="text-center p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30">
-                <p className="text-xl font-bold text-blue-700 dark:text-blue-400">12</p>
+                <p className="text-xl font-bold text-blue-700 dark:text-blue-400">0</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Categories</p>
               </div>
               <div className="text-center p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
-                <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">93%</p>
+                <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">0%</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Helpful</p>
               </div>
             </div>

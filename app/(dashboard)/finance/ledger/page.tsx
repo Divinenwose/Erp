@@ -62,6 +62,8 @@ export default function LedgerPage() {
       supabase.from('journal_entries').select('*, journal_entry_lines(*, chart_of_accounts(account_number, name))').eq('company_id', company.id).order('date', { ascending: false }),
       supabase.from('chart_of_accounts').select('*').eq('company_id', company.id).eq('is_active', true).order('account_number'),
     ]);
+    if (entriesData.error) toast.error(`Could not load journal entries: ${entriesData.error.message}`);
+    if (accountsData.error) toast.error(`Could not load accounts: ${accountsData.error.message}`);
     setEntries(entriesData.data ?? []);
     setAccounts(accountsData.data ?? []);
     setLoading(false);
@@ -186,10 +188,8 @@ export default function LedgerPage() {
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
 
-  const totalDebits = entries.reduce((sum, e) => sum + (e.total_debit || 0), 0);
-  const totalCredits = entries.reduce((sum, e) => sum + (e.total_credit || 0), 0);
-  const postedEntries = entries.filter(e => e.status === 'posted').length;
-  const draftEntries = entries.filter(e => e.status === 'draft').length;
+  const totalDebits = entries.reduce((sum, e) => sum + Number(e.total_debit || 0), 0);
+  const totalCredits = entries.reduce((sum, e) => sum + Number(e.total_credit || 0), 0);
 
   return (
     <PermissionGuard permission="finance.ledger.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view general ledger</div>}>
@@ -266,7 +266,7 @@ export default function LedgerPage() {
             </div>
             <DataTable
               columns={columns}
-              data={entries.filter(e => !search || e.entry_number.toLowerCase().includes(search.toLowerCase()) || e.description.toLowerCase().includes(search.toLowerCase()))}
+              data={entries.filter(e => !search || String(e.entry_number ?? '').toLowerCase().includes(search.toLowerCase()) || String(e.description ?? '').toLowerCase().includes(search.toLowerCase()))}
               loading={loading}
               searchable={false}
               rowKey="id"

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { logAuditEvent } from '@/lib/audit';
+import { PermissionGuard, Can } from '@/components/rbac/PermissionGuard';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
@@ -12,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, Plus, DollarSign, Target, Award, MoreHorizontal, Trash2 } from 'lucide-react';
+import { TrendingUp, Plus, DollarSign, Target, Award, MoreHorizontal, Trash2, Download } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -38,9 +40,10 @@ const oppSchema = z.object({
 type OppForm = z.infer<typeof oppSchema>;
 
 export default function PipelinePage() {
-  const { company } = useAuth();
+  const { company, user } = useAuth();
   const [opps, setOpps] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -53,12 +56,14 @@ export default function PipelinePage() {
 
   const loadData = async () => {
     if (!company?.id) return;
-    const [oppRes, custRes] = await Promise.all([
-      supabase.from('opportunities').select('*, customers(name)').eq('company_id', company.id).order('created_at', { ascending: false }),
+    const [oppRes, custRes, empRes] = await Promise.all([
+      supabase.from('opportunities').select('*, customers(name), employees(full_name)').eq('company_id', company.id).order('created_at', { ascending: false }),
       supabase.from('customers').select('id, name').eq('company_id', company.id),
+      supabase.from('employees').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
     ]);
     setOpps(oppRes.data ?? []);
     setCustomers(custRes.data ?? []);
+    setEmployees(empRes.data ?? []);
     setLoading(false);
   };
 
@@ -66,22 +71,37 @@ export default function PipelinePage() {
 
   const onSubmit = async (data: OppForm) => {
     if (!company?.id) return;
-    const { error } = await supabase.from('opportunities').insert({ ...data, company_id: company.id, status: 'open' });
+    const { error } = await supabase.from('opportunities').insert({ ...data, company_id: company.id, status: 'open', created_by: user?.id });
     if (error) { toast.error('Failed to create opportunity'); return; }
+    
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'opportunities', new_value: { title: data.title, stage: data.stage } });
+    }
+    
     toast.success('Opportunity created');
     reset(); setDialogOpen(false); loadData();
   };
 
   const moveToStage = async (id: string, stage: string) => {
     const prob = stage === 'won' ? 100 : stage === 'negotiation' ? 80 : stage === 'proposal' ? 60 : stage === 'qualified' ? 40 : 20;
-    await supabase.from('opportunities').update({ stage, probability: prob }).eq('id', id);
-    setOpps(prev => prev.map(o => o.id === id ? { ...o, stage, probability: prob } : o));
+    await supabase.from('opportunities').update({ stage, probability: prob, status: stage === 'won' ? 'won' : 'open' }).eq('id', id);
+    setOpps(prev => prev.map(o => o.id === id ? { ...o, stage, probability: prob, status: stage === 'won' ? 'won' : 'open' } : o));
+    
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'updated', module: 'crm', entity_type: 'opportunities', entity_id: id, new_value: { stage, probability: prob } });
+    }
+    
     toast.success(`Moved to ${STAGES.find(s => s.id === stage)?.label}`);
   };
 
   const deleteOpp = async (id: string) => {
     await supabase.from('opportunities').delete().eq('id', id);
     setOpps(prev => prev.filter(o => o.id !== id));
+    
+    if (company?.id && user?.id) {
+      await logAuditEvent(company.id, user.id, { action: 'deleted', module: 'crm', entity_type: 'opportunities', entity_id: id });
+    }
+    
     toast.success('Opportunity removed');
   };
 
@@ -101,9 +121,14 @@ export default function PipelinePage() {
   const winRate = opps.length > 0 ? Math.round((opps.filter(o => o.stage === 'won').length / opps.length) * 100) : 0;
 
   return (
-    <div className="space-y-5">
+    <PermissionGuard permission="crm.opportunities.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view opportunities</div>}>
+      <div className="space-y-5">
       <PageHeader title="Sales Pipeline" description="Track deals through your sales stages" breadcrumbs={[{ label: 'CRM' }, { label: 'Pipeline' }]}>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Can resource="opportunities" action="export">
+          <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" />Export</Button>
+        </Can>
+        <Can resource="opportunities" action="create">
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Add Opportunity</Button>
           </DialogTrigger>
@@ -131,6 +156,7 @@ export default function PipelinePage() {
             </form>
           </DialogContent>
         </Dialog>
+        </Can>
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -198,5 +224,6 @@ export default function PipelinePage() {
         })}
       </div>
     </div>
+    </PermissionGuard>
   );
 }

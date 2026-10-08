@@ -77,10 +77,10 @@ export default function ProcurementReportsPage() {
 
   const supplierColumns: Column<any>[] = [
     { key: 'vendors', header: 'Vendor', cell: (row) => <span className="font-medium">{row.vendors?.name || '—'}</span> },
-    { key: 'overall_score', header: 'Overall Score', cell: (row) => <span className="text-sm font-semibold">{row.overall_score?.toFixed(1) || '0'}</span> },
-    { key: 'quality_score', header: 'Quality', cell: (row) => <span className="text-sm">{row.quality_score?.toFixed(1) || '0'}</span> },
-    { key: 'delivery_score', header: 'Delivery', cell: (row) => <span className="text-sm">{row.delivery_score?.toFixed(1) || '0'}</span> },
-    { key: 'price_score', header: 'Price', cell: (row) => <span className="text-sm">{row.price_score?.toFixed(1) || '0'}</span> },
+    { key: 'overall_score', header: 'Overall Score', cell: (row) => <span className="text-sm font-semibold">{row.overall_score != null ? row.overall_score.toFixed(1) : '0'}</span> },
+    { key: 'quality_score', header: 'Quality', cell: (row) => <span className="text-sm">{row.quality_score != null ? row.quality_score.toFixed(1) : '0'}</span> },
+    { key: 'delivery_score', header: 'Delivery', cell: (row) => <span className="text-sm">{row.delivery_score != null ? row.delivery_score.toFixed(1) : '0'}</span> },
+    { key: 'price_score', header: 'Price', cell: (row) => <span className="text-sm">{row.price_score != null ? row.price_score.toFixed(1) : '0'}</span> },
     { key: 'on_time_delivery_rate', header: 'On-Time Rate', cell: (row) => <span className="text-sm">{((row.on_time_delivery_rate ?? 0) * 100).toFixed(0)}%</span> },
     { key: 'total_orders', header: 'Orders', cell: (row) => <span className="text-sm">{row.total_orders ?? 0}</span> },
     { key: 'total_spend', header: 'Total Spend', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_spend || 0)}</span> },

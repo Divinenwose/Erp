@@ -61,8 +61,8 @@ export default function InventoryOverviewPage() {
               <Bar dataKey="inStock" fill="#3B82F6" radius={[4, 4, 0, 0]} name="In Stock" />
               <Bar dataKey="reorderPoint" fill="#FCA5A5" radius={[4, 4, 0, 0]} name="Reorder Point" />
             </BarChart>
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400">No stock records yet.</p>
           </ResponsiveContainer>
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">No stock records yet.</p>
         </CardContent>
       </Card>}
     </div>

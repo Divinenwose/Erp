@@ -46,15 +46,15 @@ export default function SupplierPerformancePage() {
     { key: 'category', header: 'Category', cell: (row) => <span className="text-xs capitalize">{row.vendors?.category?.replace(/_/g, ' ') || 'Other'}</span> },
     { key: 'overall_score', header: 'Overall Score', cell: (row) => (
       <div className="flex items-center gap-2">
-        <span className="font-semibold">{row.overall_score?.toFixed(1) || '0'}</span>
+        <span className="font-semibold">{row.overall_score != null ? row.overall_score.toFixed(1) : '0'}</span>
         <div className="flex items-center gap-0.5">
           {Array.from({ length: 5 }).map((_, i) => <Star key={i} className={`h-3.5 w-3.5 ${i < Math.round(row.overall_score || 0) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 dark:text-gray-700'}`} />)}
         </div>
       </div>
     )},
-    { key: 'quality_score', header: 'Quality', cell: (row) => <span className="text-sm">{row.quality_score?.toFixed(1) || '0'}</span> },
-    { key: 'delivery_score', header: 'Delivery', cell: (row) => <span className="text-sm">{row.delivery_score?.toFixed(1) || '0'}</span> },
-    { key: 'price_score', header: 'Price', cell: (row) => <span className="text-sm">{row.price_score?.toFixed(1) || '0'}</span> },
+    { key: 'quality_score', header: 'Quality', cell: (row) => <span className="text-sm">{row.quality_score != null ? row.quality_score.toFixed(1) : '0'}</span> },
+    { key: 'delivery_score', header: 'Delivery', cell: (row) => <span className="text-sm">{row.delivery_score != null ? row.delivery_score.toFixed(1) : '0'}</span> },
+    { key: 'price_score', header: 'Price', cell: (row) => <span className="text-sm">{row.price_score != null ? row.price_score.toFixed(1) : '0'}</span> },
     { key: 'on_time_delivery_rate', header: 'On-Time Rate', cell: (row) => <span className="text-sm">{((row.on_time_delivery_rate ?? 0) * 100).toFixed(0)}%</span> },
     { key: 'total_orders', header: 'Orders', cell: (row) => <span className="text-sm">{row.total_orders ?? 0}</span> },
     { key: 'total_spend', header: 'Total Spend', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_spend || 0)}</span> },

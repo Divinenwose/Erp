@@ -158,7 +158,7 @@ export default function TargetsPage() {
     { key: 'target_amount', header: 'Target Amount', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.target_amount)}</span> },
     { key: 'achieved_amount', header: 'Achieved', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.achieved_amount)}</span> },
     { key: 'achievement', header: '% Achieved', sortable: true, cell: (row) => {
-      const pct = row.target_amount > 0 ? (row.achieved_amount / row.target_amount * 100).toFixed(1) : 0;
+      const pct = row.target_amount > 0 ? (row.achieved_amount / row.target_amount * 100).toFixed(1) : '0';
       return <span className={`text-sm font-semibold ${parseFloat(pct) >= 100 ? 'text-emerald-600' : parseFloat(pct) >= 75 ? 'text-amber-600' : 'text-red-600'}`}>{pct}%</span>;
     }},
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },

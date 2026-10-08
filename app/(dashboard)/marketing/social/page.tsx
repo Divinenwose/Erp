@@ -244,7 +244,7 @@ export default function SocialMediaPage() {
     { 
       key: 'engagement_rate',
       header: 'Engagement Rate', 
-      cell: (row) => row.engagement_rate ? `${row.engagement_rate.toFixed(2)}%` : '-'
+      cell: (row) => row.engagement_rate != null ? `${row.engagement_rate.toFixed(2)}%` : '-'
     },
     {
       key: 'actions',

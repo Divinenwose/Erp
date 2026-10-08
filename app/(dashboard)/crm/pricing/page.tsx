@@ -91,7 +91,7 @@ export default function PricingPage() {
     if (editRequest) {
       const { error } = await supabase.from('pricing_requests').update({ 
         ...data, 
-        discount_percentage,
+        discount_percentage: discountPercentage,
         updated_at: new Date().toISOString() 
       }).eq('id', editRequest.id);
       if (error) { toast.error('Failed to update request'); return; }
@@ -107,14 +107,14 @@ export default function PricingPage() {
         ...data, 
         company_id: company.id, 
         request_number: requestNumber,
-        discount_percentage,
+        discount_percentage: discountPercentage,
         status: 'pending',
         created_by: user?.id 
       });
       if (error) { toast.error('Failed to create request'); return; }
       
       if (company?.id && user?.id) {
-        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'pricing_requests', new_value: { product_service: data.product_service, request_number } });
+        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'pricing_requests', new_value: { product_service: data.product_service, request_number: requestNumber } });
       }
       
       toast.success('Request created');

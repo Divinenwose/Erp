@@ -9,7 +9,7 @@ import PageHeader from '@/components/common/PageHeader';
 import KPICard from '@/components/common/KPICard';
 import DataTable, { Column } from '@/components/common/DataTable';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, TrendingUp, Target, Users, DollarSign, Award, Calendar, MessageSquare, Smile } from 'lucide-react';
+import { Download, FileText, TrendingUp, Target, Users, DollarSign, Award, Calendar, MessageSquare, Smile, Star } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 

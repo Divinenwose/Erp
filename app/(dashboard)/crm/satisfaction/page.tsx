@@ -107,7 +107,7 @@ export default function SatisfactionPage() {
       if (error) { toast.error('Failed to create satisfaction record'); return; }
       
       if (company?.id && user?.id) {
-        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'customer_satisfaction', new_value: { rating: data.rating, survey_number } });
+        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'customer_satisfaction', new_value: { rating: data.rating, survey_number: surveyNumber } });
       }
       
       toast.success('Satisfaction record created');

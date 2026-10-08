@@ -119,7 +119,7 @@ export default function ProposalsPage() {
       if (error) { toast.error('Failed to create proposal'); return; }
       
       if (company?.id && user?.id) {
-        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'sales_proposals', new_value: { title: data.title, proposal_number } });
+        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'sales_proposals', new_value: { title: data.title, proposal_number: proposalNumber } });
       }
       
       toast.success('Proposal created');

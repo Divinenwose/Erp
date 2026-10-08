@@ -114,7 +114,7 @@ export default function TargetsPage() {
       if (error) { toast.error('Failed to create target'); return; }
       
       if (company?.id && user?.id) {
-        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'sales_targets', new_value: { target_type: data.target_type, target_number } });
+        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'sales_targets', new_value: { target_type: data.target_type, target_number: targetNumber } });
       }
       
       toast.success('Target created');

@@ -104,7 +104,7 @@ export default function ForecastsPage() {
       if (error) { toast.error('Failed to create forecast'); return; }
       
       if (company?.id && user?.id) {
-        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'sales_forecasts', new_value: { forecast_type: data.forecast_type, forecast_number } });
+        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'sales_forecasts', new_value: { forecast_type: data.forecast_type, forecast_number: forecastNumber } });
       }
       
       toast.success('Forecast created');

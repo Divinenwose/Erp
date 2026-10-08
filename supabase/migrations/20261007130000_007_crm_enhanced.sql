@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS pricing_requests (
   customer_id uuid REFERENCES customers(id),
   product_service text NOT NULL,
   current_price numeric(15,2) DEFAULT 0,
-  requested_price numeric(15,2 DEFAULT 0),
+  requested_price numeric(15,2) DEFAULT 0,
   discount_percentage numeric(5,2) DEFAULT 0,
   reason text NOT NULL,
   justification text,

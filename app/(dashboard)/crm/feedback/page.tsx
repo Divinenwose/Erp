@@ -109,7 +109,7 @@ export default function FeedbackPage() {
       if (error) { toast.error('Failed to create feedback'); return; }
       
       if (company?.id && user?.id) {
-        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'customer_feedback', new_value: { subject: data.subject, feedback_number } });
+        await logAuditEvent(company.id, user.id, { action: 'created', module: 'crm', entity_type: 'customer_feedback', new_value: { subject: data.subject, feedback_number: feedbackNumber } });
       }
       
       toast.success('Feedback recorded');

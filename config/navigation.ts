@@ -141,6 +141,7 @@ export const defaultNavigationConfig: NavItem[] = [
     module: 'crm',
     permission: 'crm.view',
     children: [
+      { title: 'Overview', href: '/crm', icon: LayoutDashboard, permission: 'crm.view' },
       { title: 'Leads', href: '/crm/leads', icon: Target, permission: 'crm.leads.view' },
       { title: 'Customers', href: '/crm/customers', icon: Users, permission: 'crm.customers.view' },
       { title: 'Pipeline', href: '/crm/pipeline', icon: TrendingUp, permission: 'crm.pipeline.view' },
@@ -616,6 +617,7 @@ export const navigationConfig: NavItem[] = [
     module: 'crm',
     permission: 'crm.view',
     children: [
+      { title: 'Overview', href: '/crm', icon: LayoutDashboard, permission: 'crm.view' },
       { title: 'Leads', href: '/crm/leads', icon: Target, permission: 'crm.leads.view' },
       { title: 'Customers', href: '/crm/customers', icon: Users, permission: 'crm.customers.view' },
       { title: 'Pipeline', href: '/crm/pipeline', icon: TrendingUp, permission: 'crm.pipeline.view' },

@@ -36,21 +36,6 @@ export default function CRMOverviewPage() {
   const canContracts = isAdmin || hasPermission('crm.contracts.view');
   const canActivities = isAdmin || hasPermission('crm.activities.view');
 
-  const modules = [
-    { title: 'Leads', description: 'Track sales leads', icon: Target, href: '/crm/leads', color: 'bg-blue-50 dark:bg-blue-950/30', iconColor: 'text-blue-600', permission: 'crm.leads.view' },
-    { title: 'Customers', description: 'Customer accounts', icon: Building2, href: '/crm/customers', color: 'bg-emerald-50 dark:bg-emerald-950/30', iconColor: 'text-emerald-600', permission: 'crm.customers.view' },
-    { title: 'Pipeline', description: 'Sales opportunities', icon: TrendingUp, href: '/crm/pipeline', color: 'bg-violet-50 dark:bg-violet-950/30', iconColor: 'text-violet-600', permission: 'crm.opportunities.view' },
-    { title: 'Activities', description: 'Follow-ups & tasks', icon: Calendar, href: '/crm/activities', color: 'bg-amber-50 dark:bg-amber-950/30', iconColor: 'text-amber-600', permission: 'crm.activities.view' },
-    { title: 'Proposals', description: 'Quotations', icon: FileText, href: '/crm/proposals', color: 'bg-pink-50 dark:bg-pink-950/30', iconColor: 'text-pink-600', permission: 'crm.proposals.view' },
-    { title: 'Contracts', description: 'Deals & contracts', icon: Award, href: '/crm/contracts', color: 'bg-cyan-50 dark:bg-cyan-950/30', iconColor: 'text-cyan-600', permission: 'crm.contracts.view' },
-    { title: 'Pricing', description: 'Discount requests', icon: DollarSign, href: '/crm/pricing', color: 'bg-rose-50 dark:bg-rose-950/30', iconColor: 'text-rose-600', permission: 'crm.pricing.view' },
-    { title: 'Targets', description: 'Sales targets', icon: Target, href: '/crm/targets', color: 'bg-indigo-50 dark:bg-indigo-950/30', iconColor: 'text-indigo-600', permission: 'crm.targets.view' },
-    { title: 'Forecasts', description: 'Revenue projections', icon: TrendingUp, href: '/crm/forecasts', color: 'bg-teal-50 dark:bg-teal-950/30', iconColor: 'text-teal-600', permission: 'crm.forecasts.view' },
-    { title: 'Feedback', description: 'Customer feedback', icon: Phone, href: '/crm/feedback', color: 'bg-orange-50 dark:bg-orange-950/30', iconColor: 'text-orange-600', permission: 'crm.feedback.view' },
-    { title: 'Satisfaction', description: 'CSAT tracking', icon: Award, href: '/crm/satisfaction', color: 'bg-lime-50 dark:bg-lime-950/30', iconColor: 'text-lime-600', permission: 'crm.satisfaction.view' },
-    { title: 'Reports', description: 'Analytics & reports', icon: FileText, href: '/crm/reports', color: 'bg-slate-50 dark:bg-slate-950/30', iconColor: 'text-slate-600', permission: 'crm.reports.view' },
-  ].filter(m => isAdmin || hasPermission(m.permission));
-
   const loadKPIs = async () => {
     if (!company?.id) return;
     
@@ -127,18 +112,6 @@ export default function CRMOverviewPage() {
         {canProposals && <KPICard title="Active Proposals" value={kpiData.activeProposals} icon={<FileText className="h-4 w-4 text-pink-600" />} iconBg="bg-pink-50 dark:bg-pink-950/50" loading={loading} />}
         {canContracts && <KPICard title="Active Contracts" value={kpiData.activeContracts} icon={<Award className="h-4 w-4 text-cyan-600" />} iconBg="bg-cyan-50 dark:bg-cyan-950/50" loading={loading} />}
         {canActivities && <KPICard title="Pending Activities" value={kpiData.pendingActivities} icon={<Calendar className="h-4 w-4 text-orange-600" />} iconBg="bg-orange-50 dark:bg-orange-950/50" loading={loading} />}
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {modules.map(m => (
-          <Link key={m.href} href={m.href} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:shadow-md transition-all group">
-            <div className={`w-10 h-10 rounded-xl ${m.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-              <m.icon className={`h-5 w-5 ${m.iconColor}`} />
-            </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{m.title}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{m.description}</p>
-          </Link>
-        ))}
       </div>
 
       {canPipeline && <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

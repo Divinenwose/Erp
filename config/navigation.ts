@@ -9,7 +9,7 @@ import {
   Mail, Inbox, Archive, FileCheck, SprayCan, Zap, MapPin, Monitor,
   Sofa, Cpu, Printer, FileSignature, Factory, Store, Scissors,
   HelpCircle, Megaphone, Palette, MonitorPlay, ClipboardCheck, IdCard, Fuel,
-  Scale, ShoppingBag, GitBranch, Wallet, RefreshCw, Workflow
+  Scale, ShoppingBag, GitBranch, Wallet, RefreshCw, Workflow, Phone
 } from 'lucide-react';
 
 export interface NavItem {

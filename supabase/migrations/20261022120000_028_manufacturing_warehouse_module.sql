@@ -498,91 +498,91 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Apply RLS Policies (company-scoped)
-ALTER TABLE production_schedules DROP POLICY IF EXISTS production_schedules_company_policy;
+DROP POLICY IF EXISTS production_schedules_company_policy ON production_schedules;
 CREATE POLICY production_schedules_company_policy ON production_schedules
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE work_orders DROP POLICY IF EXISTS work_orders_company_policy;
+DROP POLICY IF EXISTS work_orders_company_policy ON work_orders;
 CREATE POLICY work_orders_company_policy ON work_orders
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE production_runs DROP POLICY IF EXISTS production_runs_company_policy;
+DROP POLICY IF EXISTS production_runs_company_policy ON production_runs;
 CREATE POLICY production_runs_company_policy ON production_runs
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE raw_materials_inventory DROP POLICY IF EXISTS raw_materials_inventory_company_policy;
+DROP POLICY IF EXISTS raw_materials_inventory_company_policy ON raw_materials_inventory;
 CREATE POLICY raw_materials_inventory_company_policy ON raw_materials_inventory
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE wip_inventory DROP POLICY IF EXISTS wip_inventory_company_policy;
+DROP POLICY IF EXISTS wip_inventory_company_policy ON wip_inventory;
 CREATE POLICY wip_inventory_company_policy ON wip_inventory
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE finished_goods_inventory DROP POLICY IF EXISTS finished_goods_inventory_company_policy;
+DROP POLICY IF EXISTS finished_goods_inventory_company_policy ON finished_goods_inventory;
 CREATE POLICY finished_goods_inventory_company_policy ON finished_goods_inventory
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE warehouse_locations DROP POLICY IF EXISTS warehouse_locations_company_policy;
+DROP POLICY IF EXISTS warehouse_locations_company_policy ON warehouse_locations;
 CREATE POLICY warehouse_locations_company_policy ON warehouse_locations
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE manufacturing_stock_movements DROP POLICY IF EXISTS manufacturing_stock_movements_company_policy;
+DROP POLICY IF EXISTS manufacturing_stock_movements_company_policy ON manufacturing_stock_movements;
 CREATE POLICY manufacturing_stock_movements_company_policy ON manufacturing_stock_movements
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE goods_receiving DROP POLICY IF EXISTS goods_receiving_company_policy;
+DROP POLICY IF EXISTS goods_receiving_company_policy ON goods_receiving;
 CREATE POLICY goods_receiving_company_policy ON goods_receiving
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE goods_receiving_items DROP POLICY IF EXISTS goods_receiving_items_company_policy;
+DROP POLICY IF EXISTS goods_receiving_items_company_policy ON goods_receiving_items;
 CREATE POLICY goods_receiving_items_company_policy ON goods_receiving_items
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE dispatch_shipments DROP POLICY IF EXISTS dispatch_shipments_company_policy;
+DROP POLICY IF EXISTS dispatch_shipments_company_policy ON dispatch_shipments;
 CREATE POLICY dispatch_shipments_company_policy ON dispatch_shipments
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE dispatch_items DROP POLICY IF EXISTS dispatch_items_company_policy;
+DROP POLICY IF EXISTS dispatch_items_company_policy ON dispatch_items;
 CREATE POLICY dispatch_items_company_policy ON dispatch_items
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE quality_inspections DROP POLICY IF EXISTS quality_inspections_company_policy;
+DROP POLICY IF EXISTS quality_inspections_company_policy ON quality_inspections;
 CREATE POLICY quality_inspections_company_policy ON quality_inspections
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE inspection_checklist_items DROP POLICY IF EXISTS inspection_checklist_items_company_policy;
+DROP POLICY IF EXISTS inspection_checklist_items_company_policy ON inspection_checklist_items;
 CREATE POLICY inspection_checklist_items_company_policy ON inspection_checklist_items
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE equipment DROP POLICY IF EXISTS equipment_company_policy;
+DROP POLICY IF EXISTS equipment_company_policy ON equipment;
 CREATE POLICY equipment_company_policy ON equipment
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE equipment_maintenance DROP POLICY IF EXISTS equipment_maintenance_company_policy;
+DROP POLICY IF EXISTS equipment_maintenance_company_policy ON equipment_maintenance;
 CREATE POLICY equipment_maintenance_company_policy ON equipment_maintenance
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE workforce_shifts DROP POLICY IF EXISTS workforce_shifts_company_policy;
+DROP POLICY IF EXISTS workforce_shifts_company_policy ON workforce_shifts;
 CREATE POLICY workforce_shifts_company_policy ON workforce_shifts
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE shift_assignments DROP POLICY IF EXISTS shift_assignments_company_policy;
+DROP POLICY IF EXISTS shift_assignments_company_policy ON shift_assignments;
 CREATE POLICY shift_assignments_company_policy ON shift_assignments
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE safety_compliance DROP POLICY IF EXISTS safety_compliance_company_policy;
+DROP POLICY IF EXISTS safety_compliance_company_policy ON safety_compliance;
 CREATE POLICY safety_compliance_company_policy ON safety_compliance
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE manufacturing_incidents DROP POLICY IF EXISTS manufacturing_incidents_company_policy;
+DROP POLICY IF EXISTS manufacturing_incidents_company_policy ON manufacturing_incidents;
 CREATE POLICY manufacturing_incidents_company_policy ON manufacturing_incidents
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE process_waste DROP POLICY IF EXISTS process_waste_company_policy;
+DROP POLICY IF EXISTS process_waste_company_policy ON process_waste;
 CREATE POLICY process_waste_company_policy ON process_waste
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-ALTER TABLE manufacturing_documents DROP POLICY IF EXISTS manufacturing_documents_company_policy;
+DROP POLICY IF EXISTS manufacturing_documents_company_policy ON manufacturing_documents;
 CREATE POLICY manufacturing_documents_company_policy ON manufacturing_documents
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 

@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useRef, useCallb
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, Profile, Company, Role, Permission } from '@/lib/supabase';
 import { logAuthEvent } from '@/lib/audit';
-import { createCompanyAccount } from '@/app/actions/users';
+import { createCompanyAccount, syncCompanyAdminPermissions } from '@/app/actions/users';
 import { isCompanyAdminRoleName, isSuperAdminRoleName, normalizeRoleName, resolveAccessLevel, type AccessLevel } from '@/lib/rbac';
 
 interface AuthContextType {
@@ -322,10 +322,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (!error) {
-      // Log login event after successful authentication
-      // Note: This will be called again after session is established, but we log here for immediate tracking
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        const permissionSync = await syncCompanyAdminPermissions(session.access_token);
+        if (!permissionSync.success) {
+          await supabase.auth.signOut();
+          return { error: new Error(permissionSync.error) };
+        }
+
+        await Promise.all([
+          fetchProfile(session.user.id),
+          fetchRolesAndPermissions(session.user.id),
+        ]);
+
         const { data: prof } = await supabase
           .from('profiles')
           .select('company_id')

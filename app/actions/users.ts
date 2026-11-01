@@ -17,6 +17,102 @@ function isElevatedAdminRole(roleName: string): boolean {
   return isSuperAdminRoleName(roleName) || isCompanyAdminRoleName(roleName);
 }
 
+const restrictedCompanyAdminResources = new Set([
+  'hr.payroll',
+  'finance.ledger',
+  'finance.payables',
+  'finance.receivables',
+  'finance.invoices',
+  'finance.bank_accounts',
+  'finance.bank_reconciliation',
+  'finance.tax_compliance',
+  'finance.financial_statements',
+  'audit_logs',
+  'settings.security',
+  'settings.billing',
+  'roles',
+  'permissions',
+  'it.security',
+  'internal_control.fraud',
+  'internal_control.incidents',
+]);
+
+async function ensureCompanyAdminPermissions(roleId: string) {
+  const { data: permissions, error: permissionsError } = await supabaseAdmin
+    .from('permissions')
+    .select('id, resource, action')
+    .or('action.eq.view,and(resource.eq.settings.users,action.in.(create,edit))');
+  if (permissionsError) {
+    console.error('[AUTHORIZATION] Company Admin permission lookup failed:', permissionsError);
+    return 'Unable to load Company Admin permissions';
+  }
+
+  const requiredGrants = (permissions ?? []).filter(permission =>
+    !restrictedCompanyAdminResources.has(permission.resource)
+  );
+  const { error: grantError } = await supabaseAdmin.from('role_permissions').upsert(
+    requiredGrants.map(permission => ({ role_id: roleId, permission_id: permission.id })),
+    { onConflict: 'role_id,permission_id', ignoreDuplicates: true }
+  );
+  if (grantError) {
+    console.error('[AUTHORIZATION] Company Admin permission assignment failed:', grantError);
+    return 'Unable to configure Company Admin permissions';
+  }
+  return null;
+}
+
+export async function syncCompanyAdminPermissions(accessToken: string) {
+  try {
+    if (!accessToken) return { success: false, error: 'Authentication is required' };
+    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
+    if (authError || !authData.user) return { success: false, error: 'Authentication is required' };
+
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('company_id, is_active')
+      .eq('id', authData.user.id)
+      .maybeSingle();
+    if (profileError || !profile?.is_active || !profile.company_id) {
+      return { success: false, error: 'Unable to verify your active company account' };
+    }
+
+    const { data: userRoles, error: rolesError } = await supabaseAdmin
+      .from('user_roles')
+      .select('roles(name, company_id)')
+      .eq('user_id', authData.user.id);
+    if (rolesError) {
+      console.error('[AUTHORIZATION] Failed to verify login roles:', rolesError);
+      return { success: false, error: 'Unable to verify your account role' };
+    }
+    const isCompanyAdmin = (userRoles ?? []).some(row => {
+      const relatedRole = row.roles as { name?: string; company_id?: string | null } | null;
+      return relatedRole?.name
+        && isCompanyAdminRoleName(relatedRole.name)
+        && (relatedRole.company_id === null || relatedRole.company_id === profile.company_id);
+    });
+    if (!isCompanyAdmin) return { success: true };
+
+    const { data: adminRole, error: adminRoleError } = await supabaseAdmin
+      .from('roles')
+      .select('id')
+      .eq('name', 'Company Admin')
+      .is('company_id', null)
+      .limit(1)
+      .maybeSingle();
+    if (adminRoleError || !adminRole) {
+      console.error('[AUTHORIZATION] Company Admin role lookup failed:', adminRoleError);
+      return { success: false, error: 'The Company Admin role is not configured' };
+    }
+
+    const permissionError = await ensureCompanyAdminPermissions(adminRole.id);
+    if (permissionError) return { success: false, error: permissionError };
+    return { success: true };
+  } catch (error) {
+    console.error('[AUTHORIZATION] Unexpected login permission sync error:', error);
+    return { success: false, error: 'Unable to configure your company administrator access' };
+  }
+}
+
 export async function createCompanyAccount(input: {
   access_token: string;
   first_name: string;
@@ -67,48 +163,10 @@ export async function createCompanyAccount(input: {
       return { success: false, error: 'The Company Admin role is not configured' };
     }
 
-    const restrictedCompanyAdminResources = [
-      'hr.payroll',
-      'finance.ledger',
-      'finance.payables',
-      'finance.receivables',
-      'finance.invoices',
-      'finance.bank_accounts',
-      'finance.bank_reconciliation',
-      'finance.tax_compliance',
-      'finance.financial_statements',
-      'audit_logs',
-      'settings.security',
-      'settings.billing',
-      'roles',
-      'permissions',
-      'it.security',
-      'internal_control.fraud',
-      'internal_control.incidents',
-    ];
-    const { data: companyAdminPermissions, error: permissionsError } = await supabaseAdmin
-      .from('permissions')
-      .select('id, resource, action')
-      .or('action.eq.view,and(resource.eq.settings.users,action.in.(create,edit))');
-    if (permissionsError) {
-      console.error('[SIGNUP] Company Admin permission lookup failed:', permissionsError);
+    const permissionError = await ensureCompanyAdminPermissions(adminRole.id);
+    if (permissionError) {
       await supabaseAdmin.from('companies').delete().eq('id', company.id);
-      return { success: false, error: 'Unable to configure Company Admin permissions' };
-    }
-    const requiredCompanyAdminGrants = (companyAdminPermissions ?? []).filter(permission =>
-      !restrictedCompanyAdminResources.includes(permission.resource)
-    );
-    const { error: grantError } = await supabaseAdmin.from('role_permissions').upsert(
-      requiredCompanyAdminGrants.map(permission => ({
-        role_id: adminRole.id,
-        permission_id: permission.id,
-      })),
-      { onConflict: 'role_id,permission_id', ignoreDuplicates: true }
-    );
-    if (grantError) {
-      console.error('[SIGNUP] Company Admin permission assignment failed:', grantError);
-      await supabaseAdmin.from('companies').delete().eq('id', company.id);
-      return { success: false, error: 'Unable to configure Company Admin permissions' };
+      return { success: false, error: permissionError };
     }
 
     const { error: profileError } = await supabaseAdmin.from('profiles').upsert({

@@ -67,6 +67,50 @@ export async function createCompanyAccount(input: {
       return { success: false, error: 'The Company Admin role is not configured' };
     }
 
+    const restrictedCompanyAdminResources = [
+      'hr.payroll',
+      'finance.ledger',
+      'finance.payables',
+      'finance.receivables',
+      'finance.invoices',
+      'finance.bank_accounts',
+      'finance.bank_reconciliation',
+      'finance.tax_compliance',
+      'finance.financial_statements',
+      'audit_logs',
+      'settings.security',
+      'settings.billing',
+      'roles',
+      'permissions',
+      'it.security',
+      'internal_control.fraud',
+      'internal_control.incidents',
+    ];
+    const { data: companyAdminPermissions, error: permissionsError } = await supabaseAdmin
+      .from('permissions')
+      .select('id, resource, action')
+      .or('action.eq.view,and(resource.eq.settings.users,action.in.(create,edit))');
+    if (permissionsError) {
+      console.error('[SIGNUP] Company Admin permission lookup failed:', permissionsError);
+      await supabaseAdmin.from('companies').delete().eq('id', company.id);
+      return { success: false, error: 'Unable to configure Company Admin permissions' };
+    }
+    const requiredCompanyAdminGrants = (companyAdminPermissions ?? []).filter(permission =>
+      !restrictedCompanyAdminResources.includes(permission.resource)
+    );
+    const { error: grantError } = await supabaseAdmin.from('role_permissions').upsert(
+      requiredCompanyAdminGrants.map(permission => ({
+        role_id: adminRole.id,
+        permission_id: permission.id,
+      })),
+      { onConflict: 'role_id,permission_id', ignoreDuplicates: true }
+    );
+    if (grantError) {
+      console.error('[SIGNUP] Company Admin permission assignment failed:', grantError);
+      await supabaseAdmin.from('companies').delete().eq('id', company.id);
+      return { success: false, error: 'Unable to configure Company Admin permissions' };
+    }
+
     const { error: profileError } = await supabaseAdmin.from('profiles').upsert({
       id: authData.user.id,
       company_id: company.id,
@@ -204,7 +248,8 @@ async function authorizeUserManagement(accessToken: string, companyId: string, a
   if (!isSuperAdmin && !hasPermission) {
     return { error: 'You do not have permission to manage users' as const };
   }
-  return { actorId: authData.user.id, isSuperAdmin, actorPermissions };
+  const isCompanyAdmin = actorRoles.some(role => isCompanyAdminRoleName(role.name));
+  return { actorId: authData.user.id, isSuperAdmin, isCompanyAdmin, actorPermissions };
 }
 
 async function validateCompanyAssignments(companyId: string, departmentId: string | undefined, branchId: string | undefined) {
@@ -222,7 +267,7 @@ async function validateCompanyAssignments(companyId: string, departmentId: strin
 async function validateRoleAssignments(
   companyId: string,
   roleIds: string[],
-  authorization: { isSuperAdmin: boolean; actorPermissions: Set<string> }
+  authorization: { isSuperAdmin: boolean; isCompanyAdmin: boolean; actorPermissions: Set<string> }
 ) {
   const uniqueRoleIds = Array.from(new Set(roleIds));
   if (uniqueRoleIds.length === 0 || uniqueRoleIds.length !== roleIds.length) return 'Select one or more valid roles';
@@ -243,7 +288,7 @@ async function validateRoleAssignments(
   if (!authorization.isSuperAdmin && selectedRoles.some(role => isElevatedAdminRole(role.name))) {
     return 'Only a Super Admin can assign elevated administrator roles';
   }
-  if (!authorization.isSuperAdmin && selectedRoles.some(role =>
+  if (!authorization.isSuperAdmin && !authorization.isCompanyAdmin && selectedRoles.some(role =>
     role.role_permissions.some(grant => grant.permissions
       && !authorization.actorPermissions.has(`${grant.permissions.resource}.${grant.permissions.action}`))
   )) {

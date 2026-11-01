@@ -168,6 +168,21 @@ const routePermissions: Record<string, string> = {
   '/administration/meetings': 'meetings.view',
   '/administration/notifications': 'notifications.view',
   '/administration/work-orders': 'facilities.maintenance.view',
+  '/internal-control': 'internal_control.dashboard.view',
+  '/internal-control/risk-assessment': 'internal_control.risks.view',
+  '/internal-control/audit-management': 'internal_control.audits.view',
+  '/internal-control/transaction-reviews': 'internal_control.transaction_reviews.view',
+  '/internal-control/compliance-monitoring': 'internal_control.compliance.view',
+  '/internal-control/policy-enforcement': 'internal_control.policy_enforcement.view',
+  '/internal-control/fraud-investigations': 'internal_control.fraud.view',
+  '/internal-control/incidents': 'internal_control.incidents.view',
+  '/internal-control/control-testing': 'internal_control.controls.view',
+  '/internal-control/findings-actions': 'internal_control.findings.view',
+  '/internal-control/documentation': 'internal_control.evidence.view',
+  '/internal-control/training': 'internal_control.training.view',
+  '/internal-control/requests': 'internal_control.requests.view',
+  '/internal-control/policies': 'internal_control.policies.view',
+  '/internal-control/reports': 'internal_control.reports.view',
 };
 
 function getRequiredPermission(pathname: string): string | null {

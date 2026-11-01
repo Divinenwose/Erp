@@ -119,6 +119,7 @@ const DEPARTMENT_LANDING_ROUTE: Record<string, string> = {
   'IT': '/it',
   'Sales & CRM': '/crm',
   'Manufacturing': '/manufacturing',
+  'Internal Control': '/internal-control',
 };
 
 /**

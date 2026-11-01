@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { isRouteAllowedForDepartment } from '@/lib/department-access';
+import { companyModules, navigationConfig, type NavItemType } from '@/config/navigation';
 
 // Route to permission mapping
 const routePermissions: Record<string, string> = {
@@ -63,6 +64,26 @@ const routePermissions: Record<string, string> = {
     '/operations/requests': 'operations.requests.view',
     '/operations/kpis': 'operations.kpis.view',
     '/operations/reports': 'operations.reports.view',
+    '/quality': 'quality.dashboard.view',
+    '/quality/inspections': 'quality.inspections.view',
+    '/quality/checklists': 'quality.checklists.view',
+    '/quality/tests': 'quality.tests.view',
+    '/quality/defects': 'quality.defects.view',
+    '/quality/specifications': 'quality.specifications.view',
+    '/quality/non-conformances': 'quality.non_conformances.view',
+    '/quality/process-reviews': 'quality.process_reviews.view',
+    '/quality/audits': 'quality.audits.view',
+    '/quality/compliance': 'quality.compliance.view',
+    '/quality/risks': 'quality.risks.view',
+    '/quality/standards': 'quality.standards.view',
+    '/quality/training': 'quality.training.view',
+    '/quality/improvement': 'quality.improvement.view',
+    '/quality/capa': 'quality.capa.view',
+    '/quality/incidents': 'quality.incidents.view',
+    '/quality/documents': 'quality.documents.view',
+    '/quality/requests': 'quality.requests.view',
+    '/quality/monitoring': 'quality.monitoring.view',
+    '/quality/reports': 'quality.reports.view',
   '/procurement/requests': 'procurement.requests.view',
   '/procurement/orders': 'procurement.orders.view',
   '/procurement/contracts': 'procurement.view',
@@ -185,34 +206,30 @@ const routePermissions: Record<string, string> = {
   '/internal-control/reports': 'internal_control.reports.view',
 };
 
+function addNavigationPermissions(items: NavItemType[], permissions: Record<string, string>) {
+  for (const item of items) {
+    if (item.href && item.permission) permissions[item.href] = item.permission;
+    if (item.children) addNavigationPermissions(item.children, permissions);
+  }
+}
+
+const navigationRoutePermissions: Record<string, string> = {};
+addNavigationPermissions(navigationConfig, navigationRoutePermissions);
+Object.values(companyModules).forEach(items => addNavigationPermissions(items, navigationRoutePermissions));
+const allRoutePermissions = { ...navigationRoutePermissions, ...routePermissions };
+
 function getRequiredPermission(pathname: string): string | null {
-  // Check exact match first
-  if (routePermissions[pathname]) {
-    return routePermissions[pathname];
-  }
-  
-  // Check for partial matches (e.g., /hr/employees/edit should check hr.employees.view)
   const segments = pathname.split('/').filter(Boolean);
-  if (segments.length >= 2) {
-    const basePath = `/${segments[0]}/${segments[1]}`;
-    if (routePermissions[basePath]) {
-      return routePermissions[basePath];
-    }
+  for (let depth = segments.length; depth > 0; depth--) {
+    const ancestorPath = `/${segments.slice(0, depth).join('/')}`;
+    if (allRoutePermissions[ancestorPath]) return allRoutePermissions[ancestorPath];
   }
-  
-  // Check module-level permission
-  if (segments.length >= 1) {
-    const modulePath = `/${segments[0]}`;
-    if (routePermissions[modulePath]) {
-      return routePermissions[modulePath];
-    }
-  }
-  
+
   return null;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, hasPermission, isSuperAdmin, isCompanyAdmin, permissions, departmentName } = useAuth();
+  const { user, loading, hasPermission, isSuperAdmin, isCompanyAdmin, permissionsLoaded, departmentNames } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -223,22 +240,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     // Only check permissions after loading is complete and user is authenticated
-    if (!loading && user && pathname !== '/unauthorized') {
-      // Department check: non-admin users can only access routes within their department
-      if (!isCompanyAdmin() && permissions.length > 0 && !isRouteAllowedForDepartment(pathname, departmentName ?? undefined)) {
+    if (!loading && user && permissionsLoaded && pathname !== '/unauthorized') {
+      if (!isSuperAdmin() && !isCompanyAdmin() && !isRouteAllowedForDepartment(pathname, departmentNames)) {
         router.replace('/unauthorized');
         return;
       }
 
       const requiredPermission = getRequiredPermission(pathname);
-      
-      // Super Admin and Company Admin bypass all permission checks
-      // Also wait for permissions to be loaded before checking
-      if (!isCompanyAdmin() && requiredPermission && permissions.length > 0 && !hasPermission(requiredPermission)) {
+      if (!isSuperAdmin() && (!requiredPermission || !hasPermission(requiredPermission))) {
         router.replace('/unauthorized');
       }
     }
-  }, [user, loading, router, pathname, hasPermission, isCompanyAdmin, permissions, departmentName]);
+  }, [user, loading, router, pathname, hasPermission, isSuperAdmin, isCompanyAdmin, permissionsLoaded, departmentNames]);
 
   if (loading) {
     return (

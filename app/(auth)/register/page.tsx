@@ -36,14 +36,16 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegisterForm) => {
     setLoading(true);
-    const { error } = await signUp(data.email, data.password, {
+    const { error, requiresEmailVerification } = await signUp(data.email, data.password, {
       firstName: data.firstName,
       lastName: data.lastName,
       companyName: data.companyName,
     });
     if (error) { toast.error(error.message || 'Registration failed'); setLoading(false); }
     else {
-      toast.success('Workspace created! Please sign in to continue.');
+      toast.success(requiresEmailVerification
+        ? 'Registration submitted. Verify your email to finish workspace setup.'
+        : 'Workspace created! Please sign in to continue.');
       router.push('/login');
     }
   };

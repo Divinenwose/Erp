@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { NavItem } from '@/config/navigation';
 import { getNavigationConfig } from '@/lib/company-modules';
-import { isModuleAllowed } from '@/lib/department-access';
+import { getDepartmentModules, isModuleAllowed } from '@/lib/department-access';
 import { useAuth } from '@/contexts/AuthContext';
 import { ChevronDown, ChevronRight, Building2, Zap, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -48,20 +48,17 @@ function flattenTopLevelGroup(items: NavItem[], moduleId: string): NavItem[] {
  */
 function isNavItemAccessible(
   item: NavItem,
-  departmentName: string | null,
+  departmentNames: string[],
   hasPermission: (permission: string) => boolean,
-  isAdmin: boolean,
-  isHRManager: boolean = false
+  isSuperAdmin: boolean
 ): boolean {
-  if (isAdmin) return true;
-  if (isHRManager && item.module === 'hr') return true; // HR Manager gets all HR items
-  if (!isModuleAllowed(item.module, departmentName ?? undefined)) return false;
+  if (!isSuperAdmin && !isModuleAllowed(item.module, departmentNames)) return false;
 
-  const ownPermissionOk = !item.permission || hasPermission(item.permission);
+  const ownPermissionOk = isSuperAdmin || !item.permission || hasPermission(item.permission);
 
   if (item.children && item.children.length > 0) {
     const hasAccessibleChild = item.children.some(child =>
-      isNavItemAccessible(child, departmentName, hasPermission, isAdmin, isHRManager)
+      isNavItemAccessible(child, departmentNames, hasPermission, isSuperAdmin)
     );
     return ownPermissionOk || hasAccessibleChild;
   }
@@ -69,28 +66,26 @@ function isNavItemAccessible(
   return ownPermissionOk;
 }
 
-function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmentName }: { item: NavItem; collapsed: boolean; depth?: number; onMobileClose?: () => void; departmentName: string | null }) {
+function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmentNames }: { item: NavItem; collapsed: boolean; depth?: number; onMobileClose?: () => void; departmentNames: string[] }) {
   const pathname = usePathname();
-  const { hasPermission, isSuperAdmin, isCompanyAdmin, hasRole } = useAuth();
+  const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
   const [open, setOpen] = useState(false);
 
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
-  const isHRManager = hasRole('HR Manager');
+  const isSuperAdminUser = isSuperAdmin();
 
   // Check if user has RBAC permission for this item
   const hasItemPermission = useMemo(() => {
-    if (isAdmin) return true;
-    if (isHRManager && item.module === 'hr') return true; // HR Manager gets all HR items
+    if (isSuperAdminUser) return true;
     if (!item.permission) return true;
     return hasPermission(item.permission);
-  }, [item.permission, hasPermission, isAdmin, isHRManager, item.module]);
+  }, [item.permission, hasPermission, isSuperAdminUser]);
 
   // Check if user's department allows this module
   const hasDepartmentAccess = useMemo(() => {
     if (isAdmin) return true;
-    if (isHRManager && item.module === 'hr') return true; // HR Manager gets HR module
-    return isModuleAllowed(item.module, departmentName ?? undefined);
-  }, [item.module, departmentName, isAdmin, isHRManager]);
+    return isModuleAllowed(item.module, departmentNames);
+  }, [item.module, departmentNames, isAdmin]);
 
   // Filter children based on permissions and department access. A child is
   // kept only if it (or something underneath it) is actually reachable, so a
@@ -98,12 +93,10 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
   // it doesn't show up as an empty, dead-end dropdown entry.
   const visibleChildren = useMemo(() => {
     if (!item.children) return [];
-    if (isAdmin) return item.children;
-    if (isHRManager && item.module === 'hr') return item.children; // HR Manager sees all HR children
     return item.children.filter(child =>
-      isNavItemAccessible(child, departmentName, hasPermission, isAdmin, isHRManager)
+      isNavItemAccessible(child, departmentNames, hasPermission, isSuperAdminUser)
     );
-  }, [item.children, hasPermission, isAdmin, departmentName, isHRManager, item.module]);
+  }, [item.children, hasPermission, departmentNames, isSuperAdminUser]);
 
   const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + '/') : false;
   const isParentActive = visibleChildren.some(
@@ -164,7 +157,7 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
         {open && !collapsed && (
           <div className="mt-1 space-y-0.5 pl-4 border-l border-gray-200 dark:border-gray-700 ml-5">
             {visibleChildren.map((child) => (
-              <NavItemComponent key={child.href ?? child.title} item={child} collapsed={false} depth={depth + 1} onMobileClose={onMobileClose} departmentName={departmentName} />
+              <NavItemComponent key={child.href ?? child.title} item={child} collapsed={false} depth={depth + 1} onMobileClose={onMobileClose} departmentNames={departmentNames} />
             ))}
           </div>
         )}
@@ -204,18 +197,19 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
 }
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
-  const { company, departmentName, hasRole, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const { company, departmentNames, isSuperAdmin, isCompanyAdmin } = useAuth();
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
-  const isHRManager = hasRole('HR Manager');
 
-  // Company admin sees everything grouped. HR manager gets HR flattened.
-  // Other users get Administration flattened (existing behavior).
   const navigationItems = useMemo(() => {
     const config = getNavigationConfig(company?.name);
     if (isAdmin) return config;
-    if (isHRManager) return flattenTopLevelGroup(config, 'hr');
-    return flattenTopLevelGroup(config, 'admin');
-  }, [company?.name, isAdmin, isHRManager]);
+    const assignedModules = getDepartmentModules(departmentNames);
+    if (!assignedModules) return config;
+    return Array.from(assignedModules).reduce(
+      (items, moduleId) => flattenTopLevelGroup(items, moduleId),
+      config
+    );
+  }, [company?.name, departmentNames, isAdmin]);
 
   // Handle escape key to close mobile drawer
   useEffect(() => {
@@ -286,7 +280,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         <ScrollArea className="flex-1 px-3 py-3">
           <nav className="space-y-0.5">
             {navigationItems.map((item) => (
-              <NavItemComponent key={item.href ?? item.title} item={item} collapsed={collapsed} onMobileClose={onMobileClose} departmentName={departmentName} />
+              <NavItemComponent key={item.href ?? item.title} item={item} collapsed={collapsed} onMobileClose={onMobileClose} departmentNames={departmentNames} />
             ))}
           </nav>
         </ScrollArea>

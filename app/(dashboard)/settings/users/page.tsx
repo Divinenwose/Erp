@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase, Profile, Role, Department, Branch } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { logRoleChange, logAuditEvent } from '@/lib/audit';
 import { Can } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
-import { createUser, updateUser } from '@/app/actions/users';
+import { assignUsersRoles, createUser, sendUserPasswordReset, updateUser, updateUsersStatus } from '@/app/actions/users';
 import KPICard from '@/components/common/KPICard';
 import StatusBadge from '@/components/common/StatusBadge';
 import DataTable, { Column } from '@/components/common/DataTable';
@@ -26,6 +26,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { isCompanyAdminRoleName, isSuperAdminRoleName } from '@/lib/rbac';
 
 const userSchema = z.object({
   first_name: z.string().min(1, 'Required'),
@@ -40,9 +41,14 @@ const userSchema = z.object({
   assign_as_department_head: z.boolean().optional(),
 });
 type UserForm = z.infer<typeof userSchema>;
+type UserWithRelations = Profile & {
+  user_roles?: Array<{ roles: Role | null }>;
+  departments?: Department;
+  branches?: Branch;
+};
 
 export default function UsersSettingsPage() {
-  const { company, user: currentUser } = useAuth();
+  const { company, session, accessLevel, hasPermission } = useAuth();
   const [users, setUsers] = useState<(Profile & { roles?: Role[]; departments?: Department; branches?: Branch })[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -61,19 +67,25 @@ export default function UsersSettingsPage() {
   const [bulkActionType, setBulkActionType] = useState<'activate' | 'deactivate' | 'assign_roles' | null>(null);
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [bulkRoleIds, setBulkRoleIds] = useState<string[]>([]);
+  const canAssignDepartmentHead = accessLevel === 'super_admin'
+    || hasPermission('settings.departments.edit')
+    || hasPermission('departments.manage');
+  const assignableRoles = roles.filter(role => accessLevel === 'super_admin'
+    || (!isSuperAdminRoleName(role.name) && !isCompanyAdminRoleName(role.name)));
 
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<UserForm>({
     resolver: zodResolver(userSchema),
-    defaultValues: { role_ids: [] },
+    defaultValues: { role_ids: [], create_employee_record: true },
     mode: 'onSubmit',
   });
 
-  const load = async () => {
-    if (!company?.id) return;
+  const load = useCallback(async () => {
+    if (!company?.id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     
-    console.log('[Users Page] Loading data for company:', company.id);
-
     const [usersRes, rolesRes, deptRes, branchRes] = await Promise.all([
       supabase
         .from('profiles')
@@ -85,28 +97,30 @@ export default function UsersSettingsPage() {
       supabase.from('branches').select('*').eq('company_id', company.id),
     ]);
 
-    console.log('[Users Page] Roles query result:', rolesRes);
-    console.log('[Users Page] Roles data length:', rolesRes.data?.length);
-    console.log('[Users Page] Roles data:', rolesRes.data);
-    console.log('[Users Page] Roles error:', rolesRes.error);
-    console.log('[Users Page] Departments data length:', deptRes.data?.length);
-    console.log('[Users Page] Departments data:', deptRes.data);
-    console.log('[Users Page] Departments error:', deptRes.error);
-    console.log('[Users Page] Branches data length:', branchRes.data?.length);
+    const queryErrors = [usersRes.error, rolesRes.error, deptRes.error, branchRes.error].filter(Boolean);
+    if (queryErrors.length) {
+      console.error('[Users Page] Failed to load user-management data:', queryErrors);
+      toast.error('Unable to load user-management data');
+      setLoading(false);
+      return;
+    }
 
-    const usersWithRoles = (usersRes.data ?? []).map((u: any) => ({
-      ...u,
-      roles: u.user_roles?.map((ur: any) => ur.roles).filter(Boolean) || [],
-    }));
+    const usersWithRoles = (usersRes.data ?? []).map(row => {
+      const userRow = row as unknown as UserWithRelations;
+      return {
+        ...userRow,
+        roles: (userRow.user_roles ?? []).map(userRole => userRole.roles).filter((role): role is Role => Boolean(role)),
+      };
+    });
 
     setUsers(usersWithRoles);
     setRoles(rolesRes.data ?? []);
     setDepartments(deptRes.data ?? []);
     setBranches(branchRes.data ?? []);
     setLoading(false);
-  };
+  }, [company?.id]);
 
-  useEffect(() => { load(); }, [company?.id]);
+  useEffect(() => { void load(); }, [load]);
 
   const openEdit = (user: Profile & { roles?: Role[] }) => {
     setEditUser(user);
@@ -124,23 +138,27 @@ export default function UsersSettingsPage() {
   };
 
   const onSubmit = async (data: UserForm) => {
-    console.log('[Users Page] Form submitted with data:', data);
-    console.log('[Users Page] Form errors:', errors);
     if (!company?.id) return;
+    const accessToken = session?.access_token ?? '';
+    if (!accessToken) {
+      toast.error('Your session expired. Sign in again before managing users.');
+      return;
+    }
 
     if (editUser) {
       // Update existing user using Server Action
       const result = await updateUser({
+        access_token: accessToken,
         user_id: editUser.id,
         first_name: data.first_name,
         last_name: data.last_name,
+        email: editUser.email ?? data.email,
         phone: data.phone,
         job_title: data.job_title,
         department_id: data.department_id,
         branch_id: data.branch_id,
         role_ids: data.role_ids,
         company_id: company.id,
-        assigned_by: currentUser?.id || '',
       });
 
       if (!result.success) {
@@ -152,6 +170,7 @@ export default function UsersSettingsPage() {
     } else {
       // Create new user using Server Action
       const result = await createUser({
+        access_token: accessToken,
         email: data.email,
         first_name: data.first_name,
         last_name: data.last_name,
@@ -161,7 +180,6 @@ export default function UsersSettingsPage() {
         branch_id: data.branch_id,
         role_ids: data.role_ids,
         company_id: company.id,
-        assigned_by: currentUser?.id || '',
         create_employee_record: data.create_employee_record,
         assign_as_department_head: data.assign_as_department_head,
       });
@@ -177,28 +195,18 @@ export default function UsersSettingsPage() {
     reset();
     setEditUser(null);
     setDialogOpen(false);
-    load();
+    await load();
   };
 
   const handleDelete = async () => {
-    if (!deleteId || !company?.id) return;
+    if (!deleteId || !company?.id || !session?.access_token) return;
     setDeleting(true);
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq('id', deleteId);
-
-    if (error) {
-      toast.error('Failed to disable user');
+    const result = await updateUsersStatus(session.access_token, [deleteId], company.id, false);
+    if (!result.success) {
+      toast.error(result.error || 'Failed to disable user');
     } else {
-      await logAuditEvent(company.id, currentUser?.id || '', {
-        action: 'user_disabled',
-        module: 'users',
-        record_id: deleteId,
-      });
-      toast.success('User disabled');
-      load();
+      toast.success(result.message || 'User disabled');
+      await load();
     }
 
     setDeleteId(null);
@@ -206,23 +214,13 @@ export default function UsersSettingsPage() {
   };
 
   const handleResetPassword = async () => {
-    if (!resetPasswordId || !company?.id) return;
+    if (!resetPasswordId || !company?.id || !session?.access_token) return;
     setResettingPassword(true);
-
-    const { error } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: users.find(u => u.id === resetPasswordId)?.email || '',
-    });
-
-    if (error) {
-      toast.error('Failed to generate password reset link');
+    const result = await sendUserPasswordReset(session.access_token, company.id, resetPasswordId);
+    if (!result.success) {
+      toast.error(result.error || 'Failed to send password reset email');
     } else {
-      await logAuditEvent(company.id, currentUser?.id || '', {
-        action: 'password_reset',
-        module: 'auth',
-        record_id: resetPasswordId,
-      });
-      toast.success('Password reset link sent to user email');
+      toast.success(result.message || 'Password reset email sent');
     }
 
     setResetPasswordId(null);
@@ -230,25 +228,15 @@ export default function UsersSettingsPage() {
   };
 
   const handleToggleActive = async (userId: string, currentStatus: boolean) => {
-    if (!company?.id) return;
+    if (!company?.id || !session?.access_token) return;
     setToggleActiveId(userId);
     setTogglingActive(true);
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_active: !currentStatus, updated_at: new Date().toISOString() })
-      .eq('id', userId);
-
-    if (error) {
-      toast.error('Failed to update user status');
+    const result = await updateUsersStatus(session.access_token, [userId], company.id, !currentStatus);
+    if (!result.success) {
+      toast.error(result.error || 'Failed to update user status');
     } else {
-      await logAuditEvent(company.id, currentUser?.id || '', {
-        action: !currentStatus ? 'user_activated' : 'user_deactivated',
-        module: 'users',
-        record_id: userId,
-      });
-      toast.success(`User ${!currentStatus ? 'activated' : 'deactivated'}`);
-      load();
+      toast.success(result.message || `User ${!currentStatus ? 'activated' : 'deactivated'}`);
+      await load();
     }
 
     setToggleActiveId(null);
@@ -256,52 +244,27 @@ export default function UsersSettingsPage() {
   };
 
   const handleBulkAction = async () => {
-    if (!company?.id || selectedUsers.length === 0 || !bulkActionType) return;
+    if (!company?.id || !session?.access_token || selectedUsers.length === 0 || !bulkActionType) return;
     setBulkProcessing(true);
 
     try {
       if (bulkActionType === 'activate' || bulkActionType === 'deactivate') {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ is_active: bulkActionType === 'activate', updated_at: new Date().toISOString() })
-          .in('id', selectedUsers);
-
-        if (error) throw error;
-
-        await logAuditEvent(company.id, currentUser?.id || '', {
-          action: bulkActionType === 'activate' ? 'users_bulk_activated' : 'users_bulk_deactivated',
-          module: 'users',
-          new_values: { user_ids: selectedUsers },
-        });
-
-        toast.success(`${selectedUsers.length} users ${bulkActionType === 'activate' ? 'activated' : 'deactivated'}`);
+        const result = await updateUsersStatus(session.access_token, selectedUsers, company.id, bulkActionType === 'activate');
+        if (!result.success) throw new Error(result.error || 'Failed to update user status');
+        toast.success(result.message || `${selectedUsers.length} users updated`);
       } else if (bulkActionType === 'assign_roles' && bulkRoleIds.length > 0) {
-        for (const userId of selectedUsers) {
-          await supabase.from('user_roles').delete().eq('user_id', userId);
-          const roleInserts = bulkRoleIds.map(roleId => ({
-            user_id: userId,
-            role_id: roleId,
-            assigned_by: currentUser?.id,
-          }));
-          await supabase.from('user_roles').insert(roleInserts);
-        }
-
-        await logAuditEvent(company.id, currentUser?.id || '', {
-          action: 'users_bulk_roles_assigned',
-          module: 'users',
-          new_values: { user_ids: selectedUsers, role_ids: bulkRoleIds },
-        });
-
-        toast.success(`Roles assigned to ${selectedUsers.length} users`);
+        const result = await assignUsersRoles(session.access_token, selectedUsers, company.id, bulkRoleIds);
+        if (!result.success) throw new Error(result.error || 'Failed to assign roles');
+        toast.success(result.message || `Roles assigned to ${selectedUsers.length} users`);
       }
 
       setSelectedUsers([]);
       setBulkActionOpen(false);
       setBulkActionType(null);
       setBulkRoleIds([]);
-      load();
+      await load();
     } catch (error) {
-      toast.error('Failed to perform bulk action');
+      toast.error(error instanceof Error ? error.message : 'Failed to perform bulk action');
     }
 
     setBulkProcessing(false);
@@ -424,8 +387,7 @@ export default function UsersSettingsPage() {
         <Can resource="settings.users" action="create">
           <Dialog open={dialogOpen} onOpenChange={open => {
             if (open && !editUser) {
-              console.log('[Users Page] Opening dialog for new user, resetting form');
-              reset({ role_ids: [] });
+              reset({ role_ids: [], create_employee_record: true });
             }
             if (!open) {
               setEditUser(null);
@@ -490,10 +452,10 @@ export default function UsersSettingsPage() {
                     <Label>Roles *</Label>
                     <Controller name="role_ids" control={control} render={({ field }) => (
                       <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
-                        {roles.length === 0 ? (
-                          <p className="text-sm text-gray-500">No roles available. Please create roles first.</p>
+                        {assignableRoles.length === 0 ? (
+                          <p className="text-sm text-gray-500">No roles are available to assign.</p>
                         ) : (
-                          roles.map(role => (
+                          assignableRoles.map(role => (
                             <div key={role.id} className="flex items-center space-x-2">
                               <Checkbox
                                 id={role.id}
@@ -517,7 +479,7 @@ export default function UsersSettingsPage() {
                     )} />
                     {errors.role_ids && <p className="text-xs text-red-500 mt-1 font-medium">{errors.role_ids.message}</p>}
                   </div>
-                  <div className="col-span-2 space-y-3 pt-2 border-t">
+                  {!editUser && <div className="col-span-2 space-y-3 pt-2 border-t">
                     <Controller
                       name="create_employee_record"
                       control={control}
@@ -534,23 +496,23 @@ export default function UsersSettingsPage() {
                         </div>
                       )}
                     />
-                    <Controller
-                      name="assign_as_department_head"
-                      control={control}
-                      render={({ field }) => (
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="assign_as_department_head"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                          <label htmlFor="assign_as_department_head" className="text-sm cursor-pointer">
-                            Assign as department head
-                          </label>
-                        </div>
-                      )}
-                    />
-                  </div>
+                    {canAssignDepartmentHead && <Controller
+                        name="assign_as_department_head"
+                        control={control}
+                        render={({ field }) => (
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="assign_as_department_head"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                            <label htmlFor="assign_as_department_head" className="text-sm cursor-pointer">
+                              Assign as department head
+                            </label>
+                          </div>
+                        )}
+                      />}
+                  </div>}
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); setEditUser(null); reset(); }}>

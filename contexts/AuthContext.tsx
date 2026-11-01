@@ -1,9 +1,11 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, Profile, Company, Role, Permission } from '@/lib/supabase';
 import { logAuthEvent } from '@/lib/audit';
+import { createCompanyAccount } from '@/app/actions/users';
+import { isCompanyAdminRoleName, isSuperAdminRoleName, normalizeRoleName, resolveAccessLevel, type AccessLevel } from '@/lib/rbac';
 
 interface AuthContextType {
   user: User | null;
@@ -13,9 +15,12 @@ interface AuthContextType {
   roles: Role[];
   permissions: Permission[];
   departmentName: string | null;
+  departmentNames: string[];
+  permissionsLoaded: boolean;
+  accessLevel: AccessLevel;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, data: { firstName: string; lastName: string; companyName: string }) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, data: { firstName: string; lastName: string; companyName: string }) => Promise<{ error: Error | null; requiresEmailVerification?: boolean }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   hasRole: (roleName: string) => boolean;
@@ -35,20 +40,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [departmentName, setDepartmentName] = useState<string | null>(null);
+  const [departmentNames, setDepartmentNames] = useState<string[]>([]);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const isInitialized = useRef(false);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
-      console.log('[AUTH] Fetching profile for user:', userId);
       const { data: prof, error: profError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
-
-      console.log('[AUTH] Profile data:', prof);
-      console.log('[AUTH] Profile error:', profError);
 
       if (profError) {
         console.error('[AUTH] Error fetching profile:', profError);
@@ -56,30 +59,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (prof) {
+        if (!prof.is_active) {
+          await supabase.auth.signOut({ scope: 'local' });
+          return;
+        }
+
         setProfile(prof as Profile);
 
-        // Fetch department name if the user has a department_id
-        if (prof.department_id) {
-          const { data: dept } = await supabase
+        const { data: departments, error: departmentsError } = prof.company_id
+          ? await supabase
             .from('departments')
-            .select('name')
-            .eq('id', prof.department_id)
-            .maybeSingle();
-          setDepartmentName(dept?.name ?? null);
-        } else {
+            .select('id, name, head_id')
+            .eq('company_id', prof.company_id)
+          : { data: [], error: null };
+        if (departmentsError) {
+          console.error('[AUTH] Error fetching assigned departments:', departmentsError);
           setDepartmentName(null);
+          setDepartmentNames([]);
+        } else {
+          const assignedDepartments = (departments ?? []).filter(department =>
+            department.id === prof.department_id || department.head_id === userId
+          );
+          const names = Array.from(new Set(assignedDepartments.map(department => department.name)));
+          setDepartmentNames(names);
+          setDepartmentName(names[0] ?? null);
         }
 
         if (prof.company_id) {
-          console.log('[AUTH] Fetching company for company_id:', prof.company_id);
           const { data: comp, error: compError } = await supabase
             .from('companies')
             .select('*')
             .eq('id', prof.company_id)
             .maybeSingle();
-
-          console.log('[AUTH] Company data:', comp);
-          console.log('[AUTH] Company error:', compError);
 
           if (compError) {
             console.error('[AUTH] Error fetching company:', compError);
@@ -97,11 +108,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .limit(1);
 
             if (!deptError && (!depts || depts.length === 0)) {
-              console.log('[AUTH] No departments found, syncing from configuration');
               try {
                 const { syncCompanyDepartments } = await import('@/lib/departments');
                 await syncCompanyDepartments(comp.id, comp.name);
-                console.log('[AUTH] Departments synced successfully');
               } catch (syncError) {
                 console.error('[AUTH] Department sync failed:', syncError);
               }
@@ -112,20 +121,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('[AUTH] Unexpected error in fetchProfile:', error);
     }
-  };
+  }, []);
 
-  const fetchRolesAndPermissions = async (userId: string) => {
+  const fetchRolesAndPermissions = useCallback(async (userId: string) => {
+    setPermissionsLoaded(false);
     try {
-      console.log('[AUTH] Fetching roles and permissions for user:', userId);
-      
       // Fetch user's roles from user_roles table (single source of truth)
       const { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
         .select('role_id, roles(*)')
         .eq('user_id', userId);
-
-      console.log('[AUTH] User roles query result:', userRoles);
-      console.log('[AUTH] User roles error:', userRolesError);
 
       if (userRolesError) {
         console.error('[AUTH] Error fetching user roles:', userRolesError);
@@ -136,28 +141,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Extract roles from the join
       const rolesList = userRoles?.map((ur: any) => ur.roles).filter(Boolean) || [];
-      console.log('[AUTH] Roles list:', rolesList);
       setRoles(rolesList);
 
       // If no roles, return early
       if (rolesList.length === 0) {
-        console.log('[AUTH] No roles found for user');
         setPermissions([]);
         return;
       }
 
       // Get role IDs
       const roleIds = rolesList.map((r: Role) => r.id);
-      console.log('[AUTH] Role IDs:', roleIds);
-
       // Fetch permissions for these roles from role_permissions
       const { data: rolePerms, error: rolePermsError } = await supabase
         .from('role_permissions')
         .select('permission_id')
         .in('role_id', roleIds);
-
-      console.log('[AUTH] Role permissions query result:', rolePerms);
-      console.log('[AUTH] Role permissions error:', rolePermsError);
 
       if (rolePermsError) {
         console.error('[AUTH] Error fetching role permissions:', rolePermsError);
@@ -167,10 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Get permission IDs
       const permissionIds = rolePerms?.map((rp: any) => rp.permission_id) || [];
-      console.log('[AUTH] Permission IDs:', permissionIds);
-
       if (permissionIds.length === 0) {
-        console.log('[AUTH] No permissions found for roles');
         setPermissions([]);
         return;
       }
@@ -180,9 +175,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('permissions')
         .select('*')
         .in('id', permissionIds);
-
-      console.log('[AUTH] Permissions query result:', permissions);
-      console.log('[AUTH] Permissions error:', permsError);
 
       if (permsError) {
         console.error('[AUTH] Error fetching permissions:', permsError);
@@ -195,15 +187,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('[AUTH] Unexpected error in fetchRolesAndPermissions:', error);
       setRoles([]);
       setPermissions([]);
+    } finally {
+      setPermissionsLoaded(true);
     }
-  };
+  }, []);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (user) {
       await fetchProfile(user.id);
       await fetchRolesAndPermissions(user.id);
     }
-  };
+  }, [user, fetchProfile, fetchRolesAndPermissions]);
 
   useEffect(() => {
     if (isInitialized.current) return;
@@ -250,6 +244,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setRoles([]);
           setPermissions([]);
           setDepartmentName(null);
+          setDepartmentNames([]);
+          setPermissionsLoaded(true);
         }
       })();
     });
@@ -258,7 +254,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile, fetchRolesAndPermissions]);
+
+  const activeRoleIds = roles.map(role => role.id).sort().join(',');
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const refreshAuthorization = () => {
+      void Promise.all([
+        fetchProfile(user.id),
+        fetchRolesAndPermissions(user.id),
+      ]);
+    };
+
+    let channel = supabase
+      .channel(`authorization:${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${user.id}`,
+      }, refreshAuthorization)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_roles',
+        filter: `user_id=eq.${user.id}`,
+      }, refreshAuthorization);
+
+    for (const roleId of activeRoleIds ? activeRoleIds.split(',') : []) {
+      channel = channel.on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'roles',
+        filter: `id=eq.${roleId}`,
+      }, refreshAuthorization);
+      channel = channel.on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'role_permissions',
+        filter: `role_id=eq.${roleId}`,
+      }, refreshAuthorization);
+    }
+
+    if (profile?.company_id) {
+      channel = channel.on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'departments',
+        filter: `company_id=eq.${profile.company_id}`,
+      }, refreshAuthorization);
+    }
+
+    channel = channel.subscribe(status => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error(`[AUTH] Authorization refresh subscription failed: ${status}`);
+      }
+    });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.id, profile?.company_id, activeRoleIds, fetchProfile, fetchRolesAndPermissions]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -287,126 +345,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     data: { firstName: string; lastName: string; companyName: string }
   ) => {
-    console.log('[SIGNUP] STEP 1: Starting signup process');
-    console.log('[SIGNUP] Email:', email);
-    console.log('[SIGNUP] Company Name:', data.companyName);
-
     const { data: authData, error } = await supabase.auth.signUp({ 
       email, 
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/login`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: {
+          first_name: data.firstName,
+          last_name: data.lastName,
+          company_name: data.companyName,
+        },
       }
     });
-
-    console.log('[SIGNUP] STEP 2: Auth signUp completed');
-    console.log('[SIGNUP] Auth error:', error);
-    console.log('[SIGNUP] Auth user:', authData.user);
-    console.log('[SIGNUP] Auth session:', authData.session);
-
-    if (error) {
-      console.error('[SIGNUP] Auth signUp failed:', error);
-      return { error: error as Error };
-    }
-
-    if (!authData.user) {
-      console.error('[SIGNUP] No user returned from signUp');
-      return { error: new Error('No user returned from signUp') };
-    }
-
-    console.log('[SIGNUP] STEP 3: Checking session after signUp');
-    const { data: { session } } = await supabase.auth.getSession();
-    console.log('[SIGNUP] Current session:', session);
-    console.log('[SIGNUP] Session user:', session?.user);
-    console.log('[SIGNUP] auth.uid() available:', !!session?.user);
-
-    console.log('[SIGNUP] STEP 4: Creating company');
-    const slug = data.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-') + '-' + Math.random().toString(36).slice(2, 6);
-    console.log('[SIGNUP] Company slug:', slug);
-
-    const { data: companyData, error: compError } = await supabase
-      .from('companies')
-      .insert({ name: data.companyName, slug, email, created_by: authData.user.id })
-      .select()
-      .single();
-
-    console.log('[SIGNUP] STEP 5: Company insert completed');
-    console.log('[SIGNUP] Company error:', compError);
-    console.log('[SIGNUP] Company error message:', compError?.message);
-    console.log('[SIGNUP] Company error details:', compError?.details);
-    console.log('[SIGNUP] Company error hint:', compError?.hint);
-    console.log('[SIGNUP] Company error code:', compError?.code);
-    console.log('[SIGNUP] Company data:', companyData);
-
-    if (compError) {
-      console.error('[SIGNUP] Company insert failed:', compError);
-      console.error('[SIGNUP] Full error details:', JSON.stringify(compError, null, 2));
-      return { error: compError as Error };
-    }
-
-    if (!companyData) {
-      console.error('[SIGNUP] No company data returned');
-      return { error: new Error('No company data returned') };
-    }
-
-    console.log('[SIGNUP] STEP 6: Creating profile');
-    const { data: profileData, error: profileError } = await supabase.from('profiles').upsert({
-      id: authData.user.id,
-      company_id: companyData.id,
+      if (error) return { error: error as Error };
+      if (!authData.user) return { error: new Error('No user returned from sign up') };
+      const accessToken = authData.session?.access_token;
+      if (!accessToken) return { error: null, requiresEmailVerification: true };
+    const result = await createCompanyAccount({
+      access_token: accessToken,
       first_name: data.firstName,
       last_name: data.lastName,
-      display_name: `${data.firstName} ${data.lastName}`,
-      email,
-      role: 'Company Admin',
-    }).select().single();
-
-    console.log('[SIGNUP] STEP 7: Profile upsert completed');
-    console.log('[SIGNUP] Profile error:', profileError);
-    console.log('[SIGNUP] Profile data:', profileData);
-
-    if (profileError) {
-      console.error('[SIGNUP] Profile upsert failed:', profileError);
-      return { error: profileError as Error };
-    }
-
-    console.log('[SIGNUP] STEP 8: Assigning Company Admin role via user_roles');
-    // Find the Company Admin role
-    const { data: companyAdminRole, error: roleError } = await supabase
-      .from('roles')
-      .select('id')
-      .eq('name', 'Company Admin')
-      .maybeSingle();
-
-    console.log('[SIGNUP] Company Admin role lookup:', companyAdminRole);
-    console.log('[SIGNUP] Role lookup error:', roleError);
-
-    if (companyAdminRole) {
-      const { error: userRoleError } = await supabase.from('user_roles').insert({
-        user_id: authData.user.id,
-        role_id: companyAdminRole.id,
-      });
-      console.log('[SIGNUP] user_roles insert error:', userRoleError);
-      if (userRoleError) {
-        console.error('[SIGNUP] Failed to assign user role:', userRoleError);
-        // Don't fail signup, but log the error
-      }
-    } else {
-      console.warn('[SIGNUP] Company Admin role not found in roles table');
-    }
-
-    console.log('[SIGNUP] STEP 9: Synchronizing departments');
-    // Sync departments from centralized configuration
-    try {
-      const { syncCompanyDepartments } = await import('@/lib/departments');
-      await syncCompanyDepartments(companyData.id, data.companyName);
-      console.log('[SIGNUP] Departments synchronized successfully');
-    } catch (syncError) {
-      console.error('[SIGNUP] Department synchronization failed:', syncError);
-      // Don't fail signup, but log the error
-    }
-
-    console.log('[SIGNUP] Signup completed successfully');
-    return { error: null };
+      company_name: data.companyName,
+    });
+    if (!result.success) return { error: new Error(result.error) };
+    await Promise.all([fetchProfile(authData.user.id), fetchRolesAndPermissions(authData.user.id)]);
+    return { error: null, requiresEmailVerification: false };
   };
 
   const signOut = async () => {
@@ -420,6 +383,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRoles([]);
     setPermissions([]);
     setDepartmentName(null);
+    setDepartmentNames([]);
     
     // Log logout event
     if (userId && companyId) {
@@ -429,12 +393,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Helper methods for RBAC
   const hasRole = (roleName: string): boolean => {
-    return roles.some(r => r.name === roleName);
+    return roles.some(role =>
+      normalizeRoleName(role.name) === normalizeRoleName(roleName)
+      || (isCompanyAdminRoleName(role.name) && isCompanyAdminRoleName(roleName))
+      || (isSuperAdminRoleName(role.name) && isSuperAdminRoleName(roleName))
+    );
   };
 
+  const accessLevel = resolveAccessLevel(roles);
   const hasPermission = (permission: string): boolean => {
     // Permission format: resource.action (e.g., dashboard.view, hr.employees.view)
-    return permissions.some(p => `${p.resource}.${p.action}` === permission);
+    return accessLevel === 'super_admin' || permissions.some(p => `${p.resource}.${p.action}` === permission);
   };
 
   const can = (resource: string, action: string): boolean => {
@@ -442,11 +411,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isSuperAdmin = (): boolean => {
-    return hasRole('Super Admin');
+    return accessLevel === 'super_admin';
   };
 
   const isCompanyAdmin = (): boolean => {
-    return hasRole('Company Admin') || isSuperAdmin();
+    return accessLevel === 'company_admin' || isSuperAdmin();
   };
 
   return (
@@ -458,6 +427,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       roles, 
       permissions,
       departmentName,
+      departmentNames,
+      permissionsLoaded,
+      accessLevel,
       loading,
       signIn, 
       signUp, 

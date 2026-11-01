@@ -39,10 +39,11 @@ const UNIVERSAL_MODULES = new Set(['dashboard', 'settings']);
  * is allowed to see. Returns null when the department is unknown or the user
  * should not be restricted (caller is expected to check admin status first).
  */
-export function getDepartmentModules(departmentName?: string): Set<string> | null {
-  if (!departmentName) return null;
-  const modules = DEPARTMENT_MODULE_ACCESS[departmentName];
-  if (!modules) return null;
+export function getDepartmentModules(departmentName?: string | string[]): Set<string> | null {
+  const departmentNames = Array.isArray(departmentName) ? departmentName : departmentName ? [departmentName] : [];
+  if (departmentNames.length === 0) return null;
+  const modules = departmentNames.flatMap(name => DEPARTMENT_MODULE_ACCESS[name] ?? []);
+  if (modules.length === 0) return null;
   return new Set([
     ...Array.from(modules),
     ...Array.from(UNIVERSAL_MODULES),
@@ -52,12 +53,11 @@ export function getDepartmentModules(departmentName?: string): Set<string> | nul
 /**
  * Returns true if the given module is accessible from the given department.
  */
-export function isModuleAllowed(module: string | undefined, departmentName?: string): boolean {
+export function isModuleAllowed(module: string | undefined, departmentName?: string | string[]): boolean {
   if (!module) return true;
   if (UNIVERSAL_MODULES.has(module)) return true;
-  const allowed = DEPARTMENT_MODULE_ACCESS[departmentName ?? ''];
-  if (!allowed) return false;
-  return allowed.includes(module);
+  const departmentNames = Array.isArray(departmentName) ? departmentName : departmentName ? [departmentName] : [];
+  return departmentNames.some(name => DEPARTMENT_MODULE_ACCESS[name]?.includes(module));
 }
 
 /**
@@ -102,7 +102,7 @@ export function getModuleFromPath(pathname: string): string | null {
 /**
  * Returns true if a user with the given department can access the given route.
  */
-export function isRouteAllowedForDepartment(pathname: string, departmentName?: string): boolean {
+export function isRouteAllowedForDepartment(pathname: string, departmentName?: string | string[]): boolean {
   const moduleId = getModuleFromPath(pathname);
   if (!moduleId) return true; // unknown routes are not department-restricted
   return isModuleAllowed(moduleId, departmentName);
@@ -120,6 +120,7 @@ const DEPARTMENT_LANDING_ROUTE: Record<string, string> = {
   'Sales & CRM': '/crm',
   'Manufacturing': '/manufacturing',
   'Internal Control': '/internal-control',
+  'Quality Assurance & Quality Control': '/quality',
 };
 
 /**

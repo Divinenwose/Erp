@@ -72,14 +72,15 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
   const [open, setOpen] = useState(false);
 
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
+  const isCompanyAdminUser = isCompanyAdmin();
   const isSuperAdminUser = isSuperAdmin();
 
   // Check if user has RBAC permission for this item
   const hasItemPermission = useMemo(() => {
-    if (isSuperAdminUser) return true;
+    if (isSuperAdminUser || (isCompanyAdminUser && item.href === '/dashboard')) return true;
     if (!item.permission) return true;
     return hasPermission(item.permission);
-  }, [item.permission, hasPermission, isSuperAdminUser]);
+  }, [item.href, item.permission, hasPermission, isSuperAdminUser, isCompanyAdminUser]);
 
   // Check if user's department allows this module
   const hasDepartmentAccess = useMemo(() => {

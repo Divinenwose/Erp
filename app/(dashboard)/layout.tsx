@@ -247,7 +247,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
 
       const requiredPermission = getRequiredPermission(pathname);
-      if (!isSuperAdmin() && (!requiredPermission || !hasPermission(requiredPermission))) {
+      const companyAdminDashboardAccess = isCompanyAdmin() && pathname === '/dashboard';
+      if (!isSuperAdmin() && !companyAdminDashboardAccess
+        && (!requiredPermission || !hasPermission(requiredPermission))) {
         router.replace('/unauthorized');
       }
     }

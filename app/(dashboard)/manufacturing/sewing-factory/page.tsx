@@ -1,14 +1,12 @@
 'use client';
 
-import ModulePlaceholder from '@/components/common/ModulePlaceholder';
-import { Scissors } from 'lucide-react';
+import FactoryWorkspace from '@/components/manufacturing/FactoryWorkspace';
 
 export default function SewingFactoryPage() {
   return (
-    <ModulePlaceholder 
-      moduleName="Sewing Factory"
-      description="Manage sewing factory operations and production."
-      icon={Scissors}
+    <FactoryWorkspace
+      title="Sewing Factory"
+      description="Monitor production runs and output for your sewing factory."
     />
   );
 }

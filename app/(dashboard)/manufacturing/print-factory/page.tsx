@@ -1,14 +1,12 @@
 'use client';
 
-import ModulePlaceholder from '@/components/common/ModulePlaceholder';
-import { Printer } from 'lucide-react';
+import FactoryWorkspace from '@/components/manufacturing/FactoryWorkspace';
 
 export default function PrintFactoryPage() {
   return (
-    <ModulePlaceholder 
-      moduleName="Print Factory"
-      description="Manage print factory operations and production."
-      icon={Printer}
+    <FactoryWorkspace
+      title="Print Factory"
+      description="Monitor production runs and output for your print factory."
     />
   );
 }

@@ -135,9 +135,12 @@ INSERT INTO permissions (resource, action, description) VALUES
 ON CONFLICT (resource, action) DO NOTHING;
 
 -- Create Manufacturing Manager role if it doesn't exist
-INSERT INTO roles (name, description, is_system_role, is_default)
-VALUES ('Manufacturing Manager', 'Manufacturing & Warehouse department manager with full access', false, false)
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO roles (name, description, is_system, company_id)
+SELECT 'Manufacturing Manager', 'Manufacturing & Warehouse department manager with full access', false, NULL
+WHERE NOT EXISTS (
+  SELECT 1 FROM roles
+  WHERE name = 'Manufacturing Manager' AND company_id IS NULL
+);
 
 -- Grant all Manufacturing permissions to Manufacturing Manager
 INSERT INTO role_permissions (role_id, permission_id)

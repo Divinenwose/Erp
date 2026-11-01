@@ -50,15 +50,16 @@ function isNavItemAccessible(
   item: NavItem,
   departmentNames: string[],
   hasPermission: (permission: string) => boolean,
-  isSuperAdmin: boolean
+  isSuperAdmin: boolean,
+  canAccessAllDepartments: boolean
 ): boolean {
-  if (!isSuperAdmin && !isModuleAllowed(item.module, departmentNames)) return false;
+  if (!canAccessAllDepartments && !isModuleAllowed(item.module, departmentNames)) return false;
 
   const ownPermissionOk = isSuperAdmin || !item.permission || hasPermission(item.permission);
 
   if (item.children && item.children.length > 0) {
     const hasAccessibleChild = item.children.some(child =>
-      isNavItemAccessible(child, departmentNames, hasPermission, isSuperAdmin)
+      isNavItemAccessible(child, departmentNames, hasPermission, isSuperAdmin, canAccessAllDepartments)
     );
     return ownPermissionOk || hasAccessibleChild;
   }
@@ -95,9 +96,9 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
   const visibleChildren = useMemo(() => {
     if (!item.children) return [];
     return item.children.filter(child =>
-      isNavItemAccessible(child, departmentNames, hasPermission, isSuperAdminUser)
+      isNavItemAccessible(child, departmentNames, hasPermission, isSuperAdminUser, isAdmin)
     );
-  }, [item.children, hasPermission, departmentNames, isSuperAdminUser]);
+  }, [item.children, hasPermission, departmentNames, isSuperAdminUser, isAdmin]);
 
   const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + '/') : false;
   const isParentActive = visibleChildren.some(

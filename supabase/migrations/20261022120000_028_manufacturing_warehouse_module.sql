@@ -265,7 +265,7 @@ CREATE TABLE IF NOT EXISTS quality_inspections (
 );
 
 -- Inspection Checklist Items
-CREATE TABLE IF NOT EXISTS inspection_checklist_items (
+CREATE TABLE IF NOT EXISTS manufacturing_inspection_checklist_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
   inspection_id UUID NOT NULL REFERENCES quality_inspections(id) ON DELETE CASCADE,
@@ -479,7 +479,7 @@ ALTER TABLE goods_receiving_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dispatch_shipments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dispatch_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quality_inspections ENABLE ROW LEVEL SECURITY;
-ALTER TABLE inspection_checklist_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE manufacturing_inspection_checklist_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE equipment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE equipment_maintenance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workforce_shifts ENABLE ROW LEVEL SECURITY;
@@ -550,8 +550,8 @@ DROP POLICY IF EXISTS quality_inspections_company_policy ON quality_inspections;
 CREATE POLICY quality_inspections_company_policy ON quality_inspections
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
-DROP POLICY IF EXISTS inspection_checklist_items_company_policy ON inspection_checklist_items;
-CREATE POLICY inspection_checklist_items_company_policy ON inspection_checklist_items
+DROP POLICY IF EXISTS manufacturing_inspection_checklist_items_company_policy ON manufacturing_inspection_checklist_items;
+CREATE POLICY manufacturing_inspection_checklist_items_company_policy ON manufacturing_inspection_checklist_items
   FOR ALL USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
 
 DROP POLICY IF EXISTS equipment_company_policy ON equipment;

@@ -10,10 +10,10 @@ import { NavItem, companyModules, navigationConfig, defaultNavigationConfig } fr
 export function getCompanyModules(companyName?: string | null): NavItem[] {
   if (!companyName) return [];
   
-  const normalizedName = companyName.toLowerCase();
+  const normalizedName = companyName.trim().toLowerCase();
   
   // Check if company has specific modules (e.g., targfit)
-  if (normalizedName === 'targfit') {
+  if (/^targfit(?:\s|$)/.test(normalizedName)) {
     return companyModules.targfit || [];
   }
   
@@ -30,12 +30,15 @@ export function getCompanyModules(companyName?: string | null): NavItem[] {
 export function getNavigationConfig(companyName?: string | null): NavItem[] {
   if (!companyName) return defaultNavigationConfig;
   
-  const normalizedName = companyName.toLowerCase();
+  const normalizedName = companyName.trim().toLowerCase();
   
   // Targfit gets full navigation + company-specific modules
-  if (normalizedName === 'targfit') {
+  if (/^targfit(?:\s|$)/.test(normalizedName)) {
     const companySpecificModules = getCompanyModules(companyName);
-    return [...navigationConfig, ...companySpecificModules];
+    const targfitNavigation = navigationConfig.filter(item =>
+      item.module !== 'client_marketing' && item.module !== 'client_servicing'
+    );
+    return [...targfitNavigation, ...companySpecificModules];
   }
   
   // All other companies get default navigation

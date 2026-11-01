@@ -76,7 +76,7 @@ export function getDepartmentsForCompany(companyName?: string): DepartmentConfig
     return DEFAULT_DEPARTMENTS;
   }
 
-  const isTargfit = companyName.toLowerCase() === 'targfit';
+  const isTargfit = /^targfit(?:\s|$)/i.test(companyName.trim());
   
   if (isTargfit) {
     return TARGFIT_DEPARTMENTS;
@@ -101,7 +101,7 @@ export function getAllDepartmentConfigs(): Record<string, DepartmentConfig[]> {
  */
 export function isTargfitCompany(companyName?: string): boolean {
   if (!companyName) return false;
-  return companyName.toLowerCase() === 'targfit';
+  return /^targfit(?:\s|$)/i.test(companyName.trim());
 }
 
 /**

@@ -78,34 +78,27 @@ export async function syncCompanyAdminPermissions(accessToken: string) {
 
     const { data: userRoles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
-      .select('roles(name, company_id)')
+      .select('role_id, roles(id, name, company_id)')
       .eq('user_id', authData.user.id);
     if (rolesError) {
       console.error('[AUTHORIZATION] Failed to verify login roles:', rolesError);
       return { success: false, error: 'Unable to verify your account role' };
     }
-    const isCompanyAdmin = (userRoles ?? []).some(row => {
-      const relatedRole = row.roles as { name?: string; company_id?: string | null } | null;
-      return relatedRole?.name
-        && isCompanyAdminRoleName(relatedRole.name)
-        && (relatedRole.company_id === null || relatedRole.company_id === profile.company_id);
+    const companyAdminRoleIds = (userRoles ?? []).flatMap(row => {
+      const relatedRole = row.roles as { id?: string; name?: string; company_id?: string | null } | null;
+      if (!relatedRole?.name
+        || !isCompanyAdminRoleName(relatedRole.name)
+        || (relatedRole.company_id !== null && relatedRole.company_id !== profile.company_id)) {
+        return [];
+      }
+      return [relatedRole.id ?? row.role_id];
     });
-    if (!isCompanyAdmin) return { success: true };
+    if (companyAdminRoleIds.length === 0) return { success: true };
 
-    const { data: adminRole, error: adminRoleError } = await supabaseAdmin
-      .from('roles')
-      .select('id')
-      .eq('name', 'Company Admin')
-      .is('company_id', null)
-      .limit(1)
-      .maybeSingle();
-    if (adminRoleError || !adminRole) {
-      console.error('[AUTHORIZATION] Company Admin role lookup failed:', adminRoleError);
-      return { success: false, error: 'The Company Admin role is not configured' };
+    for (const roleId of Array.from(new Set(companyAdminRoleIds))) {
+      const permissionError = await ensureCompanyAdminPermissions(roleId);
+      if (permissionError) return { success: false, error: permissionError };
     }
-
-    const permissionError = await ensureCompanyAdminPermissions(adminRole.id);
-    if (permissionError) return { success: false, error: permissionError };
     return { success: true };
   } catch (error) {
     console.error('[AUTHORIZATION] Unexpected login permission sync error:', error);

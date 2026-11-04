@@ -18,9 +18,9 @@ interface PermissionGuardProps {
  * </PermissionGuard>
  */
 export function PermissionGuard({ permission, children, fallback = null }: PermissionGuardProps) {
-  const { hasPermission, isSuperAdmin } = useAuth();
+  const { hasPermission, accessLevel } = useAuth();
 
-  if (isSuperAdmin()) {
+  if (accessLevel === 'super_admin' || accessLevel === 'company_super_admin') {
     return <>{children}</>;
   }
 
@@ -77,9 +77,9 @@ interface CanProps {
  * </Can>
  */
 export function Can({ resource, action, children, fallback = null }: CanProps) {
-  const { can, isSuperAdmin } = useAuth();
+  const { can, accessLevel } = useAuth();
 
-  if (isSuperAdmin()) {
+  if (accessLevel === 'super_admin' || accessLevel === 'company_super_admin') {
     return <>{children}</>;
   }
 

@@ -40,7 +40,7 @@ export default function FactoryWorkspace({ title, description }: FactoryWorkspac
 
       if (error) {
         console.error(`Error loading ${title.toLowerCase()} production runs:`, error);
-        toast.error('Failed to load production runs');
+        toast.error(`Failed to load production runs: ${error.message}`);
         setRuns([]);
       } else {
         setRuns(data ?? []);

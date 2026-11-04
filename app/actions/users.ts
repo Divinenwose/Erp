@@ -61,6 +61,26 @@ async function ensureCompanyAdminPermissions(roleId: string) {
   return null;
 }
 
+async function ensureCompanySuperAdminPermissions(roleId: string) {
+  const { data: permissions, error: permissionsError } = await supabaseAdmin
+    .from('permissions')
+    .select('id');
+  if (permissionsError) {
+    console.error('[AUTHORIZATION] Company Super Admin permission lookup failed:', permissionsError);
+    return 'Unable to load Super Admin permissions';
+  }
+
+  const { error: grantError } = await supabaseAdmin.from('role_permissions').upsert(
+    (permissions ?? []).map(permission => ({ role_id: roleId, permission_id: permission.id })),
+    { onConflict: 'role_id,permission_id', ignoreDuplicates: true }
+  );
+  if (grantError) {
+    console.error('[AUTHORIZATION] Company Super Admin permission assignment failed:', grantError);
+    return 'Unable to configure Super Admin permissions';
+  }
+  return null;
+}
+
 export async function syncCompanyAdminPermissions(accessToken: string) {
   try {
     if (!accessToken) return { success: false, error: 'Authentication is required' };
@@ -84,19 +104,23 @@ export async function syncCompanyAdminPermissions(accessToken: string) {
       console.error('[AUTHORIZATION] Failed to verify login roles:', rolesError);
       return { success: false, error: 'Unable to verify your account role' };
     }
-    const companyAdminRoleIds = (userRoles ?? []).flatMap(row => {
+    const adminRoles = (userRoles ?? []).flatMap(row => {
       const relatedRole = row.roles as { id?: string; name?: string; company_id?: string | null } | null;
-      if (!relatedRole?.name
-        || !isCompanyAdminRoleName(relatedRole.name)
-        || (relatedRole.company_id !== null && relatedRole.company_id !== profile.company_id)) {
-        return [];
+      if (!relatedRole?.name || (relatedRole.company_id !== null && relatedRole.company_id !== profile.company_id)) return [];
+      if (isSuperAdminRoleName(relatedRole.name) && relatedRole.company_id === profile.company_id) {
+        return [{ id: relatedRole.id ?? row.role_id, isCompanySuperAdmin: true }];
       }
-      return [relatedRole.id ?? row.role_id];
+      if (isCompanyAdminRoleName(relatedRole.name)) {
+        return [{ id: relatedRole.id ?? row.role_id, isCompanySuperAdmin: false }];
+      }
+      return [];
     });
-    if (companyAdminRoleIds.length === 0) return { success: true };
+    if (adminRoles.length === 0) return { success: true };
 
-    for (const roleId of Array.from(new Set(companyAdminRoleIds))) {
-      const permissionError = await ensureCompanyAdminPermissions(roleId);
+    for (const role of adminRoles) {
+      const permissionError = role.isCompanySuperAdmin
+        ? await ensureCompanySuperAdminPermissions(role.id)
+        : await ensureCompanyAdminPermissions(role.id);
       if (permissionError) return { success: false, error: permissionError };
     }
     return { success: true };
@@ -149,14 +173,23 @@ export async function createCompanyAccount(input: {
       if (companyCleanupError) console.error('[SIGNUP] Failed to clean up company:', companyCleanupError);
     };
 
-    const { data: adminRole, error: adminRoleError } = await supabaseAdmin
-      .from('roles').select('id').eq('name', 'Company Admin').is('company_id', null).maybeSingle();
-    if (adminRoleError || !adminRole) {
+    const { data: superAdminRole, error: superAdminRoleError } = await supabaseAdmin
+      .from('roles')
+      .insert({
+        company_id: company.id,
+        name: 'Super Admin',
+        description: 'Full access to this company',
+        is_system: true,
+      })
+      .select('id')
+      .single();
+    if (superAdminRoleError || !superAdminRole) {
+      console.error('[SIGNUP] Company Super Admin role creation failed:', superAdminRoleError);
       await supabaseAdmin.from('companies').delete().eq('id', company.id);
-      return { success: false, error: 'The Company Admin role is not configured' };
+      return { success: false, error: 'Unable to create the company Super Admin role' };
     }
 
-    const permissionError = await ensureCompanyAdminPermissions(adminRole.id);
+    const permissionError = await ensureCompanySuperAdminPermissions(superAdminRole.id);
     if (permissionError) {
       await supabaseAdmin.from('companies').delete().eq('id', company.id);
       return { success: false, error: permissionError };
@@ -169,7 +202,7 @@ export async function createCompanyAccount(input: {
       last_name: input.last_name,
       display_name: `${input.first_name} ${input.last_name}`,
       email: authData.user.email,
-      role: 'Company Admin',
+      role: 'Super Admin',
       is_active: true,
     });
     if (profileError) {
@@ -180,11 +213,11 @@ export async function createCompanyAccount(input: {
 
     const { error: assignmentError } = await supabaseAdmin.from('user_roles').insert({
       user_id: authData.user.id,
-      role_id: adminRole.id,
+      role_id: superAdminRole.id,
       assigned_by: authData.user.id,
     });
     if (assignmentError) {
-      console.error('[SIGNUP] Company Admin assignment failed:', assignmentError);
+      console.error('[SIGNUP] Company Super Admin assignment failed:', assignmentError);
       await cleanup();
       return { success: false, error: assignmentError.message };
     }
@@ -255,6 +288,7 @@ interface UpdateUserInput {
 interface ActorRoleRow {
   roles: {
     name: string;
+    company_id: string | null;
     is_system: boolean;
     role_permissions: Array<{
       permissions: { resource: string; action: string } | null;
@@ -278,7 +312,7 @@ async function authorizeUserManagement(accessToken: string, companyId: string, a
 
   const { data: roleData, error: rolesError } = await supabaseAdmin
     .from('user_roles')
-    .select('roles(name, is_system, role_permissions(permissions(resource, action)))')
+    .select('roles(name, company_id, is_system, role_permissions(permissions(resource, action)))')
     .eq('user_id', authData.user.id);
   if (rolesError) {
     console.error('[USER ADMIN] Failed to resolve caller permissions:', rolesError);
@@ -287,7 +321,11 @@ async function authorizeUserManagement(accessToken: string, companyId: string, a
 
   const roleRows = (roleData ?? []) as unknown as ActorRoleRow[];
   const actorRoles = roleRows.map(row => row.roles).filter((role): role is NonNullable<ActorRoleRow['roles']> => Boolean(role));
-  const isSuperAdmin = actorRoles.some(role => isSuperAdminRoleName(role.name));
+  const isSuperAdmin = actorRoles.some(role => isSuperAdminRoleName(role.name) && role.company_id == null);
+  const isCompanyAdmin = actorRoles.some(role =>
+    isCompanyAdminRoleName(role.name)
+    || (isSuperAdminRoleName(role.name) && role.company_id === companyId)
+  );
   const actorPermissions = new Set(actorRoles.flatMap(role =>
     role.role_permissions.flatMap(grant => grant.permissions
       ? [`${grant.permissions.resource}.${grant.permissions.action}`]
@@ -299,7 +337,6 @@ async function authorizeUserManagement(accessToken: string, companyId: string, a
   if (!isSuperAdmin && !hasPermission) {
     return { error: 'You do not have permission to manage users' as const };
   }
-  const isCompanyAdmin = actorRoles.some(role => isCompanyAdminRoleName(role.name));
   return { actorId: authData.user.id, isSuperAdmin, isCompanyAdmin, actorPermissions };
 }
 

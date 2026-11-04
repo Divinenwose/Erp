@@ -409,7 +409,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const accessLevel = resolveAccessLevel(roles);
+  const accessLevel = resolveAccessLevel(roles, company?.id);
   const hasPermission = (permission: string): boolean => {
     // Permission format: resource.action (e.g., dashboard.view, hr.employees.view)
     return accessLevel === 'super_admin' || permissions.some(p => `${p.resource}.${p.action}` === permission);
@@ -424,7 +424,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isCompanyAdmin = (): boolean => {
-    return accessLevel === 'company_admin' || isSuperAdmin();
+    return accessLevel === 'company_admin' || accessLevel === 'company_super_admin' || isSuperAdmin();
   };
 
   return (

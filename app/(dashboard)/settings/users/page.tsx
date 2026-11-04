@@ -70,8 +70,8 @@ export default function UsersSettingsPage() {
   const canAssignDepartmentHead = accessLevel === 'super_admin'
     || hasPermission('settings.departments.edit')
     || hasPermission('departments.manage');
-  const assignableRoles = roles.filter(role => accessLevel === 'super_admin'
-    || (!isSuperAdminRoleName(role.name) && !isCompanyAdminRoleName(role.name)));
+  const assignableRoles = roles.filter(role => !isCompanyAdminRoleName(role.name)
+    && (accessLevel === 'super_admin' || !isSuperAdminRoleName(role.name)));
 
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<UserForm>({
     resolver: zodResolver(userSchema),
@@ -92,7 +92,7 @@ export default function UsersSettingsPage() {
         .select('*, user_roles(role_id, roles(*)), departments(*), branches(*)')
         .eq('company_id', company.id)
         .order('created_at', { ascending: false }),
-      supabase.from('roles').select('*').or(`company_id.eq.${company.id},is_system.eq.true`),
+      supabase.from('roles').select('*').or(`company_id.eq.${company.id},and(company_id.is.null,is_system.eq.true)`),
       supabase.from('departments').select('*').eq('company_id', company.id),
       supabase.from('branches').select('*').eq('company_id', company.id),
     ]);

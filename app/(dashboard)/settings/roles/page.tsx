@@ -22,6 +22,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { isCompanyAdminRoleName, isSuperAdminRoleName } from '@/lib/rbac';
 
 const roleSchema = z.object({
   name: z.string().min(1, 'Required').min(2, 'Name must be at least 2 characters'),
@@ -77,7 +78,7 @@ export default function RolesSettingsPage() {
       const rolesRes = await supabase
         .from('roles')
         .select('*, user_roles(user_id), role_permissions(permission_id)')
-        .or(`company_id.eq.${company.id},is_system.eq.true`)
+        .or(`company_id.eq.${company.id},and(company_id.is.null,is_system.eq.true)`)
         .order('name');
 
       console.log('[Roles Page] Roles query result:', rolesRes);
@@ -85,7 +86,7 @@ export default function RolesSettingsPage() {
       console.log('[Roles Page] Roles data:', rolesRes.data);
       console.log('[Roles Page] Roles error:', rolesRes.error);
 
-      const rolesWithCounts = (rolesRes.data ?? []).map((r: any) => ({
+      const rolesWithCounts = (rolesRes.data ?? []).filter((r: Role) => !isCompanyAdminRoleName(r.name)).map((r: any) => ({
         ...r,
         user_count: r.user_roles?.length || 0,
         permission_count: r.role_permissions?.length || 0,
@@ -123,6 +124,11 @@ export default function RolesSettingsPage() {
 
   const onSubmit = async (data: RoleForm) => {
     if (!company?.id) return;
+
+    if (isCompanyAdminRoleName(data.name) || isSuperAdminRoleName(data.name)) {
+      toast.error('Administrator role names are reserved');
+      return;
+    }
 
     if (editRole) {
       if (editRole.is_system) {

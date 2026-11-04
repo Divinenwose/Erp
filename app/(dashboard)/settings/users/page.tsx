@@ -42,7 +42,6 @@ const userSchema = z.object({
 });
 type UserForm = z.infer<typeof userSchema>;
 type UserWithRelations = Profile & {
-  user_roles?: Array<{ roles: Role | null }>;
   departments?: Department;
   branches?: Branch;
 };
@@ -89,7 +88,7 @@ export default function UsersSettingsPage() {
     const [usersRes, rolesRes, deptRes, branchRes] = await Promise.all([
       supabase
         .from('profiles')
-        .select('*, user_roles(role_id, roles(*)), departments(*), branches(*)')
+        .select('*, departments(*), branches(*)')
         .eq('company_id', company.id)
         .order('created_at', { ascending: false }),
       supabase.from('roles').select('*').or(`company_id.eq.${company.id},and(company_id.is.null,is_system.eq.true)`),
@@ -111,11 +110,30 @@ export default function UsersSettingsPage() {
       return;
     }
 
+    const userIds = (usersRes.data ?? []).map(profile => profile.id);
+    const userRolesRes = userIds.length > 0
+      ? await supabase.from('user_roles').select('user_id, roles(*)').in('user_id', userIds)
+      : { data: [], error: null };
+
+    if (userRolesRes.error) {
+      console.error('[Users Page] Failed to load user roles:', userRolesRes.error);
+      toast.error(`Unable to load user roles: ${userRolesRes.error.message}`);
+      setLoading(false);
+      return;
+    }
+
+    const rolesByUser = new Map<string, Role[]>();
+    for (const assignment of userRolesRes.data ?? []) {
+      const role = assignment.roles as unknown as Role | null;
+      if (!role) continue;
+      rolesByUser.set(assignment.user_id, [...(rolesByUser.get(assignment.user_id) ?? []), role]);
+    }
+
     const usersWithRoles = (usersRes.data ?? []).map(row => {
       const userRow = row as unknown as UserWithRelations;
       return {
         ...userRow,
-        roles: (userRow.user_roles ?? []).map(userRole => userRole.roles).filter((role): role is Role => Boolean(role)),
+        roles: rolesByUser.get(userRow.id) ?? [],
       };
     });
 

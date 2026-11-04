@@ -93,7 +93,7 @@ export default function UsersSettingsPage() {
         .eq('company_id', company.id)
         .order('created_at', { ascending: false }),
       supabase.from('roles').select('*').or(`company_id.eq.${company.id},and(company_id.is.null,is_system.eq.true)`),
-      supabase.from('departments').select('*').eq('company_id', company.id),
+      supabase.from('departments').select('*').eq('company_id', company.id).eq('is_active', true),
       supabase.from('branches').select('*').eq('company_id', company.id),
     ]);
 

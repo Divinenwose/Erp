@@ -36,7 +36,9 @@ export function getNavigationConfig(companyName?: string | null): NavItem[] {
   if (/^targfit(?:\s|$)/.test(normalizedName)) {
     const companySpecificModules = getCompanyModules(companyName);
     const targfitNavigation = navigationConfig.filter(item =>
-      item.module !== 'client_marketing' && item.module !== 'client_servicing'
+      item.module !== 'client_marketing'
+      && item.module !== 'client_servicing'
+      && item.module !== 'graphics'
     );
     return [...targfitNavigation, ...companySpecificModules];
   }

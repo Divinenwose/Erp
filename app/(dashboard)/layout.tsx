@@ -229,9 +229,10 @@ function getRequiredPermission(pathname: string): string | null {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, hasPermission, isSuperAdmin, isCompanyAdmin, permissionsLoaded, departmentNames } = useAuth();
+  const { user, loading, hasPermission, isSuperAdmin, isCompanyAdmin, accessLevel, permissionsLoaded, departmentNames } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const canAccessAllCompanyPages = accessLevel === 'super_admin' || accessLevel === 'company_super_admin';
 
   useEffect(() => {
     if (!loading && !user) {
@@ -248,12 +249,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       const requiredPermission = getRequiredPermission(pathname);
       const companyAdminDashboardAccess = isCompanyAdmin() && pathname === '/dashboard';
-      if (!isSuperAdmin() && !companyAdminDashboardAccess
+      if (!canAccessAllCompanyPages && !companyAdminDashboardAccess
         && (!requiredPermission || !hasPermission(requiredPermission))) {
         router.replace('/unauthorized');
       }
     }
-  }, [user, loading, router, pathname, hasPermission, isSuperAdmin, isCompanyAdmin, permissionsLoaded, departmentNames]);
+  }, [user, loading, router, pathname, hasPermission, isSuperAdmin, isCompanyAdmin, canAccessAllCompanyPages, permissionsLoaded, departmentNames]);
 
   if (loading) {
     return (

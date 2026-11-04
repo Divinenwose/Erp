@@ -10,7 +10,7 @@
  * - Any department initialization: Import from this file
  * 
  * Departments are organized by company type:
- * - Targfit: Full department set (17 departments)
+ * - Targfit: Company-specific department set
  * - Default: Standard department set (6 departments)
  */
 
@@ -30,7 +30,7 @@ export interface DepartmentConfig {
 
 /**
  * Targfit-specific departments
- * Full department set for Targfit company
+ * Department set for Targfit company
  */
 const TARGFIT_DEPARTMENTS: DepartmentConfig[] = [
   { name: 'Human Resources', code: 'HR', budget: 90000 },
@@ -41,7 +41,6 @@ const TARGFIT_DEPARTMENTS: DepartmentConfig[] = [
   { name: 'Client Servicing', code: 'CS', budget: 80000 },
   { name: 'Client Marketing', code: 'CM', budget: 70000 },
   { name: 'Legal', code: 'LEG', budget: 60000 },
-  { name: 'Graphics', code: 'GRX', budget: 50000 },
   { name: 'Administration', code: 'ADM', budget: 110000 },
   { name: 'Operations', code: 'OPS', budget: 200000 },
   { name: 'Logistics', code: 'LOG', budget: 130000 },

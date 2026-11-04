@@ -97,10 +97,16 @@ export default function UsersSettingsPage() {
       supabase.from('branches').select('*').eq('company_id', company.id),
     ]);
 
-    const queryErrors = [usersRes.error, rolesRes.error, deptRes.error, branchRes.error].filter(Boolean);
+    const queryErrors = [
+      { query: 'users', error: usersRes.error },
+      { query: 'roles', error: rolesRes.error },
+      { query: 'departments', error: deptRes.error },
+      { query: 'branches', error: branchRes.error },
+    ].filter(result => result.error);
     if (queryErrors.length) {
       console.error('[Users Page] Failed to load user-management data:', queryErrors);
-      toast.error('Unable to load user-management data');
+      const firstError = queryErrors[0];
+      toast.error(`Unable to load ${firstError.query}: ${firstError.error?.message ?? 'Unknown database error'}`);
       setLoading(false);
       return;
     }

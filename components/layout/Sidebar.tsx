@@ -50,16 +50,16 @@ function isNavItemAccessible(
   item: NavItem,
   departmentNames: string[],
   hasPermission: (permission: string) => boolean,
-  isSuperAdmin: boolean,
+  canBypassPermissions: boolean,
   canAccessAllDepartments: boolean
 ): boolean {
   if (!canAccessAllDepartments && !isModuleAllowed(item.module, departmentNames)) return false;
 
-  const ownPermissionOk = isSuperAdmin || !item.permission || hasPermission(item.permission);
+  const ownPermissionOk = canBypassPermissions || !item.permission || hasPermission(item.permission);
 
   if (item.children && item.children.length > 0) {
     const hasAccessibleChild = item.children.some(child =>
-      isNavItemAccessible(child, departmentNames, hasPermission, isSuperAdmin, canAccessAllDepartments)
+      isNavItemAccessible(child, departmentNames, hasPermission, canBypassPermissions, canAccessAllDepartments)
     );
     return ownPermissionOk || hasAccessibleChild;
   }
@@ -69,19 +69,19 @@ function isNavItemAccessible(
 
 function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmentNames }: { item: NavItem; collapsed: boolean; depth?: number; onMobileClose?: () => void; departmentNames: string[] }) {
   const pathname = usePathname();
-  const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const { hasPermission, isSuperAdmin, isCompanyAdmin, accessLevel } = useAuth();
   const [open, setOpen] = useState(false);
 
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
   const isCompanyAdminUser = isCompanyAdmin();
-  const isSuperAdminUser = isSuperAdmin();
+  const canBypassNavPermissions = accessLevel === 'super_admin' || accessLevel === 'company_super_admin';
 
   // Check if user has RBAC permission for this item
   const hasItemPermission = useMemo(() => {
-    if (isSuperAdminUser || (isCompanyAdminUser && item.href === '/dashboard')) return true;
+    if (canBypassNavPermissions || (isCompanyAdminUser && item.href === '/dashboard')) return true;
     if (!item.permission) return true;
     return hasPermission(item.permission);
-  }, [item.href, item.permission, hasPermission, isSuperAdminUser, isCompanyAdminUser]);
+  }, [item.href, item.permission, hasPermission, canBypassNavPermissions, isCompanyAdminUser]);
 
   // Check if user's department allows this module
   const hasDepartmentAccess = useMemo(() => {
@@ -96,9 +96,9 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
   const visibleChildren = useMemo(() => {
     if (!item.children) return [];
     return item.children.filter(child =>
-      isNavItemAccessible(child, departmentNames, hasPermission, isSuperAdminUser, isAdmin)
+      isNavItemAccessible(child, departmentNames, hasPermission, canBypassNavPermissions, isAdmin)
     );
-  }, [item.children, hasPermission, departmentNames, isSuperAdminUser, isAdmin]);
+  }, [item.children, hasPermission, departmentNames, canBypassNavPermissions, isAdmin]);
 
   const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + '/') : false;
   const isParentActive = visibleChildren.some(

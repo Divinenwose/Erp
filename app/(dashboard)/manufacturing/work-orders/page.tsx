@@ -76,7 +76,7 @@ export default function WorkOrdersPage() {
         .order('created_at', { ascending: false }),
       supabase.from('products').select('id, name').eq('company_id', company.id),
       supabase.from('production_schedules').select('id, schedule_name').eq('company_id', company.id),
-      supabase.from('employees').select('id, first_name, last_name').eq('company_id', company.id),
+      supabase.from('employee_directory').select('id, first_name, last_name').eq('company_id', company.id),
     ]);
 
     if (woRes.error) {

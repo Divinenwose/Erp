@@ -59,7 +59,7 @@ export default function PipelinePage() {
     const [oppRes, custRes, empRes] = await Promise.all([
       supabase.from('opportunities').select('*, customers(name), employees(full_name)').eq('company_id', company.id).order('created_at', { ascending: false }),
       supabase.from('customers').select('id, name').eq('company_id', company.id),
-      supabase.from('employees').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
+      supabase.from('employee_directory').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
     ]);
     setOpps(oppRes.data ?? []);
     setCustomers(custRes.data ?? []);

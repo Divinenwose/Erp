@@ -70,7 +70,7 @@ export default function LeadsPage() {
     if (!company?.id) return;
     const [leadRes, empRes, campRes] = await Promise.all([
       supabase.from('leads').select('*, employees(full_name), marketing_campaigns(name)').eq('company_id', company.id).order('created_at', { ascending: false }),
-      supabase.from('employees').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
+      supabase.from('employee_directory').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
       supabase.from('marketing_campaigns').select('id, name').eq('company_id', company.id).eq('status', 'active'),
     ]);
     setLeads(leadRes.data ?? []);

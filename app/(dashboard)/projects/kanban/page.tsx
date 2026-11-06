@@ -64,11 +64,15 @@ export default function KanbanPage() {
     const [taskRes, projRes, empRes] = await Promise.all([
       supabase.from('tasks').select('*, projects(name), employees(first_name, last_name)').eq('company_id', company.id).order('created_at', { ascending: false }),
       supabase.from('projects').select('id, name').eq('company_id', company.id),
-      supabase.from('employees').select('id, first_name, last_name').eq('company_id', company.id).eq('employment_status', 'active'),
+      supabase.from('employee_directory').select('id, first_name, last_name').eq('company_id', company.id).eq('employment_status', 'active'),
     ]);
-    setTasks(taskRes.data ?? []);
+    const employeeRows = empRes.data ?? [];
+    setTasks((taskRes.data ?? []).map(task => ({
+      ...task,
+      employees: employeeRows.find(employee => employee.id === task.assigned_to) ?? null,
+    })));
     setProjects(projRes.data ?? []);
-    setEmployees(empRes.data ?? []);
+    setEmployees(employeeRows);
     setLoading(false);
   };
 

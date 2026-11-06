@@ -111,6 +111,7 @@ const routePermissions: Record<string, string> = {
   '/settings': 'settings.view',
   '/settings/company': 'settings.company.edit',
   '/settings/users': 'settings.users.view',
+  '/settings/access-requests': 'hr.access_requests.view',
   '/settings/roles': 'roles.view',
   '/settings/permissions': 'permissions.view',
   '/settings/departments': 'settings.departments.view',

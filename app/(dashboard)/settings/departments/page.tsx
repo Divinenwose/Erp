@@ -49,7 +49,7 @@ export default function DepartmentsPage() {
 
     const [deptRes, empRes] = await Promise.all([
       supabase.from('departments').select('*').eq('company_id', company.id).order('name'),
-      supabase.from('employees').select('department_id').eq('company_id', company.id),
+      supabase.from('employee_directory').select('department_id').eq('company_id', company.id),
     ]);
 
     const deptsWithCounts = (deptRes.data ?? []).map((dept: Department) => ({

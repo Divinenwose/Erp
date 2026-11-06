@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { supabase, Profile, Role, Department, Branch } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { logRoleChange, logAuditEvent } from '@/lib/audit';
 import { Can } from '@/components/rbac/PermissionGuard';
 import PageHeader from '@/components/common/PageHeader';
-import { assignUsersRoles, createUser, sendUserPasswordReset, updateUser, updateUsersStatus } from '@/app/actions/users';
+import { assignUsersRoles, sendUserPasswordReset, updateUser, updateUsersStatus } from '@/app/actions/users';
 import KPICard from '@/components/common/KPICard';
 import StatusBadge from '@/components/common/StatusBadge';
 import DataTable, { Column } from '@/components/common/DataTable';
@@ -14,7 +15,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -192,28 +193,8 @@ export default function UsersSettingsPage() {
 
       toast.success('User updated');
     } else {
-      // Create new user using Server Action
-      const result = await createUser({
-        access_token: accessToken,
-        email: data.email,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        phone: data.phone,
-        job_title: data.job_title,
-        department_id: data.department_id,
-        branch_id: data.branch_id,
-        role_ids: data.role_ids,
-        company_id: company.id,
-        create_employee_record: data.create_employee_record,
-        assign_as_department_head: data.assign_as_department_head,
-      });
-
-      if (!result.success) {
-        toast.error(result.error || 'Failed to create user');
-        return;
-      }
-
-      toast.success(result.message || 'User created successfully');
+      toast.error('Create employee records in HR and approve access requests to invite accounts.');
+      return;
     }
 
     reset();
@@ -409,6 +390,9 @@ export default function UsersSettingsPage() {
         breadcrumbs={[{ label: 'Settings' }, { label: 'Users' }]}
       >
         <Can resource="settings.users" action="create">
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700" asChild>
+            <Link href="/settings/access-requests"><Plus className="h-4 w-4 mr-2" />Review Access Requests</Link>
+          </Button>
           <Dialog open={dialogOpen} onOpenChange={open => {
             if (open && !editUser) {
               reset({ role_ids: [], create_employee_record: true });
@@ -419,11 +403,6 @@ export default function UsersSettingsPage() {
             }
             setDialogOpen(open);
           }}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" />Add User
-              </Button>
-            </DialogTrigger>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editUser ? 'Edit User' : 'Add New User'}</DialogTitle>

@@ -69,7 +69,7 @@ export default function MaintenancePage() {
         .eq('company_id', company.id)
         .order('created_at', { ascending: false }),
       supabase.from('equipment').select('id, equipment_name').eq('company_id', company.id),
-      supabase.from('employees').select('id, first_name, last_name').eq('company_id', company.id),
+      supabase.from('employee_directory').select('id, first_name, last_name').eq('company_id', company.id),
     ]);
 
     if (maintRes.error) {

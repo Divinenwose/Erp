@@ -17,50 +17,6 @@ function isElevatedAdminRole(roleName: string): boolean {
   return isSuperAdminRoleName(roleName) || isCompanyAdminRoleName(roleName);
 }
 
-const restrictedCompanyAdminResources = new Set([
-  'hr.payroll',
-  'finance.ledger',
-  'finance.payables',
-  'finance.receivables',
-  'finance.invoices',
-  'finance.bank_accounts',
-  'finance.bank_reconciliation',
-  'finance.tax_compliance',
-  'finance.financial_statements',
-  'audit_logs',
-  'settings.security',
-  'settings.billing',
-  'roles',
-  'permissions',
-  'it.security',
-  'internal_control.fraud',
-  'internal_control.incidents',
-]);
-
-async function ensureCompanyAdminPermissions(roleId: string) {
-  const { data: permissions, error: permissionsError } = await supabaseAdmin
-    .from('permissions')
-    .select('id, resource, action')
-    .or('action.eq.view,and(resource.eq.settings.users,action.in.(create,edit))');
-  if (permissionsError) {
-    console.error('[AUTHORIZATION] Company Admin permission lookup failed:', permissionsError);
-    return 'Unable to load Company Admin permissions';
-  }
-
-  const requiredGrants = (permissions ?? []).filter(permission =>
-    !restrictedCompanyAdminResources.has(permission.resource)
-  );
-  const { error: grantError } = await supabaseAdmin.from('role_permissions').upsert(
-    requiredGrants.map(permission => ({ role_id: roleId, permission_id: permission.id })),
-    { onConflict: 'role_id,permission_id', ignoreDuplicates: true }
-  );
-  if (grantError) {
-    console.error('[AUTHORIZATION] Company Admin permission assignment failed:', grantError);
-    return 'Unable to configure Company Admin permissions';
-  }
-  return null;
-}
-
 async function ensureCompanySuperAdminPermissions(roleId: string) {
   const { data: permissions, error: permissionsError } = await supabaseAdmin
     .from('permissions')
@@ -81,7 +37,7 @@ async function ensureCompanySuperAdminPermissions(roleId: string) {
   return null;
 }
 
-export async function syncCompanyAdminPermissions(accessToken: string) {
+export async function syncSuperAdminPermissions(accessToken: string) {
   try {
     if (!accessToken) return { success: false, error: 'Authentication is required' };
     const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
@@ -104,29 +60,24 @@ export async function syncCompanyAdminPermissions(accessToken: string) {
       console.error('[AUTHORIZATION] Failed to verify login roles:', rolesError);
       return { success: false, error: 'Unable to verify your account role' };
     }
-    const adminRoles = (userRoles ?? []).flatMap(row => {
+    const superAdminRoles = (userRoles ?? []).flatMap(row => {
       const relatedRole = row.roles as { id?: string; name?: string; company_id?: string | null } | null;
       if (!relatedRole?.name || (relatedRole.company_id !== null && relatedRole.company_id !== profile.company_id)) return [];
       if (isSuperAdminRoleName(relatedRole.name) && relatedRole.company_id === profile.company_id) {
-        return [{ id: relatedRole.id ?? row.role_id, isCompanySuperAdmin: true }];
-      }
-      if (isCompanyAdminRoleName(relatedRole.name)) {
-        return [{ id: relatedRole.id ?? row.role_id, isCompanySuperAdmin: false }];
+        return [relatedRole.id ?? row.role_id];
       }
       return [];
     });
-    if (adminRoles.length === 0) return { success: true };
+    if (superAdminRoles.length === 0) return { success: true };
 
-    for (const role of adminRoles) {
-      const permissionError = role.isCompanySuperAdmin
-        ? await ensureCompanySuperAdminPermissions(role.id)
-        : await ensureCompanyAdminPermissions(role.id);
+    for (const roleId of superAdminRoles) {
+      const permissionError = await ensureCompanySuperAdminPermissions(roleId);
       if (permissionError) return { success: false, error: permissionError };
     }
     return { success: true };
   } catch (error) {
     console.error('[AUTHORIZATION] Unexpected login permission sync error:', error);
-    return { success: false, error: 'Unable to configure your company administrator access' };
+    return { success: false, error: 'Unable to configure your Super Admin access' };
   }
 }
 
@@ -323,19 +274,15 @@ async function authorizeUserManagement(accessToken: string, companyId: string, a
   const actorRoles = roleRows.map(row => row.roles).filter((role): role is NonNullable<ActorRoleRow['roles']> => Boolean(role));
   const isSuperAdmin = actorRoles.some(role => isSuperAdminRoleName(role.name) && role.company_id == null);
   const isCompanyAdmin = actorRoles.some(role =>
-    isCompanyAdminRoleName(role.name)
-    || (isSuperAdminRoleName(role.name) && role.company_id === companyId)
+    isSuperAdminRoleName(role.name) && role.company_id === companyId
   );
   const actorPermissions = new Set(actorRoles.flatMap(role =>
     role.role_permissions.flatMap(grant => grant.permissions
       ? [`${grant.permissions.resource}.${grant.permissions.action}`]
       : [])
   ));
-  const hasPermission = actorRoles.some(role => role.role_permissions.some(grant =>
-    grant.permissions?.resource === 'settings.users' && grant.permissions.action === action
-  ));
-  if (!isSuperAdmin && !hasPermission) {
-    return { error: 'You do not have permission to manage users' as const };
+  if (!isSuperAdmin && !isCompanyAdmin) {
+    return { error: `Only a Super Admin can ${action === 'create' ? 'invite' : 'manage'} user accounts` as const };
   }
   return { actorId: authData.user.id, isSuperAdmin, isCompanyAdmin, actorPermissions };
 }
@@ -390,138 +337,11 @@ async function validateRoleAssignments(
  * This runs on the server with service role key for security
  */
 export async function createUser(input: CreateUserInput) {
-  try {
-    const authorization = await authorizeUserManagement(input.access_token, input.company_id, 'create');
-    if ('error' in authorization) return { success: false, error: authorization.error };
-    const assignmentError = await validateCompanyAssignments(input.company_id, input.department_id, input.branch_id);
-    if (assignmentError) return { success: false, error: assignmentError };
-    const roleError = await validateRoleAssignments(input.company_id, input.role_ids, authorization);
-    if (roleError) return { success: false, error: roleError };
-    if (input.assign_as_department_head
-      && !authorization.isSuperAdmin
-      && !authorization.actorPermissions.has('settings.departments.edit')
-      && !authorization.actorPermissions.has('departments.manage')) {
-      return { success: false, error: 'You do not have permission to assign department heads' };
-    }
-    if (input.assign_as_department_head && !input.department_id) {
-      return { success: false, error: 'Choose a department before assigning a department head' };
-    }
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-      input.email,
-      {
-        data: { first_name: input.first_name, last_name: input.last_name },
-        redirectTo: `${appUrl}/auth/callback`,
-      }
-    );
-    if (inviteError || !inviteData.user) {
-      console.error('[USER ADMIN] Invitation failed:', inviteError);
-      return { success: false, error: inviteError?.message || 'Unable to invite user' };
-    }
-    const newUserId = inviteData.user.id;
-
-    const rollback = async () => {
-      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(newUserId);
-      if (deleteError) console.error('[USER ADMIN] Failed to roll back invited account:', deleteError);
-    };
-
-    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
-      id: newUserId,
-      company_id: input.company_id,
-      first_name: input.first_name,
-      last_name: input.last_name,
-      display_name: `${input.first_name} ${input.last_name}`,
-      email: input.email,
-      phone: input.phone,
-      job_title: input.job_title,
-      department_id: input.department_id,
-      branch_id: input.branch_id,
-      is_active: true,
-    });
-    if (profileError) {
-      console.error('[USER ADMIN] Profile creation failed:', profileError);
-      await rollback();
-      return { success: false, error: `Failed to create profile: ${profileError.message}` };
-    }
-
-    if (input.role_ids.length > 0) {
-      const { error } = await supabaseAdmin.from('user_roles').insert(input.role_ids.map(roleId => ({
-        user_id: newUserId,
-        role_id: roleId,
-        assigned_by: authorization.actorId,
-      })));
-      if (error) {
-        console.error('[USER ADMIN] Role assignment failed:', error);
-        await supabaseAdmin.from('profiles').delete().eq('id', newUserId);
-        await rollback();
-        return { success: false, error: `Failed to assign roles: ${error.message}` };
-      }
-    }
-
-    if (input.create_employee_record) {
-      const { error } = await supabaseAdmin.from('employees').insert({
-        company_id: input.company_id,
-        user_id: newUserId,
-        employee_number: `EMP-${Date.now()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`,
-        first_name: input.first_name,
-        last_name: input.last_name,
-        email: input.email,
-        phone: input.phone,
-        job_title: input.job_title,
-        department_id: input.department_id,
-        branch_id: input.branch_id,
-        employment_type: 'full_time',
-        employment_status: 'active',
-        hire_date: new Date().toISOString().slice(0, 10),
-      });
-      if (error) {
-        console.error('[USER ADMIN] Employee record creation failed:', error);
-        await supabaseAdmin.from('user_roles').delete().eq('user_id', newUserId);
-        await supabaseAdmin.from('profiles').delete().eq('id', newUserId);
-        await rollback();
-        return { success: false, error: `Failed to create employee record: ${error.message}` };
-      }
-    }
-
-    if (input.assign_as_department_head && input.department_id) {
-      const { error } = await supabaseAdmin.from('departments')
-        .update({ head_id: newUserId })
-        .eq('id', input.department_id)
-        .eq('company_id', input.company_id);
-      if (error) {
-        console.error('[USER ADMIN] Department head assignment failed:', error);
-        await supabaseAdmin.from('employees').delete().eq('user_id', newUserId);
-        await supabaseAdmin.from('user_roles').delete().eq('user_id', newUserId);
-        await supabaseAdmin.from('profiles').delete().eq('id', newUserId);
-        await rollback();
-        return { success: false, error: `Failed to assign department head: ${error.message}` };
-      }
-    }
-
-    const { error: auditError } = await supabaseAdmin.from('audit_logs').insert({
-      company_id: input.company_id,
-      user_id: authorization.actorId,
-      action: 'user_created',
-      module: 'users',
-      record_id: newUserId,
-      new_values: { roles: input.role_ids, department_id: input.department_id ?? null },
-    });
-    if (auditError) console.error('[USER ADMIN] User created but audit logging failed:', auditError);
-
-    for (const path of ['/settings/users', '/hr/employees', '/dashboard']) revalidatePath(path);
-    return {
-      success: true,
-      userId: newUserId,
-      message: auditError
-        ? 'User invited and created, but the audit log could not be recorded.'
-        : 'User created successfully. Invitation sent.',
-    };
-
-  } catch (error) {
-    console.error('[SERVER ACTION] Unexpected error:', error);
-    return { success: false, error: 'An unexpected error occurred' };
-  }
+  void input;
+  return {
+    success: false,
+    error: 'Create the employee record in HR, then approve an employee access request to send an account invitation.',
+  };
 }
 
 /**

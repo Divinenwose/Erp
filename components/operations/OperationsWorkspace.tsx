@@ -155,7 +155,7 @@ export default function OperationsWorkspace({ section = 'overview' }: { section?
       supabase.from('purchase_orders').select('*, vendors(name)').eq('company_id', company.id).order('created_at', { ascending: false }),
       supabase.from('deliveries').select('*, vendors(name), purchase_orders!deliveries_po_id_fkey(po_number)').eq('company_id', company.id).order('created_at', { ascending: false }),
       supabase.from('vendors').select('id, name, category, status, rating, total_orders, total_spend').eq('company_id', company.id).order('name'),
-      supabase.from('employees').select('id, user_id, first_name, last_name, employee_number, department_id, employment_status').eq('company_id', company.id).order('first_name'),
+      supabase.from('employee_directory').select('id, user_id, first_name, last_name, employee_number, department_id, employment_status').eq('company_id', company.id).order('first_name'),
       supabase.from('attendance_records').select('*, profiles(display_name, first_name, last_name, email), departments(name)').eq('company_id', company.id).order('attendance_date', { ascending: false }).limit(500),
       supabase.from('office_inspections').select('*').eq('company_id', company.id).order('inspection_date', { ascending: false }),
       supabase.from('inspection_checklist_items').select('*').order('created_at', { ascending: false }),

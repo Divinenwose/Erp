@@ -84,7 +84,7 @@ export default function ActivitiesPage() {
       supabase.from('leads').select('id, first_name, last_name').eq('company_id', company.id).eq('status', 'in').neq('status', 'converted'),
       supabase.from('opportunities').select('id, title').eq('company_id', company.id).eq('status', 'open'),
       supabase.from('customers').select('id, name').eq('company_id', company.id),
-      supabase.from('employees').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
+      supabase.from('employee_directory').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
     ]);
     setActivities(actRes.data ?? []);
     setLeads(leadRes.data ?? []);

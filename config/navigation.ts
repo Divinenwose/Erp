@@ -61,6 +61,7 @@ export const defaultNavigationConfig: NavItem[] = [
       { title: 'Overview', href: '/hr', icon: LayoutDashboard, permission: 'hr.view' },
       { title: 'Employees', href: '/hr/employees', icon: Users, permission: 'hr.employees.view' },
       { title: 'Employee Requests', href: '/hr/employee-requests', icon: UserPlus, permission: 'hr.employee_requests.view' },
+      { title: 'Account Access Requests', href: '/settings/access-requests', icon: ShieldCheck, permission: 'hr.access_requests.view' },
       { title: 'Departments', href: '/hr/departments', icon: Layers, permission: 'hr.departments.view' },
       { title: 'Attendance', href: '/hr/attendance', icon: Activity, permission: 'hr.attendance.view' },
       { title: 'Leave', href: '/hr/leave', icon: Calendar, permission: 'hr.leave.view' },
@@ -579,6 +580,7 @@ export const defaultNavigationConfig: NavItem[] = [
         permission: 'settings.users.view',
         children: [
           { title: 'Users', href: '/settings/users', icon: UserPlus, permission: 'settings.users.view' },
+          { title: 'Access Requests', href: '/settings/access-requests', icon: UserCheck, permission: 'hr.access_requests.view' },
           { title: 'Roles', href: '/settings/roles', icon: ShieldCheck, permission: 'roles.view' },
           { title: 'Permissions', href: '/settings/permissions', icon: Key, permission: 'permissions.view' },
         ]
@@ -610,6 +612,7 @@ export const navigationConfig: NavItem[] = [
       { title: 'Overview', href: '/hr', icon: LayoutDashboard, permission: 'hr.view' },
       { title: 'Employees', href: '/hr/employees', icon: Users, permission: 'hr.employees.view' },
       { title: 'Employee Requests', href: '/hr/employee-requests', icon: UserPlus, permission: 'hr.employee_requests.view' },
+      { title: 'Account Access Requests', href: '/settings/access-requests', icon: ShieldCheck, permission: 'hr.access_requests.view' },
       { title: 'Departments', href: '/hr/departments', icon: Layers, permission: 'hr.departments.view' },
       { title: 'Attendance', href: '/hr/attendance', icon: Activity, permission: 'hr.attendance.view' },
       { title: 'Leave', href: '/hr/leave', icon: Calendar, permission: 'hr.leave.view' },
@@ -1160,6 +1163,7 @@ export const navigationConfig: NavItem[] = [
         permission: 'settings.users.view',
         children: [
           { title: 'Users', href: '/settings/users', icon: UserPlus, permission: 'settings.users.view' },
+          { title: 'Access Requests', href: '/settings/access-requests', icon: UserCheck, permission: 'hr.access_requests.view' },
           { title: 'Roles', href: '/settings/roles', icon: ShieldCheck, permission: 'roles.view' },
           { title: 'Permissions', href: '/settings/permissions', icon: Key, permission: 'permissions.view' },
         ]

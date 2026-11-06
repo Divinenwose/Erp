@@ -66,7 +66,7 @@ export default function IncidentsPage() {
         .select('*, reported_profile:profiles!manufacturing_incidents_reported_by_fkey(first_name, last_name), resolved_profile:profiles!manufacturing_incidents_resolved_by_fkey(first_name, last_name), created_profile:profiles!manufacturing_incidents_created_by_fkey(first_name, last_name)')
         .eq('company_id', company.id)
         .order('created_at', { ascending: false }),
-      supabase.from('employees').select('id, first_name, last_name').eq('company_id', company.id),
+      supabase.from('employee_directory').select('id, first_name, last_name').eq('company_id', company.id),
     ]);
 
     if (incRes.error) {

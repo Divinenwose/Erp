@@ -57,7 +57,7 @@ export default function GRNPage() {
     const [grnRes, poRes, empRes] = await Promise.all([
       supabase.from('goods_received_notes').select('*, purchase_orders(po_number, vendors(name))').eq('company_id', company.id).order('created_at', { ascending: false }),
       supabase.from('purchase_orders').select('id, po_number, vendors(name)').eq('company_id', company.id).in('status', ['approved', 'sent']),
-      supabase.from('employees').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
+      supabase.from('employee_directory').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
     ]);
     setGrns(grnRes.data ?? []);
     setPurchaseOrders(poRes.data ?? []);

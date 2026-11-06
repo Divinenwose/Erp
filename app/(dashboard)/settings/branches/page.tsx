@@ -56,7 +56,7 @@ export default function BranchesPage() {
 
     const [branchRes, empRes] = await Promise.all([
       supabase.from('branches').select('*').eq('company_id', company.id).order('name'),
-      supabase.from('employees').select('branch_id').eq('company_id', company.id),
+      supabase.from('employee_directory').select('branch_id').eq('company_id', company.id),
     ]);
 
     const branchesWithCounts = (branchRes.data ?? []).map((branch: Branch) => ({

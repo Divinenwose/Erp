@@ -57,7 +57,7 @@ export default function ExpensesPage() {
     if (!company?.id) return;
     const [expensesData, employeesData] = await Promise.all([
       supabase.from('expenses').select('*, employees(first_name, last_name)').eq('company_id', company.id).order('expense_date', { ascending: false }),
-      supabase.from('employees').select('*').eq('company_id', company.id).eq('status', 'active'),
+      supabase.from('employee_directory').select('*').eq('company_id', company.id).eq('status', 'active'),
     ]);
     setExpenses(expensesData.data ?? []);
     setEmployees(employeesData.data ?? []);

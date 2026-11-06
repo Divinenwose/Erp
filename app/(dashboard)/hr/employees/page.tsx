@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -23,32 +24,47 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
+import { requestEmployeeAccess } from '@/app/actions/employee-access';
+import { changeEmployeeEmploymentStatus } from '@/app/actions/employees';
 
 const empSchema = z.object({
   first_name: z.string().min(1, 'Required'),
   last_name: z.string().min(1, 'Required'),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   phone: z.string().optional(),
+  date_of_birth: z.string().optional(),
+  address: z.string().optional(),
   job_title: z.string().optional(),
   department_id: z.string().optional(),
+  branch_id: z.string().optional(),
+  manager_id: z.string().optional(),
   employment_type: z.string().default('full_time'),
   employment_status: z.string().default('active'),
   hire_date: z.string().optional(),
   salary: z.coerce.number().optional(),
   gender: z.string().optional(),
+  emergency_contact_name: z.string().optional(),
+  emergency_contact_phone: z.string().optional(),
 });
 type EmpForm = z.infer<typeof empSchema>;
 
 export default function EmployeesPage() {
-  const { company, hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const { company, session, hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
   const canRequestActions = isSuperAdmin() || isCompanyAdmin() || hasPermission('hr.employee_requests.manage');
+  const canRequestAccess = hasPermission('hr.access_requests.create');
   const [employees, setEmployees] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editEmployee, setEditEmployee] = useState<any | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [accessRequestEmployee, setAccessRequestEmployee] = useState<any | null>(null);
+  const [accessRequestReason, setAccessRequestReason] = useState('');
+  const [submittingAccessRequest, setSubmittingAccessRequest] = useState(false);
+  const [importingEmployees, setImportingEmployees] = useState(false);
 
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<EmpForm>({
     resolver: zodResolver(empSchema),
@@ -57,12 +73,14 @@ export default function EmployeesPage() {
 
   const load = async () => {
     if (!company?.id) return;
-    const [empRes, deptRes] = await Promise.all([
+    const [empRes, deptRes, branchRes] = await Promise.all([
       supabase.from('employees').select('*, departments(name)').eq('company_id', company.id).order('first_name'),
       supabase.from('departments').select('id, name').eq('company_id', company.id),
+      supabase.from('branches').select('id, name').eq('company_id', company.id).eq('is_active', true),
     ]);
     setEmployees(empRes.data ?? []);
     setDepartments(deptRes.data ?? []);
+    setBranches(branchRes.data ?? []);
     setLoading(false);
   };
 
@@ -73,9 +91,13 @@ export default function EmployeesPage() {
     reset({
       first_name: emp.first_name, last_name: emp.last_name,
       email: emp.email ?? '', phone: emp.phone ?? '',
+      date_of_birth: emp.date_of_birth ?? '', address: emp.address ?? '',
       job_title: emp.job_title ?? '', department_id: emp.department_id ?? undefined,
+      branch_id: emp.branch_id ?? undefined, manager_id: emp.manager_id ?? undefined,
       employment_type: emp.employment_type, employment_status: emp.employment_status,
       hire_date: emp.hire_date ?? '', salary: emp.salary ?? undefined, gender: emp.gender ?? '',
+      emergency_contact_name: emp.emergency_contact_name ?? '',
+      emergency_contact_phone: emp.emergency_contact_phone ?? '',
     });
     setDialogOpen(true);
   };
@@ -83,23 +105,158 @@ export default function EmployeesPage() {
   const onSubmit = async (data: EmpForm) => {
     if (!company?.id) return;
     if (editEmployee) {
-      const { error } = await supabase.from('employees').update({ ...data, updated_at: new Date().toISOString() }).eq('id', editEmployee.id);
+      const { employment_status, ...profileData } = data;
+      const { error } = await supabase.from('employees').update({ ...profileData, updated_at: new Date().toISOString() }).eq('id', editEmployee.id);
       if (error) { toast.error('Failed to update'); return; }
+      if (employment_status !== editEmployee.employment_status) {
+        if (!session?.access_token) {
+          toast.error('Your session expired. Sign in again before changing employment status.');
+          await load();
+          return;
+        }
+        const statusResult = await changeEmployeeEmploymentStatus({
+          access_token: session.access_token,
+          employee_id: editEmployee.id,
+          employment_status,
+        });
+        if (!statusResult.success) {
+          toast.error(statusResult.error || 'Failed to update employment status');
+          await load();
+          return;
+        }
+      }
       toast.success('Employee updated');
     } else {
-      const num = `EMP-${String(employees.length + 1).padStart(4, '0')}`;
-      const { error } = await supabase.from('employees').insert({ ...data, company_id: company.id, employee_number: num, salary_currency: company.currency ?? 'USD' });
-      if (error) { toast.error('Failed to create employee'); return; }
+      const { error } = await supabase.from('employees').insert({ ...data, company_id: company.id, salary_currency: company.currency ?? 'USD' });
+      if (error) { toast.error(error.message || 'Failed to create employee'); return; }
       toast.success('Employee added');
     }
     reset(); setEditEmployee(null); setDialogOpen(false); load();
   };
 
+  const submitAccessRequest = async () => {
+    if (!accessRequestEmployee || !session?.access_token) {
+      toast.error('Your session expired. Sign in again before requesting access.');
+      return;
+    }
+    setSubmittingAccessRequest(true);
+    const result = await requestEmployeeAccess({
+      access_token: session.access_token,
+      employee_id: accessRequestEmployee.id,
+      request_reason: accessRequestReason,
+    });
+    setSubmittingAccessRequest(false);
+    if (!result.success) {
+      toast.error(result.error || 'Unable to submit the access request');
+      return;
+    }
+    toast.success('Access request submitted for Super Admin approval');
+    setAccessRequestEmployee(null);
+    setAccessRequestReason('');
+    load();
+  };
+
+  const handleEmployeeImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !company?.id) return;
+    setImportingEmployees(true);
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (!firstSheet) throw new Error('The selected file has no worksheet');
+      const sourceRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: '', raw: true });
+      if (!sourceRows.length) throw new Error('The selected worksheet has no employee rows');
+      if (sourceRows.length > 500) throw new Error('Import a maximum of 500 employees at a time');
+
+      const rows = sourceRows.map((sourceRow, index) => {
+        const values = Object.fromEntries(Object.entries(sourceRow).map(([key, value]) => [
+          key.trim().toLowerCase().replace(/[\s-]+/g, '_'),
+          value,
+        ]));
+        const firstName = String(values.first_name ?? '').trim();
+        const lastName = String(values.last_name ?? '').trim();
+        if (!firstName || !lastName) throw new Error(`Row ${index + 2} requires first_name and last_name`);
+
+        const departmentValue = String(values.department_id ?? values.department ?? '').trim();
+        const department = departments.find(item =>
+          item.id === departmentValue || item.name.toLowerCase() === departmentValue.toLowerCase()
+        );
+        if (departmentValue && !department) throw new Error(`Row ${index + 2} has an unknown department`);
+
+        const salaryValue = values.salary;
+        const salary = salaryValue === '' || salaryValue == null ? null : Number(salaryValue);
+        if (salary !== null && !Number.isFinite(salary)) throw new Error(`Row ${index + 2} has an invalid salary`);
+        const email = String(values.email ?? '').trim();
+        if (email && !z.string().email().safeParse(email).success) throw new Error(`Row ${index + 2} has an invalid email`);
+
+        return {
+          company_id: company.id,
+          first_name: firstName,
+          last_name: lastName,
+          email: email || null,
+          phone: String(values.phone ?? '').trim() || null,
+          job_title: String(values.job_title ?? '').trim() || null,
+          department_id: department?.id ?? null,
+          employment_type: String(values.employment_type ?? 'full_time').trim().toLowerCase().replace(/[\s-]+/g, '_'),
+          employment_status: String(values.employment_status ?? 'active').trim().toLowerCase().replace(/[\s-]+/g, '_'),
+          hire_date: values.hire_date instanceof Date
+            ? values.hire_date.toISOString().slice(0, 10)
+            : String(values.hire_date ?? '').trim() || null,
+          date_of_birth: values.date_of_birth instanceof Date
+            ? values.date_of_birth.toISOString().slice(0, 10)
+            : String(values.date_of_birth ?? '').trim() || null,
+          gender: String(values.gender ?? '').trim() || null,
+          address: String(values.address ?? '').trim() || null,
+          emergency_contact_name: String(values.emergency_contact_name ?? '').trim() || null,
+          emergency_contact_phone: String(values.emergency_contact_phone ?? '').trim() || null,
+          salary,
+          salary_currency: company.currency ?? 'USD',
+        };
+      });
+
+      const employeeTypes = new Set(['full_time', 'part_time', 'contract', 'intern']);
+      const employmentStatuses = new Set(['active', 'inactive', 'suspended', 'resigned', 'terminated', 'on_leave']);
+      const invalidType = rows.findIndex(row => !employeeTypes.has(row.employment_type));
+      if (invalidType >= 0) throw new Error(`Row ${invalidType + 2} has an unsupported employment_type`);
+      const invalidStatus = rows.findIndex(row => !employmentStatuses.has(row.employment_status));
+      if (invalidStatus >= 0) throw new Error(`Row ${invalidStatus + 2} has an unsupported employment_status`);
+
+      const emailSet = new Set<string>();
+      for (const row of rows) {
+        const normalizedEmail = row.email?.toLowerCase();
+        if (!normalizedEmail) continue;
+        if (emailSet.has(normalizedEmail)) throw new Error(`The file contains duplicate email ${row.email}`);
+        emailSet.add(normalizedEmail);
+      }
+
+      const { error } = await supabase.from('employees').insert(rows);
+      if (error) throw new Error(error.message);
+      toast.success(`${rows.length} employees imported`);
+      await load();
+    } catch (error) {
+      console.error('[HR] Employee import failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Employee import failed');
+    } finally {
+      setImportingEmployees(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
-    const { error } = await supabase.from('employees').update({ employment_status: 'terminated' }).eq('id', deleteId);
-    if (error) { toast.error('Failed to terminate employee'); } else { toast.success('Employee terminated'); load(); }
+    if (!session?.access_token) {
+      toast.error('Your session expired. Sign in again before terminating an employee.');
+      setDeleting(false);
+      setDeleteId(null);
+      return;
+    }
+    const result = await changeEmployeeEmploymentStatus({
+      access_token: session.access_token,
+      employee_id: deleteId,
+      employment_status: 'terminated',
+    });
+    if (!result.success) { toast.error(result.error || 'Failed to terminate employee'); } else { toast.success('Employee terminated'); load(); }
     setDeleteId(null); setDeleting(false);
   };
 
@@ -139,6 +296,11 @@ export default function EmployeesPage() {
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild><Link href={`/hr/employees/${row.id}`}><Eye className="h-4 w-4 mr-2" />View Profile</Link></DropdownMenuItem>
             <DropdownMenuItem onClick={() => openEdit(row)}><Edit className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+            {canRequestAccess && !row.user_id && row.employment_status === 'active' && (
+              <DropdownMenuItem onClick={() => setAccessRequestEmployee(row)}>
+                <UserCheck className="h-4 w-4 mr-2" />Request account access
+              </DropdownMenuItem>
+            )}
             {canRequestActions && (
               <>
                 <DropdownMenuItem asChild><Link href={`/hr/employee-requests?employee=${row.id}&type=confirmation`}>Start Confirmation</Link></DropdownMenuItem>
@@ -157,6 +319,21 @@ export default function EmployeesPage() {
     <div className="space-y-6">
       <PageHeader title="Employees" description="Manage your complete workforce" breadcrumbs={[{ label: 'HR' }, { label: 'Employees' }]}>
         <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" />Export</Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importingEmployees}
+          onClick={() => document.getElementById('employee-import')?.click()}
+        >
+          {importingEmployees ? 'Importing...' : 'Import Employees'}
+        </Button>
+        <input
+          id="employee-import"
+          className="hidden"
+          type="file"
+          accept=".csv,.xlsx,.xls"
+          onChange={handleEmployeeImport}
+        />
         <Dialog open={dialogOpen} onOpenChange={open => { if (!open) { setEditEmployee(null); reset(); } setDialogOpen(open); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Add Employee</Button>
@@ -169,13 +346,44 @@ export default function EmployeesPage() {
                 <div><Label>Last Name *</Label><Input className="mt-1" {...register('last_name')} />{errors.last_name && <p className="text-xs text-red-500 mt-1">{errors.last_name.message}</p>}</div>
                 <div><Label>Email</Label><Input className="mt-1" type="email" {...register('email')} /></div>
                 <div><Label>Phone</Label><Input className="mt-1" {...register('phone')} /></div>
+                <div><Label>Date of Birth</Label><Input className="mt-1" type="date" {...register('date_of_birth')} /></div>
+                <div><Label>Address</Label><Input className="mt-1" {...register('address')} /></div>
                 <div><Label>Job Title</Label><Input className="mt-1" {...register('job_title')} /></div>
                 <div>
                   <Label>Department</Label>
                   <Controller name="department_id" control={control} render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                    <Select onValueChange={value => field.onChange(value === 'none' ? undefined : value)} value={field.value ?? 'none'}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="Select department" /></SelectTrigger>
-                      <SelectContent>{departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )} />
+                </div>
+                <div>
+                  <Label>Branch</Label>
+                  <Controller name="branch_id" control={control} render={({ field }) => (
+                    <Select onValueChange={value => field.onChange(value === 'none' ? undefined : value)} value={field.value ?? 'none'}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Select branch" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        {branches.map(branch => <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )} />
+                </div>
+                <div>
+                  <Label>Reporting Manager</Label>
+                  <Controller name="manager_id" control={control} render={({ field }) => (
+                    <Select onValueChange={value => field.onChange(value === 'none' ? undefined : value)} value={field.value ?? 'none'}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Select manager" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No manager</SelectItem>
+                        {employees.filter(employee => employee.id !== editEmployee?.id).map(manager => (
+                          <SelectItem key={manager.id} value={manager.id}>{manager.first_name} {manager.last_name}</SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   )} />
                 </div>
@@ -202,12 +410,17 @@ export default function EmployeesPage() {
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="inactive">Inactive</SelectItem>
                         <SelectItem value="on_leave">On Leave</SelectItem>
+                        <SelectItem value="suspended">Suspended</SelectItem>
+                        <SelectItem value="resigned">Resigned</SelectItem>
+                        <SelectItem value="terminated">Terminated</SelectItem>
                       </SelectContent>
                     </Select>
                   )} />
                 </div>
                 <div><Label>Hire Date</Label><Input className="mt-1" type="date" {...register('hire_date')} /></div>
                 <div><Label>Salary (Annual)</Label><Input className="mt-1" type="number" placeholder="85000" {...register('salary')} /></div>
+                <div><Label>Emergency Contact</Label><Input className="mt-1" {...register('emergency_contact_name')} /></div>
+                <div><Label>Emergency Contact Phone</Label><Input className="mt-1" {...register('emergency_contact_phone')} /></div>
                 <div>
                   <Label>Gender</Label>
                   <Controller name="gender" control={control} render={({ field }) => (
@@ -253,6 +466,40 @@ export default function EmployeesPage() {
         emptyAction={<Button onClick={() => setDialogOpen(true)} size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Add Employee</Button>}
         onExport={() => toast.info('Export functionality available in Professional plan')}
       />
+
+      <Dialog
+        open={!!accessRequestEmployee}
+        onOpenChange={open => {
+          if (!open && !submittingAccessRequest) {
+            setAccessRequestEmployee(null);
+            setAccessRequestReason('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader><DialogTitle>Request account access</DialogTitle></DialogHeader>
+          <p className="text-sm text-gray-500">
+            Request login access for {accessRequestEmployee?.first_name} {accessRequestEmployee?.last_name}.
+            A Super Admin must approve the role and invitation.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="access-request-reason">Business justification</Label>
+            <Textarea
+              id="access-request-reason"
+              value={accessRequestReason}
+              onChange={event => setAccessRequestReason(event.target.value)}
+              placeholder="Explain why this employee needs ERP access"
+              maxLength={1000}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setAccessRequestEmployee(null)} disabled={submittingAccessRequest}>Cancel</Button>
+            <Button onClick={submitAccessRequest} disabled={submittingAccessRequest}>
+              {submittingAccessRequest ? 'Submitting...' : 'Submit request'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={!!deleteId}

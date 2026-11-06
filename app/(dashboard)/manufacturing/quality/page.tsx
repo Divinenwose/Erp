@@ -74,7 +74,7 @@ export default function QualityPage() {
       supabase.from('products').select('id, name').eq('company_id', company.id),
       supabase.from('work_orders').select('id, work_order_number').eq('company_id', company.id),
       supabase.from('production_runs').select('id, run_number').eq('company_id', company.id),
-      supabase.from('employees').select('id, first_name, last_name').eq('company_id', company.id),
+      supabase.from('employee_directory').select('id, first_name, last_name').eq('company_id', company.id),
     ]);
 
     if (inspRes.error) {

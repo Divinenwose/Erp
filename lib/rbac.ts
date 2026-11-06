@@ -1,6 +1,6 @@
 import type { Role } from '@/lib/supabase';
 
-export type AccessLevel = 'super_admin' | 'company_super_admin' | 'company_admin' | 'department' | 'employee';
+export type AccessLevel = 'super_admin' | 'company_super_admin' | 'department' | 'employee';
 
 export function normalizeRoleName(roleName: string): string {
   return roleName.trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -20,7 +20,6 @@ export function resolveAccessLevel(roles: Role[], companyId?: string): AccessLev
   if (companyId && roles.some(role => isSuperAdminRoleName(role.name) && role.company_id === companyId)) {
     return 'company_super_admin';
   }
-  if (roles.some(role => isCompanyAdminRoleName(role.name))) return 'company_admin';
   if (roles.some(role => /\b(manager|head)\b/i.test(role.name))) return 'department';
   return 'employee';
 }

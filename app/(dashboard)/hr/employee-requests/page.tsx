@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, TrendingUp, ArrowRightLeft, UserCheck, RefreshCw, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { changeEmployeeEmploymentStatus } from '@/app/actions/employees';
 
 const REQUEST_TYPES = [
   { value: 'confirmation', label: 'Confirmation', icon: UserCheck },
@@ -35,7 +36,7 @@ const STATUS_OPTIONS = ['active', 'probation', 'on_leave', 'suspended', 'resigne
 
 export default function EmployeeRequestsPage() {
   const searchParams = useSearchParams();
-  const { company, user: currentUser, hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const { company, user: currentUser, session, hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
   const canView = isAdmin || hasPermission('hr.employee_requests.view');
   const canManage = isAdmin || hasPermission('hr.employee_requests.manage');
@@ -194,13 +195,40 @@ export default function EmployeeRequestsPage() {
     }
 
     if (approve) {
+      if (request.new_status) {
+        if (!session?.access_token) {
+          await supabase.from('employee_requests').update({
+            status: 'pending',
+            decided_by: null,
+            decided_at: null,
+          }).eq('id', request.id);
+          toast.error('Your session expired. Sign in again before applying a status change.');
+          loadAll();
+          return;
+        }
+        const statusResult = await changeEmployeeEmploymentStatus({
+          access_token: session.access_token,
+          employee_id: request.employee_id,
+          employment_status: request.new_status,
+        });
+        if (!statusResult.success) {
+          await supabase.from('employee_requests').update({
+            status: 'pending',
+            decided_by: null,
+            decided_at: null,
+          }).eq('id', request.id);
+          toast.error(statusResult.error || 'Failed to apply the requested employment status');
+          loadAll();
+          return;
+        }
+      }
+
       // Apply the change to the employee record
       const empUpdate: any = {};
       if (request.new_department_id) empUpdate.department_id = request.new_department_id;
       if (request.new_branch_id) empUpdate.branch_id = request.new_branch_id;
       if (request.new_job_title) empUpdate.job_title = request.new_job_title;
       if (request.new_salary != null) empUpdate.salary = request.new_salary;
-      if (request.new_status) empUpdate.employment_status = request.new_status;
 
       if (Object.keys(empUpdate).length > 0) {
         await supabase.from('employees').update(empUpdate).eq('id', request.employee_id);

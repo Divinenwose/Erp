@@ -4,8 +4,8 @@ import React, { createContext, useContext, useEffect, useState, useRef, useCallb
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, Profile, Company, Role, Permission } from '@/lib/supabase';
 import { logAuthEvent } from '@/lib/audit';
-import { createCompanyAccount, syncCompanyAdminPermissions } from '@/app/actions/users';
-import { isCompanyAdminRoleName, isSuperAdminRoleName, normalizeRoleName, resolveAccessLevel, type AccessLevel } from '@/lib/rbac';
+import { createCompanyAccount, syncSuperAdminPermissions } from '@/app/actions/users';
+import { isSuperAdminRoleName, normalizeRoleName, resolveAccessLevel, type AccessLevel } from '@/lib/rbac';
 
 interface AuthContextType {
   user: User | null;
@@ -324,7 +324,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!error) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const permissionSync = await syncCompanyAdminPermissions(session.access_token);
+        const permissionSync = await syncSuperAdminPermissions(session.access_token);
         if (!permissionSync.success) {
           await supabase.auth.signOut();
           return { error: new Error(permissionSync.error) };
@@ -404,7 +404,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hasRole = (roleName: string): boolean => {
     return roles.some(role =>
       normalizeRoleName(role.name) === normalizeRoleName(roleName)
-      || (isCompanyAdminRoleName(role.name) && isCompanyAdminRoleName(roleName))
       || (isSuperAdminRoleName(role.name) && isSuperAdminRoleName(roleName))
     );
   };
@@ -426,7 +425,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isCompanyAdmin = (): boolean => {
-    return accessLevel === 'company_admin' || accessLevel === 'company_super_admin' || isSuperAdmin();
+    return accessLevel === 'company_super_admin' || isSuperAdmin();
   };
 
   return (

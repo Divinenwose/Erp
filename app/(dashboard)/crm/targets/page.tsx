@@ -58,7 +58,7 @@ export default function TargetsPage() {
     if (!company?.id) return;
     const [targetRes, empRes, deptRes] = await Promise.all([
       supabase.from('sales_targets').select('*, employees(full_name), departments(name)').eq('company_id', company.id).order('period_start', { ascending: false }),
-      supabase.from('employees').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
+      supabase.from('employee_directory').select('id, full_name').eq('company_id', company.id).eq('status', 'active'),
       supabase.from('departments').select('id, name').eq('company_id', company.id),
     ]);
     setTargets(targetRes.data ?? []);

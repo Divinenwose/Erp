@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { createCompanyAccount } from '@/app/actions/users';
+import { activateEmployeeAccess } from '@/app/actions/employee-access';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -36,6 +37,14 @@ export async function GET(request: Request) {
         return NextResponse.redirect(new URL('/login?setup_error=1', requestUrl.origin));
       }
       companyRegistration = true;
+    }
+
+    if (data.session?.access_token && !companyRegistration) {
+      const activation = await activateEmployeeAccess(data.session.access_token);
+      if (!activation.success) {
+        console.error('[AUTH CALLBACK] Employee account activation failed:', activation.error);
+        return NextResponse.redirect(new URL('/login?activation_error=1', requestUrl.origin));
+      }
     }
   }
 

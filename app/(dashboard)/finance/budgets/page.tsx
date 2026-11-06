@@ -138,8 +138,8 @@ export default function BudgetsPage() {
     { key: 'fiscal_year', header: 'Fiscal Year' },
     { key: 'departments', header: 'Department', cell: (row) => row.departments?.name || 'Unknown' },
     { key: 'category', header: 'Category' },
-    { key: 'budgeted_amount', header: 'Budget', cell: (row) => <span className="font-medium">{formatCurrency(row.budgeted_amount)}</span> },
-    { key: 'actual_amount', header: 'Spent', cell: (row) => <span>{formatCurrency(row.actual_amount)}</span> },
+    { key: 'budgeted_amount', header: 'Budget', cell: (row) => <span className="font-medium">{formatCurrency(row.budgeted_amount, company?.currency)}</span> },
+    { key: 'actual_amount', header: 'Spent', cell: (row) => <span>{formatCurrency(row.actual_amount, company?.currency)}</span> },
     { key: 'variance', header: 'Variance', cell: (row) => {
       const percentage = row.budgeted_amount > 0 ? ((row.actual_amount - row.budgeted_amount) / row.budgeted_amount) * 100 : 0;
       return <span className={percentage > 0 ? 'text-rose-600' : 'text-emerald-600'}>{percentage.toFixed(1)}%</span>;
@@ -195,9 +195,9 @@ export default function BudgetsPage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Budget" value={formatCurrency(totalBudget)} icon={<PieChart className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-          <KPICard title="Total Spent" value={formatCurrency(totalSpent)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-          <KPICard title="Remaining" value={formatCurrency(totalRemaining)} icon={<Calendar className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
+          <KPICard title="Total Budget" value={formatCurrency(totalBudget, company?.currency)} icon={<PieChart className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Total Spent" value={formatCurrency(totalSpent, company?.currency)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+          <KPICard title="Remaining" value={formatCurrency(totalRemaining, company?.currency)} icon={<Calendar className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
           <KPICard title="Over Budget" value={overBudgetCount} icon={<AlertTriangle className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
         </div>
 
@@ -229,9 +229,9 @@ export default function BudgetsPage() {
                   <div><span className="text-gray-500">Department:</span> {selectedBudget.departments?.name}</div>
                   <div><span className="text-gray-500">Category:</span> {selectedBudget.category}</div>
                   <div><span className="text-gray-500">Fiscal Year:</span> {selectedBudget.fiscal_year}</div>
-                  <div><span className="text-gray-500">Budget:</span> {formatCurrency(selectedBudget.budgeted_amount)}</div>
-                  <div><span className="text-gray-500">Spent:</span> {formatCurrency(selectedBudget.actual_amount)}</div>
-                  <div><span className="text-gray-500">Remaining:</span> {formatCurrency(selectedBudget.budgeted_amount - selectedBudget.actual_amount)}</div>
+                  <div><span className="text-gray-500">Budget:</span> {formatCurrency(selectedBudget.budgeted_amount, company?.currency)}</div>
+                  <div><span className="text-gray-500">Spent:</span> {formatCurrency(selectedBudget.actual_amount, company?.currency)}</div>
+                  <div><span className="text-gray-500">Remaining:</span> {formatCurrency(selectedBudget.budgeted_amount - selectedBudget.actual_amount, company?.currency)}</div>
                   <div><span className="text-gray-500">Start Date:</span> {formatDate(selectedBudget.start_date)}</div>
                   <div><span className="text-gray-500">End Date:</span> {formatDate(selectedBudget.end_date)}</div>
                   <div className="col-span-2"><span className="text-gray-500">Status:</span> <StatusBadge status={getBudgetStatus(selectedBudget)} /></div>

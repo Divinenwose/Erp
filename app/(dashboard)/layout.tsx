@@ -109,6 +109,7 @@ const routePermissions: Record<string, string> = {
   '/support/knowledge-base': 'support.knowledge.view',
   '/reports': 'reports.view',
   '/settings': 'settings.view',
+  '/notifications': 'notifications.view',
   '/settings/company': 'settings.company.edit',
   '/settings/users': 'settings.users.view',
   '/settings/access-requests': 'hr.access_requests.view',
@@ -243,14 +244,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     // Only check permissions after loading is complete and user is authenticated
     if (!loading && user && permissionsLoaded && pathname !== '/unauthorized') {
-      if (!isSuperAdmin() && !isCompanyAdmin() && !isRouteAllowedForDepartment(pathname, departmentNames)) {
+      const isPersonalProfile = pathname === '/settings/profile';
+      if (!isPersonalProfile && !isSuperAdmin() && !isCompanyAdmin() && !isRouteAllowedForDepartment(pathname, departmentNames)) {
         router.replace('/unauthorized');
         return;
       }
 
       const requiredPermission = getRequiredPermission(pathname);
       const companyAdminDashboardAccess = isCompanyAdmin() && pathname === '/dashboard';
-      if (!canAccessAllCompanyPages && !companyAdminDashboardAccess
+      if (!isPersonalProfile && !canAccessAllCompanyPages && !companyAdminDashboardAccess
         && (!requiredPermission || !hasPermission(requiredPermission))) {
         router.replace('/unauthorized');
       }

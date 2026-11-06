@@ -160,9 +160,9 @@ export default function PipelinePage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Pipeline Value" value={formatCurrency(totalValue)} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-        <KPICard title="Weighted Value" value={formatCurrency(weighted)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-        <KPICard title="Won Revenue" value={formatCurrency(wonValue)} icon={<Award className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+        <KPICard title="Pipeline Value" value={formatCurrency(totalValue, company?.currency)} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+        <KPICard title="Weighted Value" value={formatCurrency(weighted, company?.currency)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+        <KPICard title="Won Revenue" value={formatCurrency(wonValue, company?.currency)} icon={<Award className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
         <KPICard title="Win Rate" value={`${winRate}%`} icon={<Target className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
       </div>
 
@@ -184,7 +184,7 @@ export default function PipelinePage() {
               <div className={cn('min-h-[150px] p-2 space-y-2 rounded-b-xl', stage.color)}>
                 {stageValue > 0 && (
                   <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    {formatCurrency(stageValue)}
+                    {formatCurrency(stageValue, company?.currency)}
                   </div>
                 )}
                 {stageOpps.map(opp => (
@@ -206,7 +206,7 @@ export default function PipelinePage() {
                     </div>
                     {opp.customers?.name && <p className="text-xs text-gray-400 mt-1">{opp.customers.name}</p>}
                     <div className="flex items-center justify-between mt-2">
-                      <span className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(opp.estimated_value ?? 0)}</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(opp.estimated_value ?? 0, company?.currency)}</span>
                       <span className="text-xs text-gray-400">{opp.probability}% likely</span>
                     </div>
                     {opp.expected_close_date && (

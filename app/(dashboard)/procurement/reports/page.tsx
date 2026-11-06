@@ -51,7 +51,7 @@ export default function ProcurementReportsPage() {
     { key: 'vendors', header: 'Vendor', cell: (row) => <span className="text-sm">{row.vendors?.name || '—'}</span> },
     { key: 'issue_date', header: 'Issue Date', cell: (row) => <span className="text-sm text-gray-500">{formatDate(row.issue_date)}</span> },
     { key: 'expected_delivery', header: 'Expected Delivery', cell: (row) => <span className="text-sm text-gray-500">{row.expected_delivery ? formatDate(row.expected_delivery) : '—'}</span> },
-    { key: 'total_amount', header: 'Total Amount', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_amount ?? 0)}</span> },
+    { key: 'total_amount', header: 'Total Amount', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_amount ?? 0, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <span className="text-xs capitalize">{row.status}</span> },
   ];
 
@@ -61,7 +61,7 @@ export default function ProcurementReportsPage() {
     { key: 'vendors', header: 'Vendor', cell: (row) => <span className="text-sm">{row.purchase_orders?.vendors?.name || '—'}</span> },
     { key: 'delivery_date', header: 'Delivery Date', cell: (row) => <span className="text-sm text-gray-500">{formatDate(row.delivery_date)}</span> },
     { key: 'condition', header: 'Condition', cell: (row) => <span className="text-xs capitalize">{row.condition?.replace(/_/g, ' ')}</span> },
-    { key: 'total_value', header: 'Total Value', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_value ?? 0)}</span> },
+    { key: 'total_value', header: 'Total Value', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_value ?? 0, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <span className="text-xs capitalize">{row.status}</span> },
   ];
 
@@ -71,7 +71,7 @@ export default function ProcurementReportsPage() {
     { key: 'vendors', header: 'Vendor', cell: (row) => <span className="text-sm">{row.purchase_orders?.vendors?.name || '—'}</span> },
     { key: 'invoice_date', header: 'Invoice Date', cell: (row) => <span className="text-sm text-gray-500">{formatDate(row.invoice_date)}</span> },
     { key: 'due_date', header: 'Due Date', cell: (row) => <span className="text-sm text-gray-500">{formatDate(row.due_date)}</span> },
-    { key: 'total_amount', header: 'Total Amount', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_amount ?? 0)}</span> },
+    { key: 'total_amount', header: 'Total Amount', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_amount ?? 0, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <span className="text-xs capitalize">{row.status}</span> },
   ];
 
@@ -83,7 +83,7 @@ export default function ProcurementReportsPage() {
     { key: 'price_score', header: 'Price', cell: (row) => <span className="text-sm">{row.price_score != null ? row.price_score.toFixed(1) : '0'}</span> },
     { key: 'on_time_delivery_rate', header: 'On-Time Rate', cell: (row) => <span className="text-sm">{((row.on_time_delivery_rate ?? 0) * 100).toFixed(0)}%</span> },
     { key: 'total_orders', header: 'Orders', cell: (row) => <span className="text-sm">{row.total_orders ?? 0}</span> },
-    { key: 'total_spend', header: 'Total Spend', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_spend || 0)}</span> },
+    { key: 'total_spend', header: 'Total Spend', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_spend || 0, company?.currency)}</span> },
   ];
 
   const replenishmentColumns: Column<any>[] = [
@@ -103,7 +103,7 @@ export default function ProcurementReportsPage() {
     { key: 'reference_number', header: 'Reference', cell: (row) => <span className="font-mono text-xs text-blue-600">{row.reference_number || '—'}</span> },
     { key: 'vendors', header: 'Vendor', cell: (row) => <span className="text-sm">{row.vendors?.name || '—'}</span> },
     { key: 'category', header: 'Category', cell: (row) => <span className="text-xs capitalize">{row.category?.replace(/_/g, ' ') || '—'}</span> },
-    { key: 'amount', header: 'Amount', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.amount || 0)}</span> },
+    { key: 'amount', header: 'Amount', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.amount || 0, company?.currency)}</span> },
   ];
 
   return (

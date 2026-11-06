@@ -64,9 +64,9 @@ export default function ReportsPage() {
   const performanceData = [
     { metric: 'Total Leads', value: leadsData.length, change: '+12%' },
     { metric: 'Conversion Rate', value: `${opportunitiesData.length > 0 ? ((opportunitiesData.filter(o => o.stage === 'won').length / leadsData.length) * 100).toFixed(1) : 0}%`, change: '+5%' },
-    { metric: 'Pipeline Value', value: formatCurrency(opportunitiesData.filter(o => o.status === 'open').reduce((a, o) => a + (o.estimated_value ?? 0), 0)), change: '+18%' },
+    { metric: 'Pipeline Value', value: formatCurrency(opportunitiesData.filter(o => o.status === 'open').reduce((a, o) => a + (o.estimated_value ?? 0), 0), company?.currency), change: '+18%' },
     { metric: 'Win Rate', value: `${opportunitiesData.length > 0 ? ((opportunitiesData.filter(o => o.stage === 'won').length / opportunitiesData.length) * 100).toFixed(1) : 0}%`, change: '+3%' },
-    { metric: 'Avg Deal Size', value: formatCurrency(opportunitiesData.filter(o => o.stage === 'won').reduce((a, o) => a + (o.estimated_value ?? 0), 0) / (opportunitiesData.filter(o => o.stage === 'won').length || 1)), change: '+8%' },
+    { metric: 'Avg Deal Size', value: formatCurrency(opportunitiesData.filter(o => o.stage === 'won').reduce((a, o) => a + (o.estimated_value ?? 0), 0) / (opportunitiesData.filter(o => o.stage === 'won').length || 1), company?.currency), change: '+8%' },
   ];
 
   // Lead Conversion Report
@@ -97,8 +97,8 @@ export default function ReportsPage() {
   const pipelineColumns: Column<any>[] = [
     { key: 'stage', header: 'Stage', cell: (row) => <span className="text-sm">{row.stage}</span> },
     { key: 'count', header: 'Deals', cell: (row) => <span className="text-sm">{row.count}</span> },
-    { key: 'value', header: 'Value', cell: (row) => <span className="text-sm">{formatCurrency(row.value)}</span> },
-    { key: 'avg', header: 'Avg Deal', cell: (row) => <span className="text-sm">{formatCurrency(row.avg)}</span> },
+    { key: 'value', header: 'Value', cell: (row) => <span className="text-sm">{formatCurrency(row.value, company?.currency)}</span> },
+    { key: 'avg', header: 'Avg Deal', cell: (row) => <span className="text-sm">{formatCurrency(row.avg, company?.currency)}</span> },
   ];
 
   const stages = ['prospecting', 'qualified', 'proposal', 'negotiation', 'won'];
@@ -177,9 +177,9 @@ export default function ReportsPage() {
           {/* Performance Report */}
           <TabsContent value="performance" className="space-y-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <KPICard title="Total Revenue" value={formatCurrency(opportunitiesData.filter(o => o.stage === 'won').reduce((a, o) => a + (o.estimated_value ?? 0), 0))} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+              <KPICard title="Total Revenue" value={formatCurrency(opportunitiesData.filter(o => o.stage === 'won').reduce((a, o) => a + (o.estimated_value ?? 0), 0), company?.currency)} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
               <KPICard title="Win Rate" value={`${opportunitiesData.length > 0 ? ((opportunitiesData.filter(o => o.stage === 'won').length / opportunitiesData.length) * 100).toFixed(1) : 0}%`} icon={<Award className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-              <KPICard title="Pipeline Value" value={formatCurrency(opportunitiesData.filter(o => o.status === 'open').reduce((a, o) => a + (o.estimated_value ?? 0), 0))} icon={<TrendingUp className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+              <KPICard title="Pipeline Value" value={formatCurrency(opportunitiesData.filter(o => o.status === 'open').reduce((a, o) => a + (o.estimated_value ?? 0), 0), company?.currency)} icon={<TrendingUp className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
               <KPICard title="Total Activities" value={activitiesData.length} icon={<Calendar className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
             </div>
             <DataTable columns={performanceColumns} data={performanceData} loading={loading} searchable={false} rowKey="metric" />
@@ -200,9 +200,9 @@ export default function ReportsPage() {
           <TabsContent value="pipeline" className="space-y-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <KPICard title="Total Deals" value={opportunitiesData.length} icon={<FileText className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-              <KPICard title="Pipeline Value" value={formatCurrency(opportunitiesData.filter(o => o.status === 'open').reduce((a, o) => a + (o.estimated_value ?? 0), 0))} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-              <KPICard title="Won Revenue" value={formatCurrency(opportunitiesData.filter(o => o.stage === 'won').reduce((a, o) => a + (o.estimated_value ?? 0), 0))} icon={<Award className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
-              <KPICard title="Avg Deal Size" value={formatCurrency(opportunitiesData.filter(o => o.stage === 'won').reduce((a, o) => a + (o.estimated_value ?? 0), 0) / (opportunitiesData.filter(o => o.stage === 'won').length || 1))} icon={<TrendingUp className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
+              <KPICard title="Pipeline Value" value={formatCurrency(opportunitiesData.filter(o => o.status === 'open').reduce((a, o) => a + (o.estimated_value ?? 0), 0), company?.currency)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+              <KPICard title="Won Revenue" value={formatCurrency(opportunitiesData.filter(o => o.stage === 'won').reduce((a, o) => a + (o.estimated_value ?? 0), 0), company?.currency)} icon={<Award className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+              <KPICard title="Avg Deal Size" value={formatCurrency(opportunitiesData.filter(o => o.stage === 'won').reduce((a, o) => a + (o.estimated_value ?? 0), 0) / (opportunitiesData.filter(o => o.stage === 'won').length || 1), company?.currency)} icon={<TrendingUp className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
             </div>
             <DataTable columns={pipelineColumns} data={pipelineData} loading={loading} searchable={false} rowKey="stage" />
           </TabsContent>

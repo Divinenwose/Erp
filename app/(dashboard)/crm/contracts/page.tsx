@@ -222,7 +222,7 @@ export default function ContractsPage() {
     { key: 'title', header: 'Title', sortable: true, cell: (row) => <span className="text-sm">{row.title}</span> },
     { key: 'customers', header: 'Customer', cell: (row) => <span className="text-sm text-blue-600">{row.customers?.name ?? '—'}</span> },
     { key: 'contract_type', header: 'Type', cell: (row) => <span className="text-sm capitalize">{row.contract_type?.replace(/_/g, ' ')}</span> },
-    { key: 'contract_value', header: 'Value', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.contract_value)}</span> },
+    { key: 'contract_value', header: 'Value', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.contract_value, company?.currency)}</span> },
     { key: 'start_date', header: 'Start Date', sortable: true, cell: (row) => <span className="text-sm">{row.start_date ? formatDate(row.start_date) : '—'}</span> },
     { key: 'end_date', header: 'End Date', sortable: true, cell: (row) => <span className="text-sm">{row.end_date ? formatDate(row.end_date) : '—'}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
@@ -312,7 +312,7 @@ export default function ContractsPage() {
         <KPICard title="Total Contracts" value={contracts.length} icon={<FileText className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Draft" value={draft} icon={<FileText className="h-4 w-4 text-gray-600" />} iconBg="bg-gray-50 dark:bg-gray-950/50" loading={loading} />
         <KPICard title="Active" value={active} icon={<Check className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-        <KPICard title="Active Value" value={formatCurrency(totalValue)} icon={<DollarSign className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+        <KPICard title="Active Value" value={formatCurrency(totalValue, company?.currency)} icon={<DollarSign className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
       </div>
 
       <DataTable
@@ -342,7 +342,7 @@ export default function ContractsPage() {
                 <div><span className="text-gray-500">Opportunity:</span> {selectedContract.opportunities?.title ?? '—'}</div>
                 <div><span className="text-gray-500">Proposal:</span> {selectedContract.sales_proposals?.proposal_number ?? '—'}</div>
                 <div><span className="text-gray-500">Type:</span> {selectedContract.contract_type?.replace(/_/g, ' ')}</div>
-                <div className="font-semibold"><span className="text-gray-500">Value:</span> {formatCurrency(selectedContract.contract_value)}</div>
+                <div className="font-semibold"><span className="text-gray-500">Value:</span> {formatCurrency(selectedContract.contract_value, company?.currency)}</div>
                 <div><span className="text-gray-500">Start Date:</span> {selectedContract.start_date ? formatDate(selectedContract.start_date) : '—'}</div>
                 <div><span className="text-gray-500">End Date:</span> {selectedContract.end_date ? formatDate(selectedContract.end_date) : '—'}</div>
                 <div><span className="text-gray-500">Signed by Company:</span> {selectedContract.signed_by_company ? 'Yes' : 'No'}</div>

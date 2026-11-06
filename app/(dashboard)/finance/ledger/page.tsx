@@ -183,8 +183,8 @@ export default function LedgerPage() {
     { key: 'date', header: 'Date', cell: (row) => formatDate(row.date) },
     { key: 'entry_number', header: 'Reference', cell: (row) => <span className="font-mono text-xs text-blue-600">{row.entry_number}</span> },
     { key: 'description', header: 'Description' },
-    { key: 'total_debit', header: 'Debit', cell: (row) => <span className="text-emerald-600 font-medium">{formatCurrency(row.total_debit)}</span> },
-    { key: 'total_credit', header: 'Credit', cell: (row) => <span className="text-rose-600 font-medium">{formatCurrency(row.total_credit)}</span> },
+    { key: 'total_debit', header: 'Debit', cell: (row) => <span className="text-emerald-600 font-medium">{formatCurrency(row.total_debit, company?.currency)}</span> },
+    { key: 'total_credit', header: 'Credit', cell: (row) => <span className="text-rose-600 font-medium">{formatCurrency(row.total_credit, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
 
@@ -251,8 +251,8 @@ export default function LedgerPage() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard title="Total Accounts" value={accounts.length} icon={<Database className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-          <KPICard title="Total Debits" value={formatCurrency(totalDebits)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-          <KPICard title="Total Credits" value={formatCurrency(totalCredits)} icon={<TrendingDown className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
+          <KPICard title="Total Debits" value={formatCurrency(totalDebits, company?.currency)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+          <KPICard title="Total Credits" value={formatCurrency(totalCredits, company?.currency)} icon={<TrendingDown className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
           <KPICard title="Journal Entries" value={entries.length} icon={<FileText className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         </div>
 
@@ -301,16 +301,16 @@ export default function LedgerPage() {
                       <tr key={i}>
                         <td className="px-4 py-2">{line.chart_of_accounts?.account_number} - {line.chart_of_accounts?.name}</td>
                         <td className="px-4 py-2">{line.description}</td>
-                        <td className="px-4 py-2 text-right text-emerald-600">{line.debit > 0 ? formatCurrency(line.debit) : ''}</td>
-                        <td className="px-4 py-2 text-right text-rose-600">{line.credit > 0 ? formatCurrency(line.credit) : ''}</td>
+                        <td className="px-4 py-2 text-right text-emerald-600">{line.debit > 0 ? formatCurrency(line.debit, company?.currency) : ''}</td>
+                        <td className="px-4 py-2 text-right text-rose-600">{line.credit > 0 ? formatCurrency(line.credit, company?.currency) : ''}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot className="bg-gray-50 dark:bg-gray-800 font-semibold">
                     <tr>
                       <td colSpan={2} className="px-4 py-2">Total</td>
-                      <td className="px-4 py-2 text-right text-emerald-600">{formatCurrency(selectedEntry?.total_debit)}</td>
-                      <td className="px-4 py-2 text-right text-rose-600">{formatCurrency(selectedEntry?.total_credit)}</td>
+                      <td className="px-4 py-2 text-right text-emerald-600">{formatCurrency(selectedEntry?.total_debit, company?.currency)}</td>
+                      <td className="px-4 py-2 text-right text-rose-600">{formatCurrency(selectedEntry?.total_credit, company?.currency)}</td>
                     </tr>
                   </tfoot>
                 </table>

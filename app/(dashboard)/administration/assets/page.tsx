@@ -228,7 +228,7 @@ export default function AssetsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard title="Total Assets" value={assets.length} icon={<Briefcase className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Active" value={active} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-        <KPICard title="Total Value" value={formatCurrency(totalValue)} icon={<Package className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
+        <KPICard title="Total Value" value={formatCurrency(totalValue, company?.currency)} icon={<Package className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         <KPICard title="Warranty Expiring" value={expiringSoon} icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
       </div>
 
@@ -256,7 +256,7 @@ export default function AssetsPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">{a.asset_number} · {a.brand ?? ''} {a.model ?? ''} · {a.asset_type ?? 'Other'}</p>
                   </div>
                   {a.location && <div className="hidden md:flex items-center gap-1 text-xs text-gray-400"><MapPin className="h-3.5 w-3.5" />{a.location}</div>}
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden lg:block">{formatCurrency(a.current_value ?? 0)}</div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden lg:block">{formatCurrency(a.current_value ?? 0, company?.currency)}</div>
                   <span className={`text-xs font-medium ${conditionColors[a.condition] ?? 'text-gray-500'} hidden sm:inline`}>{a.condition}</span>
                   <StatusBadge status={a.status} />
                   <DropdownMenu>

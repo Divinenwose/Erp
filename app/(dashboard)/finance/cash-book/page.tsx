@@ -124,7 +124,7 @@ export default function CashBookPage() {
     { key: 'account', header: 'Account' },
     { key: 'description', header: 'Description' },
     { key: 'reference', header: 'Reference', cell: (row) => row.reference || '-' },
-    { key: 'amount', header: 'Amount', cell: (row) => <span className={`font-medium ${row.entry_type === 'receipt' ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(row.amount)}</span> },
+    { key: 'amount', header: 'Amount', cell: (row) => <span className={`font-medium ${row.entry_type === 'receipt' ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(row.amount, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
 
@@ -172,9 +172,9 @@ export default function CashBookPage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Receipts" value={formatCurrency(totalReceipts)} icon={<Receipt className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-          <KPICard title="Total Payments" value={formatCurrency(totalPayments)} icon={<Receipt className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
-          <KPICard title="Net Balance" value={formatCurrency(netBalance)} icon={<Receipt className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Total Receipts" value={formatCurrency(totalReceipts, company?.currency)} icon={<Receipt className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+          <KPICard title="Total Payments" value={formatCurrency(totalPayments, company?.currency)} icon={<Receipt className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
+          <KPICard title="Net Balance" value={formatCurrency(netBalance, company?.currency)} icon={<Receipt className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
           <KPICard title="Total Entries" value={entries.length} icon={<Receipt className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         </div>
 
@@ -210,7 +210,7 @@ export default function CashBookPage() {
                   <div><span className="text-gray-500">Date:</span> {formatDate(selectedEntry.entry_date)}</div>
                   <div><span className="text-gray-500">Type:</span> <span className={selectedEntry.entry_type === 'receipt' ? 'text-emerald-600' : 'text-rose-600'}>{selectedEntry.entry_type}</span></div>
                   <div><span className="text-gray-500">Account:</span> {selectedEntry.account}</div>
-                  <div><span className="text-gray-500">Amount:</span> {formatCurrency(selectedEntry.amount)}</div>
+                  <div><span className="text-gray-500">Amount:</span> {formatCurrency(selectedEntry.amount, company?.currency)}</div>
                   <div className="col-span-2"><span className="text-gray-500">Reference:</span> {selectedEntry.reference || '-'}</div>
                   <div className="col-span-2"><span className="text-gray-500">Description:</span> {selectedEntry.description}</div>
                   <div className="col-span-2"><span className="text-gray-500">Status:</span> <StatusBadge status={selectedEntry.status} /></div>

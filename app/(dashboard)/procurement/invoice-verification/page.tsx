@@ -188,7 +188,7 @@ export default function InvoiceVerificationPage() {
     { key: 'vendors', header: 'Vendor', cell: (row) => <span className="text-sm">{row.purchase_orders?.vendors?.name || '—'}</span> },
     { key: 'invoice_date', header: 'Invoice Date', cell: (row) => <span className="text-sm text-gray-500">{formatDate(row.invoice_date)}</span> },
     { key: 'due_date', header: 'Due Date', cell: (row) => <span className="text-sm text-gray-500">{formatDate(row.due_date)}</span> },
-    { key: 'total_amount', header: 'Total Amount', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_amount ?? 0)}</span> },
+    { key: 'total_amount', header: 'Total Amount', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_amount ?? 0, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
 
@@ -212,7 +212,7 @@ export default function InvoiceVerificationPage() {
                     <Controller name="po_id" control={control} render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger className="mt-1"><SelectValue placeholder="Select PO" /></SelectTrigger>
-                        <SelectContent>{purchaseOrders.map(po => <SelectItem key={po.id} value={po.id}>{po.po_number} - {po.vendors?.name} ({formatCurrency(po.total_amount)})</SelectItem>)}</SelectContent>
+                        <SelectContent>{purchaseOrders.map(po => <SelectItem key={po.id} value={po.id}>{po.po_number} - {po.vendors?.name} ({formatCurrency(po.total_amount, company?.currency)})</SelectItem>)}</SelectContent>
                       </Select>
                     )} />
                     {errors.po_id && <p className="text-xs text-red-500 mt-1">{errors.po_id.message}</p>}
@@ -222,7 +222,7 @@ export default function InvoiceVerificationPage() {
                     <Controller name="grn_id" control={control} render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger className="mt-1"><SelectValue placeholder="Select GRN" /></SelectTrigger>
-                        <SelectContent>{grns.map(grn => <SelectItem key={grn.id} value={grn.id}>{grn.grn_number} ({formatCurrency(grn.total_value)})</SelectItem>)}</SelectContent>
+                        <SelectContent>{grns.map(grn => <SelectItem key={grn.id} value={grn.id}>{grn.grn_number} ({formatCurrency(grn.total_value, company?.currency)})</SelectItem>)}</SelectContent>
                       </Select>
                     )} />
                     {errors.grn_id && <p className="text-xs text-red-500 mt-1">{errors.grn_id.message}</p>}
@@ -282,9 +282,9 @@ export default function InvoiceVerificationPage() {
                   <div><span className="text-gray-500">Vendor:</span> {selectedInvoice.purchase_orders?.vendors?.name || '—'}</div>
                   <div><span className="text-gray-500">Invoice Date:</span> {formatDate(selectedInvoice.invoice_date)}</div>
                   <div><span className="text-gray-500">Due Date:</span> {formatDate(selectedInvoice.due_date)}</div>
-                  <div><span className="text-gray-500">Invoice Amount:</span> {formatCurrency(selectedInvoice.invoice_amount || 0)}</div>
-                  <div><span className="text-gray-500">Tax Amount:</span> {formatCurrency(selectedInvoice.tax_amount || 0)}</div>
-                  <div><span className="text-gray-500">Total Amount:</span> {formatCurrency(selectedInvoice.total_amount || 0)}</div>
+                  <div><span className="text-gray-500">Invoice Amount:</span> {formatCurrency(selectedInvoice.invoice_amount || 0, company?.currency)}</div>
+                  <div><span className="text-gray-500">Tax Amount:</span> {formatCurrency(selectedInvoice.tax_amount || 0, company?.currency)}</div>
+                  <div><span className="text-gray-500">Total Amount:</span> {formatCurrency(selectedInvoice.total_amount || 0, company?.currency)}</div>
                 </div>
                 {selectedInvoice.notes && <div><span className="text-gray-500">Notes:</span> {selectedInvoice.notes}</div>}
                 

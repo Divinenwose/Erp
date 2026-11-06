@@ -284,7 +284,7 @@ export default function EmployeesPage() {
     { key: 'department', header: 'Department', cell: (row) => <span className="text-sm text-gray-600 dark:text-gray-400">{row.departments?.name ?? '—'}</span> },
     { key: 'hire_date', header: 'Hire Date', sortable: true, cell: (row) => <span className="text-sm text-gray-500">{row.hire_date ? formatDate(row.hire_date) : '—'}</span> },
     { key: 'employment_type', header: 'Type', cell: (row) => <span className="text-xs capitalize text-gray-600 dark:text-gray-400">{row.employment_type?.replace(/_/g, ' ')}</span> },
-    { key: 'salary', header: 'Salary', sortable: true, cell: (row) => <span className="text-sm font-medium">{row.salary ? formatCurrency(row.salary) : '—'}</span> },
+    { key: 'salary', header: 'Salary', sortable: true, cell: (row) => <span className="text-sm font-medium">{row.salary ? formatCurrency(row.salary, company?.currency) : '—'}</span> },
     { key: 'employment_status', header: 'Status', cell: (row) => <StatusBadge status={row.employment_status} /> },
     {
       key: 'actions', header: '', headerClassName: 'w-10',
@@ -451,7 +451,7 @@ export default function EmployeesPage() {
         <KPICard title="Total Employees" value={employees.length} icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Active" value={active} change={3.2} changeLabel="this month" icon={<UserCheck className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
         <KPICard title="Full-Time" value={employees.filter(e => e.employment_type === 'full_time').length} icon={<Users className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
-        <KPICard title="Total Payroll" value={formatCurrency(totalPayroll)} icon={<DollarSign className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+        <KPICard title="Total Payroll" value={formatCurrency(totalPayroll, company?.currency)} icon={<DollarSign className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
       </div>
 
       <DataTable

@@ -286,7 +286,7 @@ export default function EmployeeRequestsPage() {
         {r.new_dept?.name && `→ ${r.new_dept.name} `}
         {r.new_branch?.name && `→ ${r.new_branch.name} `}
         {r.new_job_title && `→ ${r.new_job_title} `}
-        {r.new_salary != null && `→ ${formatCurrency(r.new_salary)} `}
+        {r.new_salary != null && `→ ${formatCurrency(r.new_salary, company?.currency)} `}
         {r.new_status && `→ ${r.new_status}`}
       </span>
     ) },

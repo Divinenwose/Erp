@@ -108,7 +108,7 @@ export default function CashFlowPage() {
     { key: 'entry_date', header: 'Date', cell: (row) => formatDate(row.entry_date) },
     { key: 'flow_type', header: 'Type', cell: (row) => <span className={row.flow_type === 'inflow' ? 'text-emerald-600' : 'text-rose-600'}>{row.flow_type}</span> },
     { key: 'category', header: 'Category', cell: (row) => row.category },
-    { key: 'amount', header: 'Amount', cell: (row) => <span className="font-medium">{formatCurrency(row.amount)}</span> },
+    { key: 'amount', header: 'Amount', cell: (row) => <span className="font-medium">{formatCurrency(row.amount, company?.currency)}</span> },
     { key: 'description', header: 'Description', cell: (row) => row.description },
     { key: 'reference', header: 'Reference', cell: (row) => row.reference || '-' },
   ];
@@ -156,9 +156,9 @@ export default function CashFlowPage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Inflow" value={formatCurrency(totalInflow)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-          <KPICard title="Total Outflow" value={formatCurrency(totalOutflow)} icon={<TrendingDown className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
-          <KPICard title="Net Cash Flow" value={formatCurrency(netCashFlow)} icon={<Wallet className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Total Inflow" value={formatCurrency(totalInflow, company?.currency)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+          <KPICard title="Total Outflow" value={formatCurrency(totalOutflow, company?.currency)} icon={<TrendingDown className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
+          <KPICard title="Net Cash Flow" value={formatCurrency(netCashFlow, company?.currency)} icon={<Wallet className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
           <KPICard title="Total Entries" value={entries.length} icon={<Wallet className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         </div>
 
@@ -194,7 +194,7 @@ export default function CashFlowPage() {
                   <div><span className="text-gray-500">Date:</span> {formatDate(selectedEntry.entry_date)}</div>
                   <div><span className="text-gray-500">Type:</span> <span className={selectedEntry.flow_type === 'inflow' ? 'text-emerald-600' : 'text-rose-600'}>{selectedEntry.flow_type}</span></div>
                   <div><span className="text-gray-500">Category:</span> {selectedEntry.category}</div>
-                  <div><span className="text-gray-500">Amount:</span> {formatCurrency(selectedEntry.amount)}</div>
+                  <div><span className="text-gray-500">Amount:</span> {formatCurrency(selectedEntry.amount, company?.currency)}</div>
                   <div className="col-span-2"><span className="text-gray-500">Reference:</span> {selectedEntry.reference || '-'}</div>
                   <div className="col-span-2"><span className="text-gray-500">Description:</span> {selectedEntry.description || '-'}</div>
                 </div>

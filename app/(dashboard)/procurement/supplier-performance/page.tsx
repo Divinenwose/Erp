@@ -57,7 +57,7 @@ export default function SupplierPerformancePage() {
     { key: 'price_score', header: 'Price', cell: (row) => <span className="text-sm">{row.price_score != null ? row.price_score.toFixed(1) : '0'}</span> },
     { key: 'on_time_delivery_rate', header: 'On-Time Rate', cell: (row) => <span className="text-sm">{((row.on_time_delivery_rate ?? 0) * 100).toFixed(0)}%</span> },
     { key: 'total_orders', header: 'Orders', cell: (row) => <span className="text-sm">{row.total_orders ?? 0}</span> },
-    { key: 'total_spend', header: 'Total Spend', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_spend || 0)}</span> },
+    { key: 'total_spend', header: 'Total Spend', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_spend || 0, company?.currency)}</span> },
     { key: 'last_evaluation', header: 'Last Eval', cell: (row) => <span className="text-xs text-gray-500">{row.last_evaluation_date ? formatDate(row.last_evaluation_date) : '—'}</span> },
   ];
 
@@ -79,7 +79,7 @@ export default function SupplierPerformancePage() {
           <KPICard title="Avg Overall Rating" value={avgRating} icon={<Star className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
           <KPICard title="Avg Delivery Score" value={avgDelivery} icon={<Clock className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
           <KPICard title="On-Time Delivery Rate" value={`${onTimeRate}%`} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-          <KPICard title="Total Spend" value={formatCurrency(totalSpend)} icon={<TrendingUp className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
+          <KPICard title="Total Spend" value={formatCurrency(totalSpend, company?.currency)} icon={<TrendingUp className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         </div>
 
         <Card className="dark:bg-gray-900 dark:border-gray-800">

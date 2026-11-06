@@ -156,7 +156,7 @@ export default function TGIFReportPage() {
     slide.addTable([
       [{ text: 'Metric', options: { bold: true } }, { text: 'Value', options: { bold: true } }],
       row(['Requests Resolved This Week', String(purchaseSummary.count)]),
-      row(['Total Spend', formatCurrency(purchaseSummary.totalSpend)]),
+      row(['Total Spend', formatCurrency(purchaseSummary.totalSpend, company?.currency)]),
     ], { x: 0.5, y: 1.3, w: 9, colW: [6, 3], fontSize: 14 });
 
     // Slide 5: Completed Maintenance Activities
@@ -166,7 +166,7 @@ export default function TGIFReportPage() {
     } else {
       slide.addTable(
         [[{ text: 'Work Order', options: { bold: true } }, { text: 'Completed', options: { bold: true } }, { text: 'Cost', options: { bold: true } }],
-          ...completedWorkOrders.map(w => row([w.title, formatDate(w.completed_date), w.actual_cost ? formatCurrency(w.actual_cost) : '-']))],
+          ...completedWorkOrders.map(w => row([w.title, formatDate(w.completed_date), w.actual_cost ? formatCurrency(w.actual_cost, company?.currency) : '-']))],
         { x: 0.5, y: 1.3, w: 9, colW: [5, 2.5, 1.5], fontSize: 12 }
       );
     }
@@ -244,7 +244,7 @@ export default function TGIFReportPage() {
         <CardHeader><CardTitle className="text-base font-medium flex items-center gap-2"><ShoppingCart className="h-4 w-4" />Slide 4 — Purchases and Expenses</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
           <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg"><p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{loading ? '—' : purchaseSummary.count}</p><p className="text-xs text-gray-500">Requests Resolved This Week</p></div>
-          <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg"><p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{loading ? '—' : formatCurrency(purchaseSummary.totalSpend)}</p><p className="text-xs text-gray-500">Total Spend</p></div>
+          <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg"><p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{loading ? '—' : formatCurrency(purchaseSummary.totalSpend, company?.currency)}</p><p className="text-xs text-gray-500">Total Spend</p></div>
         </CardContent>
       </Card>
 
@@ -262,7 +262,7 @@ export default function TGIFReportPage() {
                 <div key={i} className="flex items-center justify-between p-2.5 border border-gray-200 dark:border-gray-800 rounded-lg text-sm">
                   <span>{w.title}</span>
                   <div className="flex items-center gap-2">
-                    {w.actual_cost > 0 && <span className="text-xs text-gray-500">{formatCurrency(w.actual_cost)}</span>}
+                    {w.actual_cost > 0 && <span className="text-xs text-gray-500">{formatCurrency(w.actual_cost, company?.currency)}</span>}
                     <Badge variant="outline">Completed {formatDate(w.completed_date)}</Badge>
                   </div>
                 </div>

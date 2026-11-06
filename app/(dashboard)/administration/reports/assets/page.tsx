@@ -47,7 +47,7 @@ export default function AssetsReportPage() {
     { key: 'type', header: 'Type', cell: (r: any) => r.asset_type ?? '-' },
     { key: 'category', header: 'Category', cell: (r: any) => r.category ?? '-' },
     { key: 'status', header: 'Status', cell: (r: any) => r.status ? <StatusBadge status={r.status} /> : '-' },
-    { key: 'current_value', header: 'Current Value', cell: (r: any) => r.current_value ? formatCurrency(r.current_value) : '-' },
+    { key: 'current_value', header: 'Current Value', cell: (r: any) => r.current_value ? formatCurrency(r.current_value, company?.currency) : '-' },
   ];
 
   return (
@@ -60,7 +60,7 @@ export default function AssetsReportPage() {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <KPICard title="Total Assets" value={assets.length} icon={<Briefcase className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Active" value={activeCount} icon={<Briefcase className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-        <KPICard title="Total Value" value={formatCurrency(totalValue)} icon={<DollarSign className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
+        <KPICard title="Total Value" value={formatCurrency(totalValue, company?.currency)} icon={<DollarSign className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
       </div>
 
       <Card><CardContent className="p-0"><DataTable columns={columns} data={assets} loading={loading} emptyTitle="No assets recorded" /></CardContent></Card>

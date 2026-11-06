@@ -163,10 +163,10 @@ export default function FinancialStatementsPage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Paid Revenue" value={formatCurrency(revenue)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-          <KPICard title="Net Income" value={formatCurrency(netIncome)} icon={<BarChart3 className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-          <KPICard title="Total Assets" value={formatCurrency(totalAssets)} icon={<Scale className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
-          <KPICard title="Net Cash Flow" value={formatCurrency(netCashFlow)} icon={<PieChart className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+          <KPICard title="Paid Revenue" value={formatCurrency(revenue, company?.currency)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+          <KPICard title="Net Income" value={formatCurrency(netIncome, company?.currency)} icon={<BarChart3 className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Total Assets" value={formatCurrency(totalAssets, company?.currency)} icon={<Scale className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
+          <KPICard title="Net Cash Flow" value={formatCurrency(netCashFlow, company?.currency)} icon={<PieChart className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
         </div>
 
         <Card className="dark:bg-gray-900 dark:border-gray-800">
@@ -199,15 +199,15 @@ export default function FinancialStatementsPage() {
               <div className="space-y-2">
                 {accountTotals.map(item => (
                   <div key={item.type} className="flex justify-between border-b py-2 capitalize dark:border-gray-800">
-                    <span>{item.type}</span><span className="font-medium">{formatCurrency(item.balance)}</span>
+                    <span>{item.type}</span><span className="font-medium">{formatCurrency(item.balance, company?.currency)}</span>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="space-y-2">
-                <div className="flex justify-between border-b py-2 dark:border-gray-800"><span>Paid Revenue</span><span className="font-medium">{formatCurrency(revenue)}</span></div>
-                <div className="flex justify-between border-b py-2 dark:border-gray-800"><span>Approved Expenses</span><span className="font-medium">{formatCurrency(expenseTotal)}</span></div>
-                <div className="flex justify-between py-2 font-semibold"><span>{selectedStatement === 'cash_flow' ? 'Net Cash Flow' : 'Net Income'}</span><span>{formatCurrency(netIncome)}</span></div>
+                <div className="flex justify-between border-b py-2 dark:border-gray-800"><span>Paid Revenue</span><span className="font-medium">{formatCurrency(revenue, company?.currency)}</span></div>
+                <div className="flex justify-between border-b py-2 dark:border-gray-800"><span>Approved Expenses</span><span className="font-medium">{formatCurrency(expenseTotal, company?.currency)}</span></div>
+                <div className="flex justify-between py-2 font-semibold"><span>{selectedStatement === 'cash_flow' ? 'Net Cash Flow' : 'Net Income'}</span><span>{formatCurrency(netIncome, company?.currency)}</span></div>
                 {!statementRows.length && <p className="pt-4 text-sm text-gray-500">No financial activity in this period.</p>}
               </div>
             )}

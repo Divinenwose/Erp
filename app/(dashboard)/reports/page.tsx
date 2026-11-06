@@ -173,7 +173,7 @@ export default function ReportsPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {canFinance && <KPICard title="Annual Revenue" value={formatCurrency(annualRevenue)} icon={<Building2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
+        {canFinance && <KPICard title="Annual Revenue" value={formatCurrency(annualRevenue, company?.currency)} icon={<Building2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
         {canFinance && <KPICard title="Net Profit Margin" value={`${netMargin.toFixed(1)}%`} icon={<BarChart3 className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
         {canHR && <KPICard title="Active Employees" value={employees.filter(employee => employee.employment_status === 'active').length} icon={<Users className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />}
         {canProcurement && <KPICard title="Pending Purchase Requests" value={pendingRequests} icon={<ShoppingCart className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />}
@@ -202,8 +202,8 @@ export default function ReportsPage() {
                   <defs><linearGradient id="reportsRevenue" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} /><stop offset="95%" stopColor="#3B82F6" stopOpacity={0} /></linearGradient></defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={value => formatCurrency(value)} />
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={value => formatCurrency(value, company?.currency)} />
+                  <Tooltip formatter={(value: number) => formatCurrency(value, company?.currency)} />
                   <Legend />
                   <Area type="monotone" dataKey="revenue" stroke="#3B82F6" fill="url(#reportsRevenue)" strokeWidth={2} name="Paid Invoices" />
                   <Area type="monotone" dataKey="expenses" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.12} strokeWidth={2} name="Approved Expenses" />

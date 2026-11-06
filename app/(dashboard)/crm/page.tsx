@@ -107,8 +107,8 @@ export default function CRMOverviewPage() {
         {canLeads && <KPICard title="Total Leads" value={kpiData.totalLeads} icon={<Target className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
         {canLeads && <KPICard title="Active Leads" value={kpiData.activeLeads} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
         {canCustomers && <KPICard title="Customers" value={kpiData.totalCustomers} icon={<Building2 className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />}
-        {canPipeline && <KPICard title="Pipeline Value" value={formatCurrency(kpiData.pipelineValue)} icon={<DollarSign className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />}
-        {canPipeline && <KPICard title="Won Revenue" value={formatCurrency(kpiData.wonRevenue)} icon={<Award className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
+        {canPipeline && <KPICard title="Pipeline Value" value={formatCurrency(kpiData.pipelineValue, company?.currency)} icon={<DollarSign className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />}
+        {canPipeline && <KPICard title="Won Revenue" value={formatCurrency(kpiData.wonRevenue, company?.currency)} icon={<Award className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
         {canProposals && <KPICard title="Active Proposals" value={kpiData.activeProposals} icon={<FileText className="h-4 w-4 text-pink-600" />} iconBg="bg-pink-50 dark:bg-pink-950/50" loading={loading} />}
         {canContracts && <KPICard title="Active Contracts" value={kpiData.activeContracts} icon={<Award className="h-4 w-4 text-cyan-600" />} iconBg="bg-cyan-50 dark:bg-cyan-950/50" loading={loading} />}
         {canActivities && <KPICard title="Pending Activities" value={kpiData.pendingActivities} icon={<Calendar className="h-4 w-4 text-orange-600" />} iconBg="bg-orange-50 dark:bg-orange-950/50" loading={loading} />}
@@ -123,7 +123,7 @@ export default function CRMOverviewPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="stage" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                <Tooltip formatter={(v: number) => formatCurrency(v, company?.currency)} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} name="Value">
                   {pipelineData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#4CAF50' : '#3e95cd'} />

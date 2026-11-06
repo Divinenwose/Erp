@@ -140,12 +140,12 @@ export default function FinanceOverviewPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {canInvoices && <KPICard title="Total Revenue" value={formatCurrency(kpis.totalRevenue)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
-        {canExpenses && <KPICard title="Total Expenses" value={formatCurrency(kpis.totalExpenses)} icon={<TrendingDown className="h-4 w-4 text-red-600" />} iconBg="bg-red-50 dark:bg-red-950/50" loading={loading} />}
-        {canInvoices && canExpenses && <KPICard title="Net Profit" value={formatCurrency(kpis.netProfit)} icon={<TrendingUp className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
-        {canReceivables && <KPICard title="Outstanding AR" value={formatCurrency(kpis.outstandingAR)} icon={<CreditCard className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />}
-        {canPayables && <KPICard title="Outstanding AP" value={formatCurrency(kpis.outstandingAP)} icon={<TrendingDown className="h-4 w-4 text-orange-600" />} iconBg="bg-orange-50 dark:bg-orange-950/50" loading={loading} />}
-        {canCashFlow && <KPICard title="Cash Balance" value={formatCurrency(kpis.cashBalance)} icon={<Wallet className="h-4 w-4 text-cyan-600" />} iconBg="bg-cyan-50 dark:bg-cyan-950/50" loading={loading} />}
+        {canInvoices && <KPICard title="Total Revenue" value={formatCurrency(kpis.totalRevenue, company?.currency)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
+        {canExpenses && <KPICard title="Total Expenses" value={formatCurrency(kpis.totalExpenses, company?.currency)} icon={<TrendingDown className="h-4 w-4 text-red-600" />} iconBg="bg-red-50 dark:bg-red-950/50" loading={loading} />}
+        {canInvoices && canExpenses && <KPICard title="Net Profit" value={formatCurrency(kpis.netProfit, company?.currency)} icon={<TrendingUp className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
+        {canReceivables && <KPICard title="Outstanding AR" value={formatCurrency(kpis.outstandingAR, company?.currency)} icon={<CreditCard className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />}
+        {canPayables && <KPICard title="Outstanding AP" value={formatCurrency(kpis.outstandingAP, company?.currency)} icon={<TrendingDown className="h-4 w-4 text-orange-600" />} iconBg="bg-orange-50 dark:bg-orange-950/50" loading={loading} />}
+        {canCashFlow && <KPICard title="Cash Balance" value={formatCurrency(kpis.cashBalance, company?.currency)} icon={<Wallet className="h-4 w-4 text-cyan-600" />} iconBg="bg-cyan-50 dark:bg-cyan-950/50" loading={loading} />}
         {canExpenses && <KPICard title="Pending Approvals" value={kpis.pendingApprovals} icon={<AlertCircle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />}
         {canInvoices && <KPICard title="Overdue Invoices" value={kpis.overdueInvoices} icon={<FileText className="h-4 w-4 text-red-600" />} iconBg="bg-red-50 dark:bg-red-950/50" loading={loading} />}
       </div>
@@ -170,7 +170,7 @@ export default function FinanceOverviewPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => formatCurrency(v)} />
+              <Tooltip formatter={(v: number) => formatCurrency(v, company?.currency)} />
               <Line type="monotone" dataKey="inflow" stroke="#10B981" strokeWidth={2} dot={false} name="Cash In" />
               <Line type="monotone" dataKey="outflow" stroke="#EF4444" strokeWidth={2} dot={false} name="Cash Out" />
             </LineChart>

@@ -152,7 +152,7 @@ export default function ReceivablesPage() {
   const columns: Column<any>[] = [
     { key: 'customers', header: 'Customer', cell: (row) => row.customers?.name || 'Unknown' },
     { key: 'invoice_number', header: 'Invoice', cell: (row) => <span className="font-mono text-xs text-blue-600">{row.invoice_number}</span> },
-    { key: 'total_amount', header: 'Amount', cell: (row) => <span className="font-medium">{formatCurrency(row.total_amount)}</span> },
+    { key: 'total_amount', header: 'Amount', cell: (row) => <span className="font-medium">{formatCurrency(row.total_amount, company?.currency)}</span> },
     { key: 'due_date', header: 'Due Date', cell: (row) => formatDate(row.due_date) },
     { key: 'days', header: 'Days', cell: (row) => {
       const days = getDaysUntilDue(row.due_date);
@@ -223,10 +223,10 @@ export default function ReceivablesPage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Receivables" value={formatCurrency(totalReceivables)} icon={<TrendingUp className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-          <KPICard title="Overdue" value={formatCurrency(overdueReceivables)} icon={<AlertTriangle className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
-          <KPICard title="Due This Week" value={formatCurrency(dueThisWeek)} icon={<Calendar className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
-          <KPICard title="Collected This Month" value={formatCurrency(collectedThisMonth)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+          <KPICard title="Total Receivables" value={formatCurrency(totalReceivables, company?.currency)} icon={<TrendingUp className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Overdue" value={formatCurrency(overdueReceivables, company?.currency)} icon={<AlertTriangle className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
+          <KPICard title="Due This Week" value={formatCurrency(dueThisWeek, company?.currency)} icon={<Calendar className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+          <KPICard title="Collected This Month" value={formatCurrency(collectedThisMonth, company?.currency)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
         </div>
 
         <Card className="dark:bg-gray-900 dark:border-gray-800">
@@ -258,8 +258,8 @@ export default function ReceivablesPage() {
                   <div><span className="text-gray-500">Invoice:</span> {selectedReceivable.invoice_number}</div>
                   <div><span className="text-gray-500">Issue Date:</span> {formatDate(selectedReceivable.issue_date)}</div>
                   <div><span className="text-gray-500">Due Date:</span> {formatDate(selectedReceivable.due_date)}</div>
-                  <div><span className="text-gray-500">Amount:</span> {formatCurrency(selectedReceivable.total_amount)}</div>
-                  <div><span className="text-gray-500">Balance Due:</span> {formatCurrency(selectedReceivable.balance_due)}</div>
+                  <div><span className="text-gray-500">Amount:</span> {formatCurrency(selectedReceivable.total_amount, company?.currency)}</div>
+                  <div><span className="text-gray-500">Balance Due:</span> {formatCurrency(selectedReceivable.balance_due, company?.currency)}</div>
                   <div><span className="text-gray-500">Status:</span> <StatusBadge status={getReceivableStatus(selectedReceivable.due_date, selectedReceivable.status)} /></div>
                   <div><span className="text-gray-500">Currency:</span> {selectedReceivable.currency}</div>
                 </div>

@@ -134,7 +134,7 @@ export default function BankAccountsPage() {
     { key: 'account_number', header: 'Account Number', cell: (row) => <span className="font-mono text-xs">{row.account_number}</span> },
     { key: 'account_type', header: 'Type' },
     { key: 'currency', header: 'Currency' },
-    { key: 'current_balance', header: 'Balance', cell: (row) => <span className="font-medium">{formatCurrency(row.current_balance)}</span> },
+    { key: 'current_balance', header: 'Balance', cell: (row) => <span className="font-medium">{formatCurrency(row.current_balance, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
 
@@ -186,7 +186,7 @@ export default function BankAccountsPage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Balance" value={formatCurrency(totalBalance)} icon={<Building2 className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Total Balance" value={formatCurrency(totalBalance, company?.currency)} icon={<Building2 className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
           <KPICard title="Active Accounts" value={activeAccounts} icon={<Building2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
           <KPICard title="Total Accounts" value={accounts.length} icon={<Building2 className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         </div>
@@ -221,8 +221,8 @@ export default function BankAccountsPage() {
                   <div><span className="text-gray-500">Account Number:</span> {selectedAccount.account_number}</div>
                   <div><span className="text-gray-500">Type:</span> {selectedAccount.account_type}</div>
                   <div><span className="text-gray-500">Currency:</span> {selectedAccount.currency}</div>
-                  <div><span className="text-gray-500">Opening Balance:</span> {formatCurrency(selectedAccount.opening_balance)}</div>
-                  <div><span className="text-gray-500">Current Balance:</span> {formatCurrency(selectedAccount.current_balance)}</div>
+                  <div><span className="text-gray-500">Opening Balance:</span> {formatCurrency(selectedAccount.opening_balance, company?.currency)}</div>
+                  <div><span className="text-gray-500">Current Balance:</span> {formatCurrency(selectedAccount.current_balance, company?.currency)}</div>
                   <div><span className="text-gray-500">Status:</span> <StatusBadge status={selectedAccount.status} /></div>
                   {selectedAccount.notes && <div className="col-span-2"><span className="text-gray-500">Notes:</span> {selectedAccount.notes}</div>}
                 </div>

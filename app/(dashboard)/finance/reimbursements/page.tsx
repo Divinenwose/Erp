@@ -161,7 +161,7 @@ export default function ReimbursementsPage() {
     { key: 'employees', header: 'Employee', cell: (row) => `${row.employees?.first_name} ${row.employees?.last_name}` || 'Unknown' },
     { key: 'category', header: 'Category' },
     { key: 'description', header: 'Description' },
-    { key: 'amount', header: 'Amount', cell: (row) => <span className="font-medium">{formatCurrency(row.amount)}</span> },
+    { key: 'amount', header: 'Amount', cell: (row) => <span className="font-medium">{formatCurrency(row.amount, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
 
@@ -212,9 +212,9 @@ export default function ReimbursementsPage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Amount" value={formatCurrency(totalAmount)} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-          <KPICard title="Pending" value={formatCurrency(pendingAmount)} icon={<DollarSign className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
-          <KPICard title="Paid" value={formatCurrency(paidAmount)} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+          <KPICard title="Total Amount" value={formatCurrency(totalAmount, company?.currency)} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Pending" value={formatCurrency(pendingAmount, company?.currency)} icon={<DollarSign className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+          <KPICard title="Paid" value={formatCurrency(paidAmount, company?.currency)} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
           <KPICard title="Total Requests" value={reimbursements.length} icon={<DollarSign className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         </div>
 
@@ -250,7 +250,7 @@ export default function ReimbursementsPage() {
                   <div><span className="text-gray-500">Employee:</span> {selectedReimbursement.employees?.first_name} {selectedReimbursement.employees?.last_name}</div>
                   <div><span className="text-gray-500">Category:</span> {selectedReimbursement.category}</div>
                   <div><span className="text-gray-500">Date:</span> {formatDate(selectedReimbursement.expense_date)}</div>
-                  <div><span className="text-gray-500">Amount:</span> {formatCurrency(selectedReimbursement.amount)}</div>
+                  <div><span className="text-gray-500">Amount:</span> {formatCurrency(selectedReimbursement.amount, company?.currency)}</div>
                   <div className="col-span-2"><span className="text-gray-500">Description:</span> {selectedReimbursement.description}</div>
                   <div className="col-span-2"><span className="text-gray-500">Status:</span> <StatusBadge status={selectedReimbursement.status} /></div>
                   {selectedReimbursement.receipt_reference && <div className="col-span-2"><span className="text-gray-500">Receipt:</span> {selectedReimbursement.receipt_reference}</div>}
@@ -269,7 +269,7 @@ export default function ReimbursementsPage() {
               <div className="space-y-4">
                 <div className="text-sm">
                   <p><span className="text-gray-500">Employee:</span> {selectedReimbursement.employees?.first_name} {selectedReimbursement.employees?.last_name}</p>
-                  <p><span className="text-gray-500">Amount:</span> {formatCurrency(selectedReimbursement.amount)}</p>
+                  <p><span className="text-gray-500">Amount:</span> {formatCurrency(selectedReimbursement.amount, company?.currency)}</p>
                 </div>
                 <div>
                   <Label>Payment Amount</Label>

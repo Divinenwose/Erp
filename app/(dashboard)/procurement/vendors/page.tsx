@@ -186,7 +186,7 @@ export default function VendorsPage() {
     { key: 'email', header: 'Email', cell: (row) => row.email || '-' },
     { key: 'phone', header: 'Phone', cell: (row) => row.phone || '-' },
     { key: 'payment_terms', header: 'Terms', cell: (row) => <span className="text-xs">{row.payment_terms ?? 30} days</span> },
-    { key: 'total_spend', header: 'Total Spend', cell: (row) => <span className="font-medium">{formatCurrency(row.total_spend || 0)}</span> },
+    { key: 'total_spend', header: 'Total Spend', cell: (row) => <span className="font-medium">{formatCurrency(row.total_spend || 0, company?.currency)}</span> },
     { key: 'rating', header: 'Rating', cell: (row) => (
       <div className="flex items-center gap-0.5">
         {Array.from({ length: 5 }).map((_, i) => <Star key={i} className={`h-3.5 w-3.5 ${i < (row.rating ?? 0) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 dark:text-gray-700'}`} />)}
@@ -259,7 +259,7 @@ export default function VendorsPage() {
           <KPICard title="Total Vendors" value={vendors.length} icon={<Building2 className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
           <KPICard title="Active" value={active} icon={<Building2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
           <KPICard title="Categories" value={categories} icon={<Building2 className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
-          <KPICard title="Total Spend" value={formatCurrency(totalSpend)} icon={<TrendingUp className="h-4 w-4 text-orange-600" />} iconBg="bg-orange-50 dark:bg-orange-950/50" loading={loading} />
+          <KPICard title="Total Spend" value={formatCurrency(totalSpend, company?.currency)} icon={<TrendingUp className="h-4 w-4 text-orange-600" />} iconBg="bg-orange-50 dark:bg-orange-950/50" loading={loading} />
         </div>
 
         <Card className="dark:bg-gray-900 dark:border-gray-800">
@@ -296,7 +296,7 @@ export default function VendorsPage() {
                   <div><span className="text-gray-500">Currency:</span> {selectedVendor.currency}</div>
                   <div><span className="text-gray-500">Payment Terms:</span> {selectedVendor.payment_terms ?? 30} days</div>
                   <div><span className="text-gray-500">Total Orders:</span> {selectedVendor.total_orders ?? 0}</div>
-                  <div><span className="text-gray-500">Total Spend:</span> {formatCurrency(selectedVendor.total_spend || 0)}</div>
+                  <div><span className="text-gray-500">Total Spend:</span> {formatCurrency(selectedVendor.total_spend || 0, company?.currency)}</div>
                   <div><span className="text-gray-500">Rating:</span> <div className="flex items-center gap-0.5">{Array.from({ length: 5 }).map((_, i) => <Star key={i} className={`h-3.5 w-3.5 ${i < (selectedVendor.rating ?? 0) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 dark:text-gray-700'}`} />)}</div></div>
                   <div><span className="text-gray-500">Last Order:</span> {selectedVendor.last_order_date ? formatDate(selectedVendor.last_order_date) : '-'}</div>
                   {selectedVendor.address && <div className="col-span-2"><span className="text-gray-500">Address:</span> {selectedVendor.address}</div>}

@@ -56,7 +56,7 @@ export default function FuelReportPage() {
     { key: 'date', header: 'Date', cell: (r: any) => formatDate(r.fuel_date) },
     { key: 'driver', header: 'Driver', cell: (r: any) => r.profiles ? `${r.profiles.first_name} ${r.profiles.last_name}` : '-' },
     { key: 'quantity', header: 'Quantity', cell: (r: any) => r.fuel_quantity ?? '-' },
-    { key: 'cost', header: 'Cost', cell: (r: any) => r.cost ? formatCurrency(r.cost) : '-' },
+    { key: 'cost', header: 'Cost', cell: (r: any) => r.cost ? formatCurrency(r.cost, company?.currency) : '-' },
     { key: 'station', header: 'Station', cell: (r: any) => r.fuel_station ?? '-' },
   ];
 
@@ -71,7 +71,7 @@ export default function FuelReportPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <KPICard title="Total Cost" value={formatCurrency(totalCost)} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+        <KPICard title="Total Cost" value={formatCurrency(totalCost, company?.currency)} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Total Quantity" value={totalQuantity.toFixed(1)} icon={<Fuel className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         <KPICard title="Fill-ups" value={records.length} icon={<Fuel className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
       </div>

@@ -129,8 +129,8 @@ export default function PettyCashPage() {
     { key: 'fund_name', header: 'Fund Name' },
     { key: 'custodian', header: 'Custodian' },
     { key: 'location', header: 'Location', cell: (row) => row.location || '-' },
-    { key: 'initial_amount', header: 'Initial', cell: (row) => formatCurrency(row.initial_amount) },
-    { key: 'current_balance', header: 'Current Balance', cell: (row) => <span className="font-medium">{formatCurrency(row.current_balance)}</span> },
+    { key: 'initial_amount', header: 'Initial', cell: (row) => formatCurrency(row.initial_amount, company?.currency) },
+    { key: 'current_balance', header: 'Current Balance', cell: (row) => <span className="font-medium">{formatCurrency(row.current_balance, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
 
@@ -171,8 +171,8 @@ export default function PettyCashPage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Balance" value={formatCurrency(totalBalance)} icon={<Wallet className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-          <KPICard title="Total Initial" value={formatCurrency(totalInitial)} icon={<Wallet className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+          <KPICard title="Total Balance" value={formatCurrency(totalBalance, company?.currency)} icon={<Wallet className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Total Initial" value={formatCurrency(totalInitial, company?.currency)} icon={<Wallet className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
           <KPICard title="Active Funds" value={activeFunds} icon={<Wallet className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
           <KPICard title="Total Funds" value={funds.length} icon={<Wallet className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
         </div>
@@ -205,8 +205,8 @@ export default function PettyCashPage() {
                   <div><span className="text-gray-500">Fund Name:</span> {selectedFund.fund_name}</div>
                   <div><span className="text-gray-500">Custodian:</span> {selectedFund.custodian}</div>
                   <div><span className="text-gray-500">Location:</span> {selectedFund.location || '-'}</div>
-                  <div><span className="text-gray-500">Initial Amount:</span> {formatCurrency(selectedFund.initial_amount)}</div>
-                  <div><span className="text-gray-500">Current Balance:</span> {formatCurrency(selectedFund.current_balance)}</div>
+                  <div><span className="text-gray-500">Initial Amount:</span> {formatCurrency(selectedFund.initial_amount, company?.currency)}</div>
+                  <div><span className="text-gray-500">Current Balance:</span> {formatCurrency(selectedFund.current_balance, company?.currency)}</div>
                   <div><span className="text-gray-500">Status:</span> <StatusBadge status={selectedFund.status} /></div>
                   {selectedFund.notes && <div className="col-span-2"><span className="text-gray-500">Notes:</span> {selectedFund.notes}</div>}
                 </div>
@@ -223,7 +223,7 @@ export default function PettyCashPage() {
               <div className="space-y-4">
                 <div className="text-sm">
                   <p><span className="text-gray-500">Fund:</span> {selectedFund.fund_name}</p>
-                  <p><span className="text-gray-500">Current Balance:</span> {formatCurrency(selectedFund.current_balance)}</p>
+                  <p><span className="text-gray-500">Current Balance:</span> {formatCurrency(selectedFund.current_balance, company?.currency)}</p>
                 </div>
                 <div>
                   <Label>Replenishment Amount</Label>

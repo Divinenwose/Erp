@@ -122,7 +122,7 @@ export default function ProjectsPage() {
         <KPICard title="Total Projects" value={projects.length} icon={<FolderKanban className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="In Progress" value={active} icon={<Clock className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
         <KPICard title="Completed" value={completed} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-        <KPICard title="Total Budget" value={formatCurrency(totalBudget)} icon={<Users className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
+        <KPICard title="Total Budget" value={formatCurrency(totalBudget, company?.currency)} icon={<Users className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
       </div>
 
       <div className="flex items-center gap-3">
@@ -178,7 +178,7 @@ export default function ProjectsPage() {
                   </div>
                   <div className="w-24 hidden md:block"><div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-blue-600 rounded-full" style={{ width: `${p.completion_percent ?? 0}%` }} /></div></div>
                   <div className="text-xs text-gray-400 hidden lg:block">{p.end_date ? formatDate(p.end_date) : '—'}</div>
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden lg:block">{formatCurrency(p.budget ?? 0)}</div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden lg:block">{formatCurrency(p.budget ?? 0, company?.currency)}</div>
                   <StatusBadge status={p.status} />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

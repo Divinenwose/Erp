@@ -142,7 +142,7 @@ export default function ForecastsPage() {
     { key: 'forecast_number', header: 'Number', sortable: true, cell: (row) => <span className="font-medium text-sm">{row.forecast_number}</span> },
     { key: 'forecast_type', header: 'Type', sortable: true, cell: (row) => <span className="text-sm capitalize">{row.forecast_type}</span> },
     { key: 'period_start', header: 'Period', sortable: true, cell: (row) => <span className="text-sm">{formatDate(row.period_start)} - {formatDate(row.period_end)}</span> },
-    { key: 'forecast_amount', header: 'Forecast Amount', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.forecast_amount)}</span> },
+    { key: 'forecast_amount', header: 'Forecast Amount', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.forecast_amount, company?.currency)}</span> },
     { key: 'confidence_level', header: 'Confidence', sortable: true, cell: (row) => <span className="text-sm">{row.confidence_level}%</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
@@ -207,7 +207,7 @@ export default function ForecastsPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard title="Active Forecasts" value={active} icon={<TrendingUp className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-        <KPICard title="Total Forecast" value={formatCurrency(totalForecast)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+        <KPICard title="Total Forecast" value={formatCurrency(totalForecast, company?.currency)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
         <KPICard title="Avg Confidence" value={`${avgConfidence.toFixed(0)}%`} icon={<Calendar className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
         <KPICard title="Forecast Periods" value={forecasts.length} icon={<Calendar className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
       </div>
@@ -237,7 +237,7 @@ export default function ForecastsPage() {
                 <div className="col-span-2"><span className="text-gray-500">Type:</span> {selectedForecast.forecast_type}</div>
                 <div><span className="text-gray-500">Period:</span> {formatDate(selectedForecast.period_start)} - {formatDate(selectedForecast.period_end)}</div>
                 <div><span className="text-gray-500">Period Type:</span> {selectedForecast.period_type}</div>
-                <div className="font-semibold"><span className="text-gray-500">Forecast Amount:</span> {formatCurrency(selectedForecast.forecast_amount)}</div>
+                <div className="font-semibold"><span className="text-gray-500">Forecast Amount:</span> {formatCurrency(selectedForecast.forecast_amount, company?.currency)}</div>
                 <div><span className="text-gray-500">Confidence Level:</span> {selectedForecast.confidence_level}%</div>
               </div>
               {selectedForecast.assumptions && <div><span className="text-gray-500">Assumptions:</span> {selectedForecast.assumptions}</div>}

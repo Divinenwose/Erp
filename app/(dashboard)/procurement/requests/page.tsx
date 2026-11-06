@@ -167,7 +167,7 @@ export default function PurchaseRequestsPage() {
     { key: 'request_number', header: 'Number', cell: (row) => <span className="font-mono text-xs text-blue-600">{row.request_number}</span> },
     { key: 'title', header: 'Title' },
     { key: 'departments', header: 'Department', cell: (row) => row.departments?.name || 'General' },
-    { key: 'estimated_cost', header: 'Estimated Cost', cell: (row) => <span className="font-medium">{formatCurrency(row.estimated_cost || 0)}</span> },
+    { key: 'estimated_cost', header: 'Estimated Cost', cell: (row) => <span className="font-medium">{formatCurrency(row.estimated_cost || 0, company?.currency)}</span> },
     { key: 'required_date', header: 'Required Date', cell: (row) => row.required_date ? formatDate(row.required_date) : '-' },
     { key: 'priority', header: 'Priority', cell: (row) => <span className={`text-xs px-2 py-1 rounded-full font-medium ${
       row.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400' :
@@ -236,7 +236,7 @@ export default function PurchaseRequestsPage() {
           <KPICard title="Total Requests" value={requests.length} icon={<FileText className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
           <KPICard title="Pending Approval" value={pending} icon={<Clock className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
           <KPICard title="Approved" value={approved} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-          <KPICard title="Total Value" value={formatCurrency(totalValue)} icon={<TrendingUp className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
+          <KPICard title="Total Value" value={formatCurrency(totalValue, company?.currency)} icon={<TrendingUp className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         </div>
 
         <Card className="dark:bg-gray-900 dark:border-gray-800">
@@ -269,7 +269,7 @@ export default function PurchaseRequestsPage() {
                   <div><span className="text-gray-500">Title:</span> {selectedRequest.title}</div>
                   <div><span className="text-gray-500">Department:</span> {selectedRequest.departments?.name}</div>
                   <div><span className="text-gray-500">Priority:</span> {selectedRequest.priority}</div>
-                  <div><span className="text-gray-500">Estimated Cost:</span> {formatCurrency(selectedRequest.estimated_cost || 0)}</div>
+                  <div><span className="text-gray-500">Estimated Cost:</span> {formatCurrency(selectedRequest.estimated_cost || 0, company?.currency)}</div>
                   <div><span className="text-gray-500">Required Date:</span> {selectedRequest.required_date ? formatDate(selectedRequest.required_date) : '-'}</div>
                   <div><span className="text-gray-500">Requested By:</span> {selectedRequest.employees?.first_name} {selectedRequest.employees?.last_name}</div>
                 </div>

@@ -11,7 +11,7 @@ import { formatCurrency } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function InventoryOverviewPage() {
-  const { hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
+  const { company, hasPermission, isSuperAdmin, isCompanyAdmin } = useAuth();
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
   const canProducts = isAdmin || hasPermission('inventory.products.view');
   const canWarehouses = isAdmin || hasPermission('inventory.warehouses.view');
@@ -32,7 +32,7 @@ export default function InventoryOverviewPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {canProducts && <KPICard title="Total Products" value={0} icon={<Package className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" />}
-        {canProducts && <KPICard title="Total Stock Value" value={formatCurrency(0)} icon={<TrendingDown className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" />}
+        {canProducts && <KPICard title="Total Stock Value" value={formatCurrency(0, company?.currency)} icon={<TrendingDown className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" />}
         {canMovements && <KPICard title="Low Stock Items" value={0} icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" />}
         {canWarehouses && <KPICard title="Warehouses" value={0} icon={<Warehouse className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" />}
       </div>

@@ -303,7 +303,7 @@ export default function DashboardPage() {
 
       {/* Primary KPIs — each card only shown if the viewer has the underlying permission */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {canFinance && <KPICard title="Total Revenue (YTD)" value={formatCurrency(stats.totalRevenue)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
+        {canFinance && <KPICard title="Total Revenue (YTD)" value={formatCurrency(stats.totalRevenue, company?.currency)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
         {canHR && <KPICard title="Active Employees" value={stats.employees} icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
         {canCRM && <KPICard title="Active Customers" value={stats.customers} icon={<Building2 className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />}
         {canProjects && <KPICard title="Active Projects" value={stats.projects} icon={<FolderKanban className="h-4 w-4 text-orange-600" />} iconBg="bg-orange-50 dark:bg-orange-950/50" loading={loading} />}
@@ -351,8 +351,8 @@ export default function DashboardPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => formatCurrency(v)} />
-                <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => formatCurrency(v, company?.currency)} />
+                <Tooltip formatter={(v: number) => formatCurrency(v, company?.currency)} />
                 <Legend iconType="circle" iconSize={8} />
                 <Area type="monotone" dataKey="revenue" stroke="#3B82F6" fill="url(#colRev)" strokeWidth={2} name="Revenue" />
                 <Area type="monotone" dataKey="expenses" stroke="#F59E0B" fill="url(#colExp)" strokeWidth={2} name="Expenses" />
@@ -411,8 +411,8 @@ export default function DashboardPage() {
                       style={{ width: `${Math.min(100, pct)}%` }} />
                   </div>
                   <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-                    <span>{formatCurrency(d.spent)}</span>
-                    <span>{formatCurrency(d.budget)}</span>
+                    <span>{formatCurrency(d.spent, company?.currency)}</span>
+                    <span>{formatCurrency(d.budget, company?.currency)}</span>
                   </div>
                 </div>
               );
@@ -460,7 +460,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-400 truncate">{(inv as any).customers?.name ?? '—'}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-xs font-semibold text-gray-900 dark:text-white">{formatCurrency(inv.total_amount)}</p>
+                    <p className="text-xs font-semibold text-gray-900 dark:text-white">{formatCurrency(inv.total_amount, company?.currency)}</p>
                     <StatusBadge status={inv.status} size="sm" />
                   </div>
                 </div>

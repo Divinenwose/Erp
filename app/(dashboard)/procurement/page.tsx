@@ -99,7 +99,7 @@ export default function ProcurementOverviewPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {canOrders && <KPICard title="Total Spend (YTD)" value={formatCurrency(kpiData.totalSpend)} icon={<TrendingDown className="h-4 w-4 text-red-600" />} iconBg="bg-red-50 dark:bg-red-950/50" loading={loading} />}
+        {canOrders && <KPICard title="Total Spend (YTD)" value={formatCurrency(kpiData.totalSpend, company?.currency)} icon={<TrendingDown className="h-4 w-4 text-red-600" />} iconBg="bg-red-50 dark:bg-red-950/50" loading={loading} />}
         {canVendors && <KPICard title="Active Vendors" value={kpiData.activeVendors} icon={<Building2 className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
         {canOrders && <KPICard title="Pending POs" value={kpiData.pendingPOs} icon={<ShoppingCart className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />}
         {canRequests && <KPICard title="Approved Requests" value={kpiData.approvedRequests} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
@@ -125,7 +125,7 @@ export default function ProcurementOverviewPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => formatCurrency(v)} />
+              <Tooltip formatter={(v: number) => formatCurrency(v, company?.currency)} />
               <Bar dataKey="spend" fill="#8B5CF6" radius={[4, 4, 0, 0]} name="Spend" />
             </BarChart>
           </ResponsiveContainer>

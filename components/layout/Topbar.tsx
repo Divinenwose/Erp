@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn, getInitials, formatDateRelative } from '@/lib/utils';
@@ -14,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 interface TopbarProps {
   onMenuToggle: () => void;
@@ -22,20 +23,56 @@ interface TopbarProps {
   onMobileClose: () => void;
 }
 
-const mockNotifications = [
-  { id: '1', title: 'Leave request pending', message: 'John Smith requested 3 days annual leave', time: new Date(Date.now() - 1800000).toISOString(), type: 'warning', read: false },
-  { id: '2', title: 'Purchase order approved', message: 'PO-2024-0089 has been approved', time: new Date(Date.now() - 7200000).toISOString(), type: 'success', read: false },
-  { id: '3', title: 'Invoice overdue', message: 'Invoice INV-0043 is 5 days overdue', time: new Date(Date.now() - 86400000).toISOString(), type: 'error', read: true },
-];
-
 export default function Topbar({ onMenuToggle, sidebarCollapsed, mobileOpen, onMobileClose }: TopbarProps) {
   const { theme, setTheme } = useTheme();
   const { user, profile, company, roles, signOut } = useAuth();
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    title: string;
+    message: string;
+    created_at: string;
+    type: string;
+    read: boolean;
+  }>>([]);
 
-  const unreadCount = mockNotifications.filter(n => !n.read).length;
+  useEffect(() => {
+    if (!company?.id || !user?.id) {
+      setNotifications([]);
+      return;
+    }
+
+    const loadNotifications = async () => {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id, title, message, created_at, type, read')
+        .eq('company_id', company.id)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (error) {
+        console.error('[NOTIFICATIONS] Failed to load topbar notifications:', error);
+        return;
+      }
+      setNotifications(data ?? []);
+    };
+
+    void loadNotifications();
+    const channel = supabase
+      .channel(`topbar-notifications-${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`,
+      }, () => { void loadNotifications(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [company?.id, user?.id]);
+
+  const unreadCount = notifications.filter(notification => !notification.read).length;
   const displayName = profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() : user?.email ?? '';
   // Show the user's actual RBAC role(s) rather than the legacy profile.role
   // field, which may just hold "employee" regardless of assigned role.
@@ -141,14 +178,17 @@ export default function Topbar({ onMenuToggle, sidebarCollapsed, mobileOpen, onM
               {unreadCount > 0 && <Badge variant="secondary" className="text-xs">{unreadCount} new</Badge>}
             </div>
             <div className="max-h-72 overflow-y-auto">
-              {mockNotifications.map(n => (
-                <div key={n.id} className={cn('px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer border-b last:border-b-0', !n.read && 'bg-blue-50/50 dark:bg-blue-950/20')}>
+              {notifications.length === 0 && (
+                <p className="px-3 py-6 text-center text-xs text-gray-500">You are all caught up.</p>
+              )}
+              {notifications.map(n => (
+                <div key={n.id} className={cn('px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 border-b last:border-b-0', !n.read && 'bg-blue-50/50 dark:bg-blue-950/20')}>
                   <div className="flex items-start gap-2">
-                    <div className={cn('w-1.5 h-1.5 rounded-full mt-2 shrink-0', n.type === 'error' ? 'bg-red-500' : n.type === 'warning' ? 'bg-amber-500' : 'bg-emerald-500')} />
+                    <div className={cn('w-1.5 h-1.5 rounded-full mt-2 shrink-0', n.type === 'error' || n.type === 'alert' ? 'bg-red-500' : n.type === 'warning' ? 'bg-amber-500' : n.type === 'success' || n.type === 'approval' ? 'bg-emerald-500' : 'bg-blue-500')} />
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-gray-900 dark:text-white">{n.title}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{n.message}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{formatDateRelative(n.time)}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{formatDateRelative(n.created_at)}</p>
                     </div>
                   </div>
                 </div>

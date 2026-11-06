@@ -155,8 +155,8 @@ export default function TargetsPage() {
     { key: 'employees', header: 'Assigned To', cell: (row) => <span className="text-sm">{row.employees?.full_name ?? '—'}</span> },
     { key: 'departments', header: 'Team', cell: (row) => <span className="text-sm">{row.departments?.name ?? '—'}</span> },
     { key: 'period_start', header: 'Period', sortable: true, cell: (row) => <span className="text-sm">{formatDate(row.period_start)} - {formatDate(row.period_end)}</span> },
-    { key: 'target_amount', header: 'Target Amount', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.target_amount)}</span> },
-    { key: 'achieved_amount', header: 'Achieved', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.achieved_amount)}</span> },
+    { key: 'target_amount', header: 'Target Amount', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.target_amount, company?.currency)}</span> },
+    { key: 'achieved_amount', header: 'Achieved', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.achieved_amount, company?.currency)}</span> },
     { key: 'achievement', header: '% Achieved', sortable: true, cell: (row) => {
       const pct = row.target_amount > 0 ? (row.achieved_amount / row.target_amount * 100).toFixed(1) : '0';
       return <span className={`text-sm font-semibold ${parseFloat(pct) >= 100 ? 'text-emerald-600' : parseFloat(pct) >= 75 ? 'text-amber-600' : 'text-red-600'}`}>{pct}%</span>;
@@ -239,8 +239,8 @@ export default function TargetsPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard title="Active Targets" value={active} icon={<Target className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-        <KPICard title="Total Target" value={formatCurrency(totalTargetAmount)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-        <KPICard title="Achieved" value={formatCurrency(totalAchieved)} icon={<Award className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+        <KPICard title="Total Target" value={formatCurrency(totalTargetAmount, company?.currency)} icon={<TrendingUp className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+        <KPICard title="Achieved" value={formatCurrency(totalAchieved, company?.currency)} icon={<Award className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
         <KPICard title="Achievement Rate" value={`${achievementRate}%`} icon={<Users className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
       </div>
 
@@ -269,8 +269,8 @@ export default function TargetsPage() {
                 <div className="col-span-2"><span className="text-gray-500">Type:</span> {selectedTarget.target_type}</div>
                 <div><span className="text-gray-500">Period:</span> {formatDate(selectedTarget.period_start)} - {formatDate(selectedTarget.period_end)}</div>
                 <div><span className="text-gray-500">Period Type:</span> {selectedTarget.period_type}</div>
-                <div><span className="text-gray-500">Target Amount:</span> {formatCurrency(selectedTarget.target_amount)}</div>
-                <div><span className="text-gray-500">Achieved Amount:</span> {formatCurrency(selectedTarget.achieved_amount)}</div>
+                <div><span className="text-gray-500">Target Amount:</span> {formatCurrency(selectedTarget.target_amount, company?.currency)}</div>
+                <div><span className="text-gray-500">Achieved Amount:</span> {formatCurrency(selectedTarget.achieved_amount, company?.currency)}</div>
                 <div className="font-semibold"><span className="text-gray-500">Achievement:</span> {selectedTarget.target_amount > 0 ? (selectedTarget.achieved_amount / selectedTarget.target_amount * 100).toFixed(1) : 0}%</div>
                 <div><span className="text-gray-500">Target Quantity:</span> {selectedTarget.target_quantity ?? 0}</div>
                 <div><span className="text-gray-500">Achieved Quantity:</span> {selectedTarget.achieved_quantity ?? 0}</div>

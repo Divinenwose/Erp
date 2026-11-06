@@ -59,7 +59,7 @@ export default function PurchasesReportPage() {
     { key: 'title', header: 'Title' },
     { key: 'requester', header: 'Requester', cell: (r: any) => r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : '-' },
     { key: 'department', header: 'Department', cell: (r: any) => r.departments?.name ?? '-' },
-    { key: 'amount', header: 'Amount', cell: (r: any) => formatCurrency(r.actual_cost || r.estimated_cost || 0) },
+    { key: 'amount', header: 'Amount', cell: (r: any) => formatCurrency(r.actual_cost || r.estimated_cost || 0, company?.currency) },
     { key: 'status', header: 'Status', cell: (r: any) => <StatusBadge status={r.status} /> },
   ];
 
@@ -74,7 +74,7 @@ export default function PurchasesReportPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Spend" value={formatCurrency(totalSpend)} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+        <KPICard title="Total Spend" value={formatCurrency(totalSpend, company?.currency)} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Total Requests" value={requests.length} icon={<ShoppingCart className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         <KPICard title="Resolved" value={resolved} icon={<ShoppingCart className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
         <KPICard title="Pending" value={pending} icon={<ShoppingCart className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />

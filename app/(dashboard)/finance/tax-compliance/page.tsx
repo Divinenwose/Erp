@@ -132,8 +132,8 @@ export default function TaxCompliancePage() {
     { key: 'tax_type', header: 'Tax Type' },
     { key: 'tax_period', header: 'Period' },
     { key: 'due_date', header: 'Due Date', cell: (row) => formatDate(row.due_date) },
-    { key: 'taxable_amount', header: 'Taxable Amount', cell: (row) => formatCurrency(row.taxable_amount) },
-    { key: 'tax_amount', header: 'Tax Amount', cell: (row) => <span className="font-medium">{formatCurrency(row.tax_amount)}</span> },
+    { key: 'taxable_amount', header: 'Taxable Amount', cell: (row) => formatCurrency(row.taxable_amount, company?.currency) },
+    { key: 'tax_amount', header: 'Tax Amount', cell: (row) => <span className="font-medium">{formatCurrency(row.tax_amount, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
 
@@ -186,8 +186,8 @@ export default function TaxCompliancePage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Tax Liability" value={formatCurrency(totalTaxAmount)} icon={<FileText className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-          <KPICard title="Pending" value={formatCurrency(pendingAmount)} icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+          <KPICard title="Total Tax Liability" value={formatCurrency(totalTaxAmount, company?.currency)} icon={<FileText className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Pending" value={formatCurrency(pendingAmount, company?.currency)} icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
           <KPICard title="Overdue" value={overdueCount} icon={<AlertTriangle className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
           <KPICard title="Total Records" value={taxes.length} icon={<FileText className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         </div>
@@ -224,8 +224,8 @@ export default function TaxCompliancePage() {
                   <div><span className="text-gray-500">Tax Type:</span> {selectedTax.tax_type}</div>
                   <div><span className="text-gray-500">Period:</span> {selectedTax.tax_period}</div>
                   <div><span className="text-gray-500">Due Date:</span> {formatDate(selectedTax.due_date)}</div>
-                  <div><span className="text-gray-500">Taxable Amount:</span> {formatCurrency(selectedTax.taxable_amount)}</div>
-                  <div><span className="text-gray-500">Tax Amount:</span> {formatCurrency(selectedTax.tax_amount)}</div>
+                  <div><span className="text-gray-500">Taxable Amount:</span> {formatCurrency(selectedTax.taxable_amount, company?.currency)}</div>
+                  <div><span className="text-gray-500">Tax Amount:</span> {formatCurrency(selectedTax.tax_amount, company?.currency)}</div>
                   <div><span className="text-gray-500">Status:</span> <StatusBadge status={selectedTax.status} /></div>
                   {selectedTax.filed_at && <div><span className="text-gray-500">Filed At:</span> {formatDate(selectedTax.filed_at)}</div>}
                   {selectedTax.paid_at && <div><span className="text-gray-500">Paid At:</span> {formatDate(selectedTax.paid_at)}</div>}

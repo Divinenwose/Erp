@@ -41,11 +41,11 @@ export default function TrialBalancePage() {
     { key: 'account_type', header: 'Type' },
     { key: 'debit_balance', header: 'Debit', cell: (row) => {
       const debit = row.account_type === 'asset' || row.account_type === 'expense' ? (row.current_balance || 0) : 0;
-      return <span className="font-medium">{formatCurrency(debit)}</span>;
+      return <span className="font-medium">{formatCurrency(debit, company?.currency)}</span>;
     }},
     { key: 'credit_balance', header: 'Credit', cell: (row) => {
       const credit = row.account_type === 'liability' || row.account_type === 'equity' || row.account_type === 'revenue' ? (row.current_balance || 0) : 0;
-      return <span className="font-medium">{formatCurrency(credit)}</span>;
+      return <span className="font-medium">{formatCurrency(credit, company?.currency)}</span>;
     }},
   ];
 
@@ -70,9 +70,9 @@ export default function TrialBalancePage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Debits" value={formatCurrency(totalDebit)} icon={<Scale className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-          <KPICard title="Total Credits" value={formatCurrency(totalCredit)} icon={<Scale className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-          <KPICard title="Difference" value={formatCurrency(Math.abs(totalDebit - totalCredit))} icon={<Scale className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
+          <KPICard title="Total Debits" value={formatCurrency(totalDebit, company?.currency)} icon={<Scale className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Total Credits" value={formatCurrency(totalCredit, company?.currency)} icon={<Scale className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+          <KPICard title="Difference" value={formatCurrency(Math.abs(totalDebit - totalCredit), company?.currency)} icon={<Scale className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
           <KPICard title="Status" value={isBalanced ? 'Balanced' : 'Unbalanced'} icon={<Scale className={`h-4 w-4 ${isBalanced ? 'text-emerald-600' : 'text-rose-600'}`} />} iconBg={isBalanced ? 'bg-emerald-50 dark:bg-emerald-950/50' : 'bg-rose-50 dark:bg-rose-950/50'} loading={loading} />
         </div>
 

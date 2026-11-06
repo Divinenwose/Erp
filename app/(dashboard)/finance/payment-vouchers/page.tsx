@@ -137,7 +137,7 @@ export default function PaymentVouchersPage() {
     { key: 'payee', header: 'Payee' },
     { key: 'payment_date', header: 'Date', cell: (row) => formatDate(row.payment_date) },
     { key: 'category', header: 'Category' },
-    { key: 'amount', header: 'Amount', cell: (row) => <span className="font-medium">{formatCurrency(row.amount)}</span> },
+    { key: 'amount', header: 'Amount', cell: (row) => <span className="font-medium">{formatCurrency(row.amount, company?.currency)}</span> },
     { key: 'payment_method', header: 'Method' },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
@@ -187,9 +187,9 @@ export default function PaymentVouchersPage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Amount" value={formatCurrency(totalAmount)} icon={<FileText className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-          <KPICard title="Pending" value={formatCurrency(pendingAmount)} icon={<FileText className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
-          <KPICard title="Paid" value={formatCurrency(paidAmount)} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+          <KPICard title="Total Amount" value={formatCurrency(totalAmount, company?.currency)} icon={<FileText className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Pending" value={formatCurrency(pendingAmount, company?.currency)} icon={<FileText className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+          <KPICard title="Paid" value={formatCurrency(paidAmount, company?.currency)} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
           <KPICard title="Total Vouchers" value={vouchers.length} icon={<FileText className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         </div>
 
@@ -225,7 +225,7 @@ export default function PaymentVouchersPage() {
                   <div><span className="text-gray-500">Voucher:</span> {selectedVoucher.voucher_number}</div>
                   <div><span className="text-gray-500">Payee:</span> {selectedVoucher.payee}</div>
                   <div><span className="text-gray-500">Date:</span> {formatDate(selectedVoucher.payment_date)}</div>
-                  <div><span className="text-gray-500">Amount:</span> {formatCurrency(selectedVoucher.amount)}</div>
+                  <div><span className="text-gray-500">Amount:</span> {formatCurrency(selectedVoucher.amount, company?.currency)}</div>
                   <div><span className="text-gray-500">Category:</span> {selectedVoucher.category}</div>
                   <div><span className="text-gray-500">Method:</span> {selectedVoucher.payment_method}</div>
                   <div className="col-span-2"><span className="text-gray-500">Description:</span> {selectedVoucher.description}</div>

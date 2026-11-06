@@ -190,7 +190,7 @@ export default function ProposalsPage() {
     { key: 'title', header: 'Title', sortable: true, cell: (row) => <span className="text-sm">{row.title}</span> },
     { key: 'customers', header: 'Customer', cell: (row) => <span className="text-sm text-blue-600">{row.customers?.name ?? '—'}</span> },
     { key: 'opportunities', header: 'Opportunity', cell: (row) => <span className="text-sm text-gray-500">{row.opportunities?.title ?? '—'}</span> },
-    { key: 'total_amount', header: 'Value', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.total_amount)}</span> },
+    { key: 'total_amount', header: 'Value', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.total_amount, company?.currency)}</span> },
     { key: 'valid_until', header: 'Valid Until', sortable: true, cell: (row) => <span className="text-sm">{row.valid_until ? formatDate(row.valid_until) : '—'}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
@@ -257,7 +257,7 @@ export default function ProposalsPage() {
         <KPICard title="Total Proposals" value={proposals.length} icon={<FileText className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Draft" value={draft} icon={<FileText className="h-4 w-4 text-gray-600" />} iconBg="bg-gray-50 dark:bg-gray-950/50" loading={loading} />
         <KPICard title="Pending" value={pending} icon={<Clock className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
-        <KPICard title="Approved Value" value={formatCurrency(totalValue)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+        <KPICard title="Approved Value" value={formatCurrency(totalValue, company?.currency)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
       </div>
 
       <DataTable
@@ -285,10 +285,10 @@ export default function ProposalsPage() {
                 <div className="col-span-2"><span className="text-gray-500">Title:</span> {selectedProposal.title}</div>
                 <div><span className="text-gray-500">Customer:</span> {selectedProposal.customers?.name ?? '—'}</div>
                 <div><span className="text-gray-500">Opportunity:</span> {selectedProposal.opportunities?.title ?? '—'}</div>
-                <div><span className="text-gray-500">Subtotal:</span> {formatCurrency(selectedProposal.subtotal)}</div>
-                <div><span className="text-gray-500">Tax:</span> {formatCurrency(selectedProposal.tax_amount)}</div>
-                <div><span className="text-gray-500">Discount:</span> {formatCurrency(selectedProposal.discount_amount)}</div>
-                <div className="col-span-2 font-semibold"><span className="text-gray-500">Total:</span> {formatCurrency(selectedProposal.total_amount)}</div>
+                <div><span className="text-gray-500">Subtotal:</span> {formatCurrency(selectedProposal.subtotal, company?.currency)}</div>
+                <div><span className="text-gray-500">Tax:</span> {formatCurrency(selectedProposal.tax_amount, company?.currency)}</div>
+                <div><span className="text-gray-500">Discount:</span> {formatCurrency(selectedProposal.discount_amount, company?.currency)}</div>
+                <div className="col-span-2 font-semibold"><span className="text-gray-500">Total:</span> {formatCurrency(selectedProposal.total_amount, company?.currency)}</div>
                 <div><span className="text-gray-500">Valid Until:</span> {selectedProposal.valid_until ? formatDate(selectedProposal.valid_until) : '—'}</div>
                 <div><span className="text-gray-500">Currency:</span> {selectedProposal.currency}</div>
               </div>

@@ -119,8 +119,8 @@ export default function ProductsPage() {
       ),
     },
     { key: 'category', header: 'Category', cell: (row) => <span className="text-sm text-gray-600 dark:text-gray-400">{row.categories?.name ?? '—'}</span> },
-    { key: 'cost_price', header: 'Cost Price', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.cost_price)}</span> },
-    { key: 'selling_price', header: 'Selling Price', sortable: true, cell: (row) => <span className="text-sm font-medium">{formatCurrency(row.selling_price)}</span> },
+    { key: 'cost_price', header: 'Cost Price', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.cost_price, company?.currency)}</span> },
+    { key: 'selling_price', header: 'Selling Price', sortable: true, cell: (row) => <span className="text-sm font-medium">{formatCurrency(row.selling_price, company?.currency)}</span> },
     {
       key: 'stock', header: 'In Stock', sortable: true,
       cell: (row) => {
@@ -206,7 +206,7 @@ export default function ProductsPage() {
         <KPICard title="Total Products" value={products.length} icon={<Package className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Active" value={products.filter(p => p.is_active).length} icon={<Package className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
         <KPICard title="Low Stock Items" value={lowStock} icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
-        <KPICard title="Inventory Value" value={formatCurrency(totalValue)} icon={<Package className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
+        <KPICard title="Inventory Value" value={formatCurrency(totalValue, company?.currency)} icon={<Package className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
       </div>
 
       <DataTable

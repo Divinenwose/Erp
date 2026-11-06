@@ -52,7 +52,7 @@ export default function VendorsReportPage() {
     { key: 'rating', header: 'Rating', cell: (r: any) => `${r.rating ?? 0} / 5` },
     { key: 'orders', header: 'Orders', cell: (r: any) => `${r.completed_orders ?? 0}/${r.total_orders ?? 0}` },
     { key: 'late', header: 'Late Deliveries', cell: (r: any) => r.late_deliveries ?? 0 },
-    { key: 'spend', header: 'Total Spent', cell: (r: any) => r.total_spent ? formatCurrency(r.total_spent) : '-' },
+    { key: 'spend', header: 'Total Spent', cell: (r: any) => r.total_spent ? formatCurrency(r.total_spent, company?.currency) : '-' },
   ];
 
   return (
@@ -64,7 +64,7 @@ export default function VendorsReportPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <KPICard title="Avg Rating" value={`${avgRating} / 5`} icon={<Star className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
-        <KPICard title="Total Spend" value={formatCurrency(totalSpend)} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+        <KPICard title="Total Spend" value={formatCurrency(totalSpend, company?.currency)} icon={<DollarSign className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Late Deliveries" value={totalLateDeliveries} icon={<TrendingDown className="h-4 w-4 text-red-600" />} iconBg="bg-red-50 dark:bg-red-950/50" loading={loading} />
       </div>
 

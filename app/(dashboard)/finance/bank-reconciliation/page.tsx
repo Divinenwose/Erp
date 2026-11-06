@@ -123,9 +123,9 @@ export default function BankReconciliationPage() {
   const columns: Column<any>[] = [
     { key: 'statement_date', header: 'Statement Date', cell: (row) => formatDate(row.statement_date) },
     { key: 'bank_accounts', header: 'Bank Account', cell: (row) => row.bank_accounts?.account_name || 'Unknown' },
-    { key: 'statement_balance', header: 'Statement Balance', cell: (row) => formatCurrency(row.statement_balance) },
-    { key: 'book_balance', header: 'Book Balance', cell: (row) => formatCurrency(row.book_balance) },
-    { key: 'difference', header: 'Difference', cell: (row) => <span className={row.difference === 0 ? 'text-emerald-600' : 'text-rose-600'}>{formatCurrency(row.difference)}</span> },
+    { key: 'statement_balance', header: 'Statement Balance', cell: (row) => formatCurrency(row.statement_balance, company?.currency) },
+    { key: 'book_balance', header: 'Book Balance', cell: (row) => formatCurrency(row.book_balance, company?.currency) },
+    { key: 'difference', header: 'Difference', cell: (row) => <span className={row.difference === 0 ? 'text-emerald-600' : 'text-rose-600'}>{formatCurrency(row.difference, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
 
@@ -205,9 +205,9 @@ export default function BankReconciliationPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div><span className="text-gray-500">Bank Account:</span> {selectedReconciliation.bank_accounts?.account_name}</div>
                   <div><span className="text-gray-500">Statement Date:</span> {formatDate(selectedReconciliation.statement_date)}</div>
-                  <div><span className="text-gray-500">Statement Balance:</span> {formatCurrency(selectedReconciliation.statement_balance)}</div>
-                  <div><span className="text-gray-500">Book Balance:</span> {formatCurrency(selectedReconciliation.book_balance)}</div>
-                  <div><span className="text-gray-500">Difference:</span> <span className={selectedReconciliation.difference === 0 ? 'text-emerald-600' : 'text-rose-600'}>{formatCurrency(selectedReconciliation.difference)}</span></div>
+                  <div><span className="text-gray-500">Statement Balance:</span> {formatCurrency(selectedReconciliation.statement_balance, company?.currency)}</div>
+                  <div><span className="text-gray-500">Book Balance:</span> {formatCurrency(selectedReconciliation.book_balance, company?.currency)}</div>
+                  <div><span className="text-gray-500">Difference:</span> <span className={selectedReconciliation.difference === 0 ? 'text-emerald-600' : 'text-rose-600'}>{formatCurrency(selectedReconciliation.difference, company?.currency)}</span></div>
                   <div><span className="text-gray-500">Status:</span> <StatusBadge status={selectedReconciliation.status} /></div>
                   {selectedReconciliation.notes && <div className="col-span-2"><span className="text-gray-500">Notes:</span> {selectedReconciliation.notes}</div>}
                 </div>

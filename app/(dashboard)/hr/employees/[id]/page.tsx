@@ -309,7 +309,7 @@ export default function EmployeeProfilePage() {
               <div><p className="text-xs text-gray-500">Employment Status</p><StatusBadge status={employee.employment_status} /></div>
               <div><p className="text-xs text-gray-500">Pay Frequency</p><p className="font-medium capitalize">{employee.pay_frequency ?? '—'}</p></div>
               {(isAdmin || hasPermission('hr.payroll.view')) && (
-                <div><p className="text-xs text-gray-500">Salary</p><p className="font-medium">{employee.salary ? formatCurrency(employee.salary) : '—'}</p></div>
+                <div><p className="text-xs text-gray-500">Salary</p><p className="font-medium">{employee.salary ? formatCurrency(employee.salary, company?.currency) : '—'}</p></div>
               )}
             </CardContent>
           </Card>
@@ -450,7 +450,7 @@ export default function EmployeeProfilePage() {
                       if (h.new_branch?.name && h.new_branch?.name !== h.previous_branch?.name) changes.push(`${h.previous_branch?.name ?? '—'} → ${h.new_branch.name}`);
                       if (h.new_job_title && h.new_job_title !== h.previous_job_title) changes.push(`${h.previous_job_title ?? '—'} → ${h.new_job_title}`);
                       if ((isAdmin || hasPermission('hr.payroll.view')) && h.new_salary != null && h.new_salary !== h.previous_salary) {
-                        changes.push(`${h.previous_salary ? formatCurrency(h.previous_salary) : '—'} → ${formatCurrency(h.new_salary)}`);
+                        changes.push(`${h.previous_salary ? formatCurrency(h.previous_salary, company?.currency) : '—'} → ${formatCurrency(h.new_salary, company?.currency)}`);
                       }
                       if (h.new_status && h.new_status !== h.previous_status) changes.push(`${h.previous_status ?? '—'} → ${h.new_status}`);
                       return (

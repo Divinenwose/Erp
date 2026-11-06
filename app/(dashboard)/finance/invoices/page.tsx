@@ -185,8 +185,8 @@ export default function InvoicesPage() {
     { key: 'invoice_number', header: 'Invoice', cell: (row) => <span className="font-mono text-xs text-blue-600">{row.invoice_number}</span> },
     { key: 'customers', header: 'Customer', cell: (row) => row.customers?.name || 'Unknown' },
     { key: 'issue_date', header: 'Issue Date', cell: (row) => formatDate(row.issue_date) },
-    { key: 'total_amount', header: 'Total', cell: (row) => <span className="font-medium">{formatCurrency(row.total_amount)}</span> },
-    { key: 'balance_due', header: 'Balance Due', cell: (row) => <span className="font-medium">{formatCurrency(row.balance_due)}</span> },
+    { key: 'total_amount', header: 'Total', cell: (row) => <span className="font-medium">{formatCurrency(row.total_amount, company?.currency)}</span> },
+    { key: 'balance_due', header: 'Balance Due', cell: (row) => <span className="font-medium">{formatCurrency(row.balance_due, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
 
@@ -240,9 +240,9 @@ export default function InvoicesPage() {
         </PageHeader>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Invoiced" value={formatCurrency(totalInvoiced)} icon={<FileText className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
-          <KPICard title="Total Paid" value={formatCurrency(totalPaid)} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-          <KPICard title="Outstanding" value={formatCurrency(totalOutstanding)} icon={<XCircle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
+          <KPICard title="Total Invoiced" value={formatCurrency(totalInvoiced, company?.currency)} icon={<FileText className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
+          <KPICard title="Total Paid" value={formatCurrency(totalPaid, company?.currency)} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
+          <KPICard title="Outstanding" value={formatCurrency(totalOutstanding, company?.currency)} icon={<XCircle className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
           <KPICard title="Overdue" value={overdueCount} icon={<Send className="h-4 w-4 text-rose-600" />} iconBg="bg-rose-50 dark:bg-rose-950/50" loading={loading} />
         </div>
 
@@ -279,11 +279,11 @@ export default function InvoicesPage() {
                   <div><span className="text-gray-500">Customer:</span> {selectedInvoice.customers?.name}</div>
                   <div><span className="text-gray-500">Issue Date:</span> {formatDate(selectedInvoice.issue_date)}</div>
                   <div><span className="text-gray-500">Due Date:</span> {formatDate(selectedInvoice.due_date)}</div>
-                  <div><span className="text-gray-500">Subtotal:</span> {formatCurrency(selectedInvoice.subtotal)}</div>
-                  <div><span className="text-gray-500">Tax:</span> {formatCurrency(selectedInvoice.tax_amount)}</div>
-                  <div><span className="text-gray-500">Total:</span> {formatCurrency(selectedInvoice.total_amount)}</div>
-                  <div><span className="text-gray-500">Paid:</span> {formatCurrency(selectedInvoice.paid_amount)}</div>
-                  <div className="col-span-2"><span className="text-gray-500">Balance Due:</span> {formatCurrency(selectedInvoice.balance_due)}</div>
+                  <div><span className="text-gray-500">Subtotal:</span> {formatCurrency(selectedInvoice.subtotal, company?.currency)}</div>
+                  <div><span className="text-gray-500">Tax:</span> {formatCurrency(selectedInvoice.tax_amount, company?.currency)}</div>
+                  <div><span className="text-gray-500">Total:</span> {formatCurrency(selectedInvoice.total_amount, company?.currency)}</div>
+                  <div><span className="text-gray-500">Paid:</span> {formatCurrency(selectedInvoice.paid_amount, company?.currency)}</div>
+                  <div className="col-span-2"><span className="text-gray-500">Balance Due:</span> {formatCurrency(selectedInvoice.balance_due, company?.currency)}</div>
                   <div className="col-span-2"><span className="text-gray-500">Status:</span> <StatusBadge status={selectedInvoice.status} /></div>
                 </div>
                 {selectedInvoice.notes && <div><span className="text-gray-500">Notes:</span> {selectedInvoice.notes}</div>}
@@ -300,7 +300,7 @@ export default function InvoicesPage() {
               <div className="space-y-4">
                 <div className="text-sm">
                   <p><span className="text-gray-500">Invoice:</span> {selectedInvoice.invoice_number}</p>
-                  <p><span className="text-gray-500">Balance Due:</span> {formatCurrency(selectedInvoice.balance_due)}</p>
+                  <p><span className="text-gray-500">Balance Due:</span> {formatCurrency(selectedInvoice.balance_due, company?.currency)}</p>
                 </div>
                 <div>
                   <Label>Payment Amount</Label>

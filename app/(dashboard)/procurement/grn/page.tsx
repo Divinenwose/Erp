@@ -178,7 +178,7 @@ export default function GRNPage() {
     { key: 'vendors', header: 'Vendor', cell: (row) => <span className="text-sm">{row.purchase_orders?.vendors?.name || '—'}</span> },
     { key: 'delivery_date', header: 'Delivery Date', cell: (row) => <span className="text-sm text-gray-500">{formatDate(row.delivery_date)}</span> },
     { key: 'condition', header: 'Condition', cell: (row) => <span className="text-xs capitalize">{row.condition.replace(/_/g, ' ')}</span> },
-    { key: 'total_value', header: 'Total Value', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_value ?? 0)}</span> },
+    { key: 'total_value', header: 'Total Value', cell: (row) => <span className="text-sm font-semibold">{formatCurrency(row.total_value ?? 0, company?.currency)}</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
 
@@ -250,7 +250,7 @@ export default function GRNPage() {
           <KPICard title="Total GRNs" value={grns.length} icon={<Package className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
           <KPICard title="Pending Verification" value={pending} icon={<Clock className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-50 dark:bg-amber-950/50" loading={loading} />
           <KPICard title="Verified" value={verified} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
-          <KPICard title="Total Value" value={formatCurrency(totalValue)} icon={<Truck className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
+          <KPICard title="Total Value" value={formatCurrency(totalValue, company?.currency)} icon={<Truck className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
         </div>
 
         <Card className="dark:bg-gray-900 dark:border-gray-800">
@@ -278,7 +278,7 @@ export default function GRNPage() {
                   <div><span className="text-gray-500">Vendor:</span> {selectedGRN.purchase_orders?.vendors?.name || '—'}</div>
                   <div><span className="text-gray-500">Delivery Date:</span> {formatDate(selectedGRN.delivery_date)}</div>
                   <div><span className="text-gray-500">Condition:</span> <span className="capitalize">{selectedGRN.condition.replace(/_/g, ' ')}</span></div>
-                  <div><span className="text-gray-500">Total Value:</span> {formatCurrency(selectedGRN.total_value || 0)}</div>
+                  <div><span className="text-gray-500">Total Value:</span> {formatCurrency(selectedGRN.total_value || 0, company?.currency)}</div>
                   <div><span className="text-gray-500">Verified At:</span> {selectedGRN.verified_at ? formatDate(selectedGRN.verified_at) : '—'}</div>
                 </div>
                 {selectedGRN.notes && <div><span className="text-gray-500">Notes:</span> {selectedGRN.notes}</div>}

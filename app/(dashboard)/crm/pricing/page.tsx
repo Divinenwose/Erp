@@ -184,8 +184,8 @@ export default function PricingPage() {
     { key: 'request_number', header: 'Number', sortable: true, cell: (row) => <span className="font-medium text-sm">{row.request_number}</span> },
     { key: 'product_service', header: 'Product/Service', sortable: true, cell: (row) => <span className="text-sm">{row.product_service}</span> },
     { key: 'customers', header: 'Customer', cell: (row) => <span className="text-sm text-blue-600">{row.customers?.name ?? '—'}</span> },
-    { key: 'current_price', header: 'Current Price', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.current_price)}</span> },
-    { key: 'requested_price', header: 'Requested Price', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.requested_price)}</span> },
+    { key: 'current_price', header: 'Current Price', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.current_price, company?.currency)}</span> },
+    { key: 'requested_price', header: 'Requested Price', sortable: true, cell: (row) => <span className="text-sm">{formatCurrency(row.requested_price, company?.currency)}</span> },
     { key: 'discount_percentage', header: 'Discount %', sortable: true, cell: (row) => <span className="text-sm">{row.discount_percentage?.toFixed(1) ?? 0}%</span> },
     { key: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
   ];
@@ -269,8 +269,8 @@ export default function PricingPage() {
                 <div><span className="text-gray-500">Number:</span> {selectedRequest.request_number}</div>
                 <div><span className="text-gray-500">Status:</span> <StatusBadge status={selectedRequest.status} /></div>
                 <div className="col-span-2"><span className="text-gray-500">Product/Service:</span> {selectedRequest.product_service}</div>
-                <div><span className="text-gray-500">Current Price:</span> {formatCurrency(selectedRequest.current_price)}</div>
-                <div><span className="text-gray-500">Requested Price:</span> {formatCurrency(selectedRequest.requested_price)}</div>
+                <div><span className="text-gray-500">Current Price:</span> {formatCurrency(selectedRequest.current_price, company?.currency)}</div>
+                <div><span className="text-gray-500">Requested Price:</span> {formatCurrency(selectedRequest.requested_price, company?.currency)}</div>
                 <div className="font-semibold"><span className="text-gray-500">Discount:</span> {selectedRequest.discount_percentage?.toFixed(1)}%</div>
                 <div><span className="text-gray-500">Customer:</span> {selectedRequest.customers?.name ?? '—'}</div>
                 <div><span className="text-gray-500">Opportunity:</span> {selectedRequest.opportunities?.title ?? '—'}</div>

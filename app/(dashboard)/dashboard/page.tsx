@@ -10,12 +10,13 @@ import KPICard from '@/components/common/KPICard';
 import PageHeader from '@/components/common/PageHeader';
 import StatusBadge from '@/components/common/StatusBadge';
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import {
   Users, DollarSign, ShoppingCart,
-  FileText, CheckCircle2, Clock, Building2, FolderKanban, Target
+  FileText, CheckCircle2, Clock, Building2, FolderKanban, Target,
+  Activity, ArrowUpRight, RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,9 @@ interface DashboardStats {
   totalRevenue: number; activeLeads: number;
 }
 
-interface RecentActivity { id: string; type: string; title: string; subtitle: string; time: string; status: string; }
+interface RecentActivity { id: string; type: string; title: string; subtitle: string; time: string; status: string; href?: string; }
+interface DepartmentUpdate { id: string; module: string; action: string; time: string; href: string; actor: string; }
+interface DepartmentPulse { department: string; records: number; href: string; }
 
 const chartColors = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#06B6D4', '#F97316'];
 
@@ -69,6 +72,10 @@ export default function DashboardPage() {
   const canIT = isAdmin || hasPermission('it.reports.view');
   const canOperations = isAdmin || hasPermission('operations.reports.view');
   const canLogistics = isAdmin || hasPermission('logistics.view');
+  const canMedia = isAdmin || hasPermission('media.view');
+  const canManufacturing = isAdmin || hasPermission('manufacturing.view');
+  const canQuality = isAdmin || hasPermission('quality.dashboard.view');
+  const canInternalControl = isAdmin || hasPermission('internal_control.dashboard.view');
 
   const [stats, setStats] = useState<DashboardStats>({
     employees: 0, customers: 0, projects: 0, vendors: 0,
@@ -81,7 +88,8 @@ export default function DashboardPage() {
   const [revenueData, setRevenueData] = useState<{ month: string; revenue: number; expenses: number }[]>([]);
   const [pipelineData, setPipelineData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [deptSpend, setDeptSpend] = useState<{ dept: string; budget: number; spent: number }[]>([]);
-  const [departmentActivity, setDepartmentActivity] = useState<{ department: string; records: number }[]>([]);
+  const [departmentUpdates, setDepartmentUpdates] = useState<DepartmentUpdate[]>([]);
+  const [departmentPulse, setDepartmentPulse] = useState<DepartmentPulse[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -99,6 +107,8 @@ export default function DashboardPage() {
         recentEmpRes, deptRes, invoiceCountRes, expenseCountRes, inventoryRes,
         assetsRes, workOrdersRes, marketingRes, itRes, operationsRes,
         logisticsRoutesRes, deliveriesRes, logisticsIncidentsRes, logisticsRequestsRes,
+        mediaCampaignsRes, mediaRequestsRes, productionRunsRes, qualityInspectionsRes,
+        qualityRecordsRes, internalControlRes, auditLogsRes,
       ] = await Promise.all([
         canHR ? supabase.from('employees').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('employment_status', 'active') : Promise.resolve({ count: 0 } as any),
         canCRM ? supabase.from('customers').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'active') : Promise.resolve({ count: 0 } as any),
@@ -124,6 +134,13 @@ export default function DashboardPage() {
         canLogistics ? supabase.from('deliveries').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
         canLogistics ? supabase.from('logistics_incidents').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
         canLogistics ? supabase.from('logistics_requests').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canMedia ? supabase.from('media_campaigns').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canMedia ? supabase.from('media_requests').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canManufacturing ? supabase.from('production_runs').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canQuality ? supabase.from('quality_inspections').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canQuality ? supabase.from('quality_records').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        canInternalControl ? supabase.from('internal_control_records').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
+        isAdmin ? supabase.from('audit_logs').select('id, module, action, created_at, user_id').eq('company_id', id).order('created_at', { ascending: false }).limit(12) : Promise.resolve({ data: [], error: null } as any),
       ]);
 
       const departmentQueryErrors = [
@@ -133,6 +150,11 @@ export default function DashboardPage() {
         { department: 'IT', error: itRes.error },
         { department: 'Operations', error: operationsRes.error },
         { department: 'Logistics', error: logisticsRoutesRes.error ?? deliveriesRes.error ?? logisticsIncidentsRes.error ?? logisticsRequestsRes.error },
+        { department: 'Media', error: mediaCampaignsRes.error ?? mediaRequestsRes.error },
+        { department: 'Manufacturing', error: productionRunsRes.error },
+        { department: 'Quality', error: qualityInspectionsRes.error ?? qualityRecordsRes.error },
+        { department: 'Legal & Internal Control', error: internalControlRes.error },
+        { department: 'Audit updates', error: auditLogsRes.error },
       ].filter(result => result.error);
       if (departmentQueryErrors.length > 0) {
         toast.error(`Could not load dashboard data for: ${departmentQueryErrors.map(result => result.department).join(', ')}.`);
@@ -180,18 +202,39 @@ export default function DashboardPage() {
         budget: Number(department.budget ?? 0),
         spent: departmentExpenses[department.id] ?? 0,
       })));
-      setDepartmentActivity([
-        ...(canHR ? [{ department: 'HR', records: empRes.count ?? 0 }] : []),
-        ...(canFinance ? [{ department: 'Finance', records: (invoiceCountRes.count ?? 0) + (expenseCountRes.count ?? 0) }] : []),
-        ...(canCRM || canLeads ? [{ department: 'Sales & CRM', records: (custRes.count ?? 0) + (leadRes.data ?? []).length }] : []),
-        ...(canProjects ? [{ department: 'Projects', records: projRes.count ?? 0 }] : []),
-        ...(canProcurement || canPurchaseRequests ? [{ department: 'Procurement', records: (vendRes.count ?? 0) + (prRes.count ?? 0) }] : []),
-        ...(canInventory ? [{ department: 'Inventory', records: inventoryRes.count ?? 0 }] : []),
-        ...(canAdministration ? [{ department: 'Administration', records: (assetsRes.count ?? 0) + (workOrdersRes.count ?? 0) }] : []),
-        ...(canMarketing ? [{ department: 'Marketing', records: marketingRes.count ?? 0 }] : []),
-        ...(canIT ? [{ department: 'IT', records: itRes.count ?? 0 }] : []),
-        ...(canOperations ? [{ department: 'Operations', records: operationsRes.count ?? 0 }] : []),
-        ...(canLogistics ? [{ department: 'Logistics', records: (logisticsRoutesRes.count ?? 0) + (deliveriesRes.count ?? 0) + (logisticsIncidentsRes.count ?? 0) + (logisticsRequestsRes.count ?? 0) }] : []),
+      const departmentRoutes: Record<string, string> = {
+        Administration: '/administration',
+        'Human Resources': '/hr',
+        'Finance & Accounts': '/finance',
+        Marketing: '/marketing',
+        Procurement: '/procurement',
+        IT: '/it',
+        Operations: '/operations',
+        Logistics: '/logistics',
+        'Sales & CRM': '/crm',
+        Media: '/media',
+        'Manufacturing & Warehouse': '/manufacturing',
+        'Legal & Internal Control': '/internal-control',
+        'Quality Control & Quality Assurance': '/quality',
+        Inventory: '/inventory',
+        Projects: '/projects',
+      };
+      setDepartmentPulse([
+        ...(canAdministration ? [{ department: 'Administration', records: (assetsRes.count ?? 0) + (workOrdersRes.count ?? 0), href: departmentRoutes.Administration }] : []),
+        ...(canHR ? [{ department: 'Human Resources', records: empRes.count ?? 0, href: departmentRoutes['Human Resources'] }] : []),
+        ...(canFinance ? [{ department: 'Finance & Accounts', records: (invoiceCountRes.count ?? 0) + (expenseCountRes.count ?? 0), href: departmentRoutes['Finance & Accounts'] }] : []),
+        ...(canMarketing ? [{ department: 'Marketing', records: marketingRes.count ?? 0, href: departmentRoutes.Marketing }] : []),
+        ...(canProcurement || canPurchaseRequests ? [{ department: 'Procurement', records: (vendRes.count ?? 0) + (prRes.count ?? 0), href: departmentRoutes.Procurement }] : []),
+        ...(canIT ? [{ department: 'IT', records: itRes.count ?? 0, href: departmentRoutes.IT }] : []),
+        ...(canOperations ? [{ department: 'Operations', records: operationsRes.count ?? 0, href: departmentRoutes.Operations }] : []),
+        ...(canLogistics ? [{ department: 'Logistics', records: (logisticsRoutesRes.count ?? 0) + (deliveriesRes.count ?? 0) + (logisticsIncidentsRes.count ?? 0) + (logisticsRequestsRes.count ?? 0), href: departmentRoutes.Logistics }] : []),
+        ...(canCRM || canLeads ? [{ department: 'Sales & CRM', records: (custRes.count ?? 0) + (leadRes.data ?? []).length, href: departmentRoutes['Sales & CRM'] }] : []),
+        ...(canMedia ? [{ department: 'Media', records: (mediaCampaignsRes.count ?? 0) + (mediaRequestsRes.count ?? 0), href: departmentRoutes.Media }] : []),
+        ...(canManufacturing || canInventory ? [{ department: 'Manufacturing & Warehouse', records: (productionRunsRes.count ?? 0) + (inventoryRes.count ?? 0), href: departmentRoutes['Manufacturing & Warehouse'] }] : []),
+        ...(canInternalControl ? [{ department: 'Legal & Internal Control', records: internalControlRes.count ?? 0, href: departmentRoutes['Legal & Internal Control'] }] : []),
+        ...(canQuality ? [{ department: 'Quality Control & Quality Assurance', records: (qualityRecordsRes.count ?? 0) + (qualityInspectionsRes.count ?? 0), href: departmentRoutes['Quality Control & Quality Assurance'] }] : []),
+        ...(canInventory ? [{ department: 'Inventory', records: inventoryRes.count ?? 0, href: departmentRoutes.Inventory }] : []),
+        ...(canProjects ? [{ department: 'Projects', records: projRes.count ?? 0, href: departmentRoutes.Projects }] : []),
       ]);
 
       setStats({
@@ -230,21 +273,65 @@ export default function DashboardPage() {
         ...(leavesData.data ?? []).map((l: any) => ({
           id: l.id, type: 'leave',
           title: `Leave request — ${l.employees?.first_name} ${l.employees?.last_name}`,
-          subtitle: 'HR · Leave Management', time: l.created_at, status: l.status,
+          subtitle: 'HR · Leave Management', time: l.created_at, status: l.status, href: '/hr/leave',
         })),
         ...(projectsData.data ?? []).map((p: any) => ({
           id: p.id, type: 'project',
           title: `Project: ${p.name}`,
-          subtitle: 'Project Management', time: p.updated_at, status: p.status,
+          subtitle: 'Project Management', time: p.updated_at, status: p.status, href: '/projects',
         })),
         ...(prsData.data ?? []).map((r: any) => ({
           id: r.id, type: 'pr',
           title: r.title,
-          subtitle: 'Procurement · Purchase Request', time: r.created_at, status: r.status,
+          subtitle: 'Procurement · Purchase Request', time: r.created_at, status: r.status, href: '/procurement/requests',
         })),
       ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 8);
 
       setActivities(feed);
+      if (isAdmin && !auditLogsRes.error) {
+        const actorIds = Array.from(new Set((auditLogsRes.data ?? []).map((log: any) => log.user_id).filter(Boolean)));
+        const { data: actorProfiles, error: actorProfilesError } = actorIds.length > 0
+          ? await supabase.from('profiles').select('id, first_name, last_name').in('id', actorIds)
+          : { data: [], error: null };
+        if (actorProfilesError) console.error('[DASHBOARD] Could not resolve audit update actors:', actorProfilesError);
+        const actorNames = new Map((actorProfiles ?? []).map(actor => [
+          actor.id,
+          `${actor.first_name ?? ''} ${actor.last_name ?? ''}`.trim(),
+        ]));
+        const moduleLinks: Record<string, string> = {
+          hr: '/hr',
+          hr_leave: '/hr/leave',
+          hr_employee_requests: '/hr/employee-requests',
+          finance: '/finance',
+          invoices: '/finance/invoices',
+          crm: '/crm',
+          marketing: '/marketing',
+          procurement: '/procurement',
+          purchase_requests: '/procurement/requests',
+          projects: '/projects',
+          operations: '/operations',
+          logistics: '/logistics',
+          it: '/it',
+          media: '/media',
+          manufacturing: '/manufacturing',
+          quality: '/quality',
+          internal_control: '/internal-control',
+          assets: '/administration/assets',
+          departments: '/settings/departments',
+          users: '/settings/users',
+          roles: '/settings/roles',
+        };
+        setDepartmentUpdates((auditLogsRes.data ?? []).map((log: any) => ({
+          id: log.id,
+          module: String(log.module ?? 'system').replace(/[_-]+/g, ' '),
+          action: String(log.action ?? 'updated').replace(/[_-]+/g, ' '),
+          time: log.created_at,
+          href: moduleLinks[log.module] ?? '/administration/audit-logs',
+          actor: actorNames.get(log.user_id) || 'System',
+        })));
+      } else {
+        setDepartmentUpdates([]);
+      }
       setLoading(false);
     };
 
@@ -261,6 +348,8 @@ export default function DashboardPage() {
       'it_tickets', 'it_assets', 'it_licenses', 'it_records', 'operations_records', 'operations_requests',
       'logistics_routes', 'logistics_incidents', 'logistics_documents', 'logistics_communications',
       'logistics_requests', 'logistics_approval_history', 'deliveries', 'warehouses',
+      'media_campaigns', 'media_requests', 'production_runs', 'quality_inspections',
+      'quality_records', 'internal_control_records', 'audit_logs',
     ].forEach(table => {
       channel.on('postgres_changes', {
         event: '*',
@@ -275,7 +364,7 @@ export default function DashboardPage() {
       }
     });
     return () => { void supabase.removeChannel(channel); };
-  }, [company?.id, departmentLandingPath, canHR, canLeave, canFinance, canCRM, canLeads, canPipeline, canProjects, canProcurement, canPurchaseRequests, canInventory, canAdministration, canMarketing, canIT, canOperations, canLogistics, isAdmin]);
+  }, [company?.id, departmentLandingPath, canHR, canLeave, canFinance, canCRM, canLeads, canPipeline, canProjects, canProcurement, canPurchaseRequests, canInventory, canAdministration, canMarketing, canIT, canOperations, canLogistics, canMedia, canManufacturing, canQuality, canInternalControl, isAdmin]);
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -329,6 +418,48 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {isAdmin && (
+        <Card className="dark:bg-gray-900 dark:border-gray-800">
+          <CardHeader className="flex flex-row items-start justify-between gap-4 pb-3">
+            <div>
+              <CardTitle className="text-sm font-semibold">Company-wide Department Pulse</CardTitle>
+              <CardDescription className="mt-1">Current record volumes across departments. Select a department to open its workspace.</CardDescription>
+            </div>
+            <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+              {departmentPulse.length} workspaces
+            </span>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {Array.from({ length: 10 }, (_, index) => <div key={index} className="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />)}
+              </div>
+            ) : departmentPulse.length === 0 ? (
+              <p className="py-6 text-center text-sm text-gray-500">No department data is available yet.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {departmentPulse.map(item => (
+                  <Link
+                    key={item.department}
+                    href={item.href}
+                    className="group rounded-xl border border-gray-200 bg-white p-3 transition hover:border-blue-300 hover:bg-blue-50/50 dark:border-gray-800 dark:bg-gray-950 dark:hover:border-blue-800 dark:hover:bg-blue-950/20"
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+                        <Activity className="h-4 w-4" />
+                      </span>
+                      <ArrowUpRight className="h-4 w-4 text-gray-300 transition group-hover:text-blue-600" />
+                    </div>
+                    <p className="text-xl font-semibold text-gray-900 dark:text-white">{item.records.toLocaleString()}</p>
+                    <p className="mt-1 min-h-8 text-xs leading-4 text-gray-500 dark:text-gray-400">{item.department}</p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -420,24 +551,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>}
 
-        {isAdmin && <Card className="dark:bg-gray-900 dark:border-gray-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Company-wide Department Records</CardTitle>
-            <CardDescription>Live record counts across departments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={240} minHeight={240}>
-              <BarChart data={departmentActivity} margin={{ top: 8, right: 8, left: -20, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="department" tick={{ fontSize: 10 }} interval={0} angle={-35} textAnchor="end" />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="records" name="Records" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>}
-
         {/* Recent invoices */}
         {canFinance && <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-2">
@@ -469,32 +582,63 @@ export default function DashboardPage() {
           </CardContent>
         </Card>}
 
-        {/* Activity feed */}
+        {/* Cross-department audit updates for admins; authorized request feed for department users */}
         <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Recent Activity</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-sm font-semibold">{isAdmin ? 'Latest Department Updates' : 'Recent Activity'}</CardTitle>
+                {isAdmin && <CardDescription className="mt-1">Latest recorded changes from across the company</CardDescription>}
+              </div>
+              {isAdmin && (
+                <Button variant="ghost" size="sm" asChild className="h-7 text-xs text-blue-600">
+                  <Link href="/administration/audit-logs">Audit log</Link>
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-0 p-0">
             {loading ? (
-              <div className="p-4 space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />)}</div>
+              <div className="space-y-2 p-4">{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-10 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />)}</div>
+            ) : isAdmin ? departmentUpdates.length === 0 ? (
+              <div className="px-4 pb-4 pt-2 text-xs text-gray-400">No department updates have been recorded yet.</div>
+            ) : (
+              departmentUpdates.map(update => (
+                <Link key={update.id} href={update.href} className="flex items-start gap-3 border-b border-gray-100 px-4 py-3 transition hover:bg-gray-50 last:border-0 dark:border-gray-800 dark:hover:bg-gray-800/50">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-semibold capitalize text-gray-900 dark:text-white">{update.action}</span>
+                    <span className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                      <span className="truncate capitalize">{update.module}</span>
+                      <span>·</span>
+                      <span className="truncate">{update.actor}</span>
+                      <span>·</span>
+                      <span className="shrink-0">{formatDateRelative(update.time)}</span>
+                    </span>
+                  </span>
+                  <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-gray-300" />
+                </Link>
+              ))
             ) : activities.length === 0 ? (
               <div className="px-4 pb-4 pt-2 text-xs text-gray-400">No activity yet.</div>
             ) : (
               activities.map(a => (
-                <div key={a.id} className="flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${a.type === 'leave' ? 'bg-blue-100 dark:bg-blue-900/30' : a.type === 'project' ? 'bg-violet-100 dark:bg-violet-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+                <Link key={a.id} href={a.href ?? '/dashboard'} className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${a.type === 'leave' ? 'bg-blue-100 dark:bg-blue-900/30' : a.type === 'project' ? 'bg-violet-100 dark:bg-violet-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
                     {a.type === 'leave' ? <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" /> : a.type === 'project' ? <FolderKanban className="h-3.5 w-3.5 text-violet-600" /> : <ShoppingCart className="h-3.5 w-3.5 text-amber-600" />}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{a.title}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <p className="text-xs text-gray-400 truncate">{a.subtitle}</p>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-medium text-gray-900 dark:text-white">{a.title}</span>
+                    <span className="mt-0.5 flex items-center gap-1.5">
+                      <span className="truncate text-xs text-gray-400">{a.subtitle}</span>
                       <span className="text-gray-300 dark:text-gray-600">·</span>
-                      <p className="text-xs text-gray-400 whitespace-nowrap">{formatDateRelative(a.time)}</p>
-                    </div>
-                  </div>
+                      <span className="whitespace-nowrap text-xs text-gray-400">{formatDateRelative(a.time)}</span>
+                    </span>
+                  </span>
                   <StatusBadge status={a.status} size="sm" />
-                </div>
+                </Link>
               ))
             )}
           </CardContent>

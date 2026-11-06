@@ -34,6 +34,7 @@ interface DashboardStats {
 interface RecentActivity { id: string; type: string; title: string; subtitle: string; time: string; status: string; href?: string; }
 interface DepartmentUpdate { id: string; module: string; action: string; time: string; href: string; actor: string; }
 interface DepartmentPulse { department: string; records: number; href: string; }
+interface AttentionItem { label: string; count: number | null; href: string; detail: string; }
 
 const chartColors = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#06B6D4', '#F97316'];
 
@@ -90,6 +91,9 @@ export default function DashboardPage() {
   const [deptSpend, setDeptSpend] = useState<{ dept: string; budget: number; spent: number }[]>([]);
   const [departmentUpdates, setDepartmentUpdates] = useState<DepartmentUpdate[]>([]);
   const [departmentPulse, setDepartmentPulse] = useState<DepartmentPulse[]>([]);
+  const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
+  const [financeDataError, setFinanceDataError] = useState(false);
+  const [budgetDataError, setBudgetDataError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -98,7 +102,9 @@ export default function DashboardPage() {
     // never be shown.
     if (!company?.id || departmentLandingPath) return;
     const id = company.id;
-
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const yearStart = `${now.getFullYear()}-01-01`;
     const loadAll = async () => {
       const [
         empRes, custRes, projRes, vendRes,
@@ -109,19 +115,20 @@ export default function DashboardPage() {
         logisticsRoutesRes, deliveriesRes, logisticsIncidentsRes, logisticsRequestsRes,
         mediaCampaignsRes, mediaRequestsRes, productionRunsRes, qualityInspectionsRes,
         qualityRecordsRes, internalControlRes, auditLogsRes,
+        overdueInvoicesRes, overdueTasksRes, pendingAccessRes, openITTicketsRes, openQualityRecordsRes,
       ] = await Promise.all([
         canHR ? supabase.from('employees').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('employment_status', 'active') : Promise.resolve({ count: 0 } as any),
         canCRM ? supabase.from('customers').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'active') : Promise.resolve({ count: 0 } as any),
         canProjects ? supabase.from('projects').select('id', { count: 'exact', head: true }).eq('company_id', id).in('status', ['in_progress', 'planning']) : Promise.resolve({ count: 0 } as any),
         canProcurement ? supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'active') : Promise.resolve({ count: 0 } as any),
         canLeave ? supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending') : Promise.resolve({ count: 0 } as any),
-        canFinance ? supabase.from('invoices').select('id, total_amount, status', { count: 'exact' }).eq('company_id', id).in('status', ['pending', 'overdue']) : Promise.resolve({ data: [] } as any),
+        canFinance ? supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', id).in('status', ['sent', 'pending', 'partial', 'overdue']) : Promise.resolve({ count: 0 } as any),
         canPurchaseRequests ? supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending') : Promise.resolve({ count: 0 } as any),
-        canFinance ? supabase.from('invoices').select('total_amount, issue_date').eq('company_id', id).eq('status', 'paid') : Promise.resolve({ data: [] } as any),
-        canFinance ? supabase.from('expenses').select('amount, expense_date, employees(department_id)').eq('company_id', id).eq('status', 'approved') : Promise.resolve({ data: [] } as any),
+        canFinance ? supabase.from('invoices').select('paid_amount, issue_date, status').eq('company_id', id).eq('invoice_type', 'sales').in('status', ['partial', 'paid', 'overdue']).gt('paid_amount', 0).gte('issue_date', yearStart) : Promise.resolve({ data: [] } as any),
+        canFinance ? supabase.from('expenses').select('amount, expense_date, category, status, employees(department_id)').eq('company_id', id).in('status', ['approved', 'reimbursed']).gte('expense_date', yearStart) : Promise.resolve({ data: [] } as any),
         canPipeline || canLeads ? supabase.from('leads').select('status').eq('company_id', id) : Promise.resolve({ data: [] } as any),
         canHR ? supabase.from('employees').select('id, first_name, last_name, job_title, hire_date, avatar_url').eq('company_id', id).eq('employment_status', 'active').order('hire_date', { ascending: false }).limit(4) : Promise.resolve({ data: [] } as any),
-        isAdmin ? supabase.from('departments').select('id, name, budget').eq('company_id', id).eq('is_active', true).order('name') : Promise.resolve({ data: [] } as any),
+        isAdmin ? supabase.from('budgets').select('id, department_id, category, budgeted_amount, fiscal_year, start_date, end_date, status, departments(name)').eq('company_id', id).eq('status', 'approved').lte('start_date', today).gte('end_date', today).order('start_date', { ascending: false }) : Promise.resolve({ data: [] } as any),
         canFinance ? supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
         canFinance ? supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
         canInventory ? supabase.from('products').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
@@ -141,10 +148,16 @@ export default function DashboardPage() {
         canQuality ? supabase.from('quality_records').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
         canInternalControl ? supabase.from('internal_control_records').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
         isAdmin ? supabase.from('audit_logs').select('id, module, action, created_at, user_id').eq('company_id', id).order('created_at', { ascending: false }).limit(12) : Promise.resolve({ data: [], error: null } as any),
+        canFinance ? supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('invoice_type', 'sales').in('status', ['pending', 'partial', 'overdue']).lt('due_date', today) : Promise.resolve({ count: 0, error: null } as any),
+        canProjects ? supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('company_id', id).lt('due_date', today).in('status', ['todo', 'in_progress', 'blocked', 'in_review']) : Promise.resolve({ count: 0, error: null } as any),
+        isAdmin ? supabase.from('employee_access_requests').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending') : Promise.resolve({ count: 0, error: null } as any),
+        canIT ? supabase.from('it_tickets').select('id', { count: 'exact', head: true }).eq('company_id', id).not('status', 'in', '(resolved,closed)') : Promise.resolve({ count: 0, error: null } as any),
+        canQuality ? supabase.from('quality_records').select('id', { count: 'exact', head: true }).eq('company_id', id).in('status', ['open', 'pending', 'under_review', 'in_progress', 'awaiting_verification', 'failed', 'non_compliant', 'reopened']) : Promise.resolve({ count: 0, error: null } as any),
       ]);
 
       const departmentQueryErrors = [
         { department: 'Inventory', error: inventoryRes.error },
+        { department: 'Finance revenue and expenses', error: revenueRes.error ?? expenseRes.error },
         { department: 'Administration', error: assetsRes.error ?? workOrdersRes.error },
         { department: 'Marketing', error: marketingRes.error },
         { department: 'IT', error: itRes.error },
@@ -154,7 +167,12 @@ export default function DashboardPage() {
         { department: 'Manufacturing', error: productionRunsRes.error },
         { department: 'Quality', error: qualityInspectionsRes.error ?? qualityRecordsRes.error },
         { department: 'Legal & Internal Control', error: internalControlRes.error },
-        { department: 'Audit updates', error: auditLogsRes.error },
+        { department: 'Finance budgets', error: deptRes.error },
+        { department: 'Overdue invoices', error: overdueInvoicesRes.error },
+        { department: 'Overdue tasks', error: overdueTasksRes.error },
+        { department: 'Access requests', error: pendingAccessRes.error },
+        { department: 'IT tickets', error: openITTicketsRes.error },
+        { department: 'Quality records', error: openQualityRecordsRes.error },
       ].filter(result => result.error);
       if (departmentQueryErrors.length > 0) {
         toast.error(`Could not load dashboard data for: ${departmentQueryErrors.map(result => result.department).join(', ')}.`);
@@ -162,22 +180,23 @@ export default function DashboardPage() {
 
       const invoices = revenueRes.data ?? [];
       const expenses = expenseRes.data ?? [];
-      const yearStart = `${new Date().getFullYear()}-01-01`;
+      setFinanceDataError(Boolean(revenueRes.error || expenseRes.error));
+      setBudgetDataError(Boolean(deptRes.error));
       const totalRevenue = invoices
-        .filter((invoice: any) => invoice.issue_date >= yearStart)
-        .reduce((sum: number, invoice: any) => sum + Number(invoice.total_amount ?? 0), 0);
-      const openInvoices = (invoiceRes.data ?? []).length;
+        .reduce((sum: number, invoice: any) => sum + Number(invoice.paid_amount ?? 0), 0);
+      const openInvoices = invoiceRes.count ?? 0;
       const months = Array.from({ length: 6 }, (_, index) => {
-        const date = new Date();
-        date.setDate(1);
-        date.setMonth(date.getMonth() - (5 - index));
-        return { key: date.toISOString().slice(0, 7), label: date.toLocaleDateString('en-US', { month: 'short' }) };
+        const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+        return {
+          key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+          label: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+        };
       });
       setRevenueData(months.map(month => ({
         month: month.label,
         revenue: invoices
           .filter((invoice: any) => invoice.issue_date?.slice(0, 7) === month.key)
-          .reduce((sum: number, invoice: any) => sum + Number(invoice.total_amount ?? 0), 0),
+          .reduce((sum: number, invoice: any) => sum + Number(invoice.paid_amount ?? 0), 0),
         expenses: expenses
           .filter((expense: any) => expense.expense_date?.slice(0, 7) === month.key)
           .reduce((sum: number, expense: any) => sum + Number(expense.amount ?? 0), 0),
@@ -192,16 +211,36 @@ export default function DashboardPage() {
         value,
         color: chartColors[index % chartColors.length],
       })));
-      const departmentExpenses = expenses.reduce((totals: Record<string, number>, expense: any) => {
-        const departmentId = expense.employees?.department_id;
-        if (departmentId) totals[departmentId] = (totals[departmentId] ?? 0) + Number(expense.amount ?? 0);
-        return totals;
-      }, {});
-      setDeptSpend((deptRes.data ?? []).map((department: any) => ({
-        dept: department.name,
-        budget: Number(department.budget ?? 0),
-        spent: departmentExpenses[department.id] ?? 0,
-      })));
+      const currentBudgets = deptRes.data ?? [];
+      setDeptSpend(currentBudgets.map((budget: any) => {
+        const budgetStart = budget.start_date ?? `${budget.fiscal_year}-01-01`;
+        const budgetEnd = budget.end_date ?? `${budget.fiscal_year}-12-31`;
+        const budgetCategory = String(budget.category ?? '').trim().toLowerCase();
+        const actualSpent = expenses.reduce((sum: number, expense: any) => {
+          const expenseDepartmentId = expense.employees?.department_id;
+          const expenseCategory = String(expense.category ?? '').trim().toLowerCase();
+          const sameCategory = budgetCategory === expenseCategory;
+          if (
+            expenseDepartmentId === budget.department_id
+            && expense.expense_date >= budgetStart
+            && expense.expense_date <= budgetEnd
+            && sameCategory
+          ) return sum + Number(expense.amount ?? 0);
+          return sum;
+        }, 0);
+        return {
+          dept: `${(budget as any).departments?.name ?? 'Department'} · ${budget.category}`,
+          budget: Number(budget.budgeted_amount ?? 0),
+          spent: actualSpent,
+        };
+      }));
+      setAttentionItems([
+        ...(canFinance ? [{ label: 'Overdue receivables', count: overdueInvoicesRes.error ? null : overdueInvoicesRes.count ?? 0, href: '/finance/receivables', detail: 'Customer invoices past due' }] : []),
+        ...(canProjects ? [{ label: 'Overdue tasks', count: overdueTasksRes.error ? null : overdueTasksRes.count ?? 0, href: '/projects/tasks', detail: 'Open tasks past their due date' }] : []),
+        ...(isAdmin ? [{ label: 'Access requests', count: pendingAccessRes.error ? null : pendingAccessRes.count ?? 0, href: '/settings/access-requests', detail: 'Awaiting Super Admin review' }] : []),
+        ...(canIT ? [{ label: 'Open IT tickets', count: openITTicketsRes.error ? null : openITTicketsRes.count ?? 0, href: '/it', detail: 'Unresolved service tickets' }] : []),
+        ...(canQuality ? [{ label: 'Open quality issues', count: openQualityRecordsRes.error ? null : openQualityRecordsRes.count ?? 0, href: '/quality', detail: 'Records requiring follow-up' }] : []),
+      ]);
       const departmentRoutes: Record<string, string> = {
         Administration: '/administration',
         'Human Resources': '/hr',
@@ -392,7 +431,7 @@ export default function DashboardPage() {
 
       {/* Primary KPIs — each card only shown if the viewer has the underlying permission */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {canFinance && <KPICard title="Total Revenue (YTD)" value={formatCurrency(stats.totalRevenue, company?.currency)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
+        {canFinance && <KPICard title="Total Revenue (YTD)" value={financeDataError ? 'Unavailable' : formatCurrency(stats.totalRevenue, company?.currency)} icon={<DollarSign className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />}
         {canHR && <KPICard title="Active Employees" value={stats.employees} icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />}
         {canCRM && <KPICard title="Active Customers" value={stats.customers} icon={<Building2 className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />}
         {canProjects && <KPICard title="Active Projects" value={stats.projects} icon={<FolderKanban className="h-4 w-4 text-orange-600" />} iconBg="bg-orange-50 dark:bg-orange-950/50" loading={loading} />}
@@ -418,6 +457,35 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {attentionItems.length > 0 && (
+        <section className="space-y-3" aria-labelledby="attention-heading">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 id="attention-heading" className="text-sm font-semibold text-gray-900 dark:text-white">Needs attention</h2>
+              <p className="text-xs text-gray-500">Live counts of overdue work and pending reviews</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {attentionItems.map(item => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="rounded-xl border border-gray-200 bg-white p-4 transition hover:border-amber-300 hover:shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:hover:border-amber-800"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{item.label}</span>
+                  <Clock className="h-4 w-4 text-amber-500" />
+                </div>
+                <p className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">
+                  {loading ? '—' : item.count == null ? '—' : item.count.toLocaleString()}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">{item.detail}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {isAdmin && (
         <Card className="dark:bg-gray-900 dark:border-gray-800">
@@ -466,10 +534,16 @@ export default function DashboardPage() {
         {canFinance && <Card className="lg:col-span-2 dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Revenue vs Expenses (Last 6 Months)</CardTitle>
+            <CardDescription>
+              Paid invoice amounts by issue date and approved or reimbursed expenses by expense date · {company?.currency ?? 'USD'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200} minHeight={200}>
-              <AreaChart data={revenueData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+            {financeDataError ? (
+              <p className="py-12 text-center text-sm text-red-600">Financial chart data could not be loaded. Refresh to try again.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={200} minHeight={200}>
+                <AreaChart data={revenueData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
@@ -487,8 +561,9 @@ export default function DashboardPage() {
                 <Legend iconType="circle" iconSize={8} />
                 <Area type="monotone" dataKey="revenue" stroke="#3B82F6" fill="url(#colRev)" strokeWidth={2} name="Revenue" />
                 <Area type="monotone" dataKey="expenses" stroke="#F59E0B" fill="url(#colExp)" strokeWidth={2} name="Expenses" />
-              </AreaChart>
-            </ResponsiveContainer>
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>}
 
@@ -527,9 +602,19 @@ export default function DashboardPage() {
         {isAdmin && <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Department Budget Utilization</CardTitle>
+            <CardDescription>Approved or reimbursed expenses matched by the employee&apos;s current department, category, and budget period</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {deptSpend.map(d => {
+            {budgetDataError ? (
+              <p className="py-5 text-center text-sm text-red-600">Budget utilization could not be loaded. Refresh to try again.</p>
+            ) : deptSpend.length === 0 ? (
+              <div className="py-5 text-center">
+                <p className="text-sm text-gray-500">No approved budgets are active today.</p>
+                <Button variant="link" size="sm" asChild className="mt-1">
+                  <Link href="/finance/budgets">Review budgets</Link>
+                </Button>
+              </div>
+            ) : deptSpend.map(d => {
               const pct = d.budget > 0 ? Math.round((d.spent / d.budget) * 100) : 0;
               return (
                 <div key={d.dept}>
@@ -542,8 +627,8 @@ export default function DashboardPage() {
                       style={{ width: `${Math.min(100, pct)}%` }} />
                   </div>
                   <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-                    <span>{formatCurrency(d.spent, company?.currency)}</span>
-                    <span>{formatCurrency(d.budget, company?.currency)}</span>
+                    <span>Spent {formatCurrency(d.spent, company?.currency)}</span>
+                    <span>Budget {formatCurrency(d.budget, company?.currency)}</span>
                   </div>
                 </div>
               );

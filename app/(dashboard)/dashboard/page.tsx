@@ -125,10 +125,10 @@ export default function DashboardPage() {
         canFinance ? supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', id).in('status', ['sent', 'pending', 'partial', 'overdue']) : Promise.resolve({ count: 0 } as any),
         canPurchaseRequests ? supabase.from('purchase_requests').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pending') : Promise.resolve({ count: 0 } as any),
         canFinance ? supabase.from('invoices').select('paid_amount, issue_date, status').eq('company_id', id).eq('invoice_type', 'sales').in('status', ['partial', 'paid', 'overdue']).gt('paid_amount', 0).gte('issue_date', yearStart) : Promise.resolve({ data: [] } as any),
-        canFinance ? supabase.from('expenses').select('amount, expense_date, category, status, employees(department_id)').eq('company_id', id).in('status', ['approved', 'reimbursed']).gte('expense_date', yearStart) : Promise.resolve({ data: [] } as any),
+        canFinance ? supabase.from('expenses').select('amount, expense_date, category, status, employee_id').eq('company_id', id).in('status', ['approved', 'reimbursed']).gte('expense_date', yearStart) : Promise.resolve({ data: [] } as any),
         canPipeline || canLeads ? supabase.from('leads').select('status').eq('company_id', id) : Promise.resolve({ data: [] } as any),
         canHR ? supabase.from('employees').select('id, first_name, last_name, job_title, hire_date, avatar_url').eq('company_id', id).eq('employment_status', 'active').order('hire_date', { ascending: false }).limit(4) : Promise.resolve({ data: [] } as any),
-        isAdmin ? supabase.from('budgets').select('id, department_id, category, budgeted_amount, fiscal_year, start_date, end_date, status, departments(name)').eq('company_id', id).eq('status', 'approved').lte('start_date', today).gte('end_date', today).order('start_date', { ascending: false }) : Promise.resolve({ data: [] } as any),
+        isAdmin ? supabase.from('budgets').select('id, department_id, name, fiscal_year, period, total_amount, status, departments(name)').eq('company_id', id).eq('fiscal_year', now.getFullYear()).in('status', ['active', 'approved']) : Promise.resolve({ data: [] } as any),
         canFinance ? supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
         canFinance ? supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
         canInventory ? supabase.from('products').select('id', { count: 'exact', head: true }).eq('company_id', id) : Promise.resolve({ count: 0 } as any),
@@ -154,10 +154,14 @@ export default function DashboardPage() {
         canIT ? supabase.from('it_tickets').select('id', { count: 'exact', head: true }).eq('company_id', id).not('status', 'in', '(resolved,closed)') : Promise.resolve({ count: 0, error: null } as any),
         canQuality ? supabase.from('quality_records').select('id', { count: 'exact', head: true }).eq('company_id', id).in('status', ['open', 'pending', 'under_review', 'in_progress', 'awaiting_verification', 'failed', 'non_compliant', 'reopened']) : Promise.resolve({ count: 0, error: null } as any),
       ]);
+      const employeeDepartmentsRes = isAdmin
+        ? await supabase.from('employees').select('id, department_id').eq('company_id', id)
+        : { data: [], error: null };
 
       const departmentQueryErrors = [
         { department: 'Inventory', error: inventoryRes.error },
-        { department: 'Finance revenue and expenses', error: revenueRes.error ?? expenseRes.error },
+        { department: 'Finance invoices', error: revenueRes.error },
+        { department: 'Finance expenses', error: expenseRes.error },
         { department: 'Administration', error: assetsRes.error ?? workOrdersRes.error },
         { department: 'Marketing', error: marketingRes.error },
         { department: 'IT', error: itRes.error },
@@ -168,6 +172,7 @@ export default function DashboardPage() {
         { department: 'Quality', error: qualityInspectionsRes.error ?? qualityRecordsRes.error },
         { department: 'Legal & Internal Control', error: internalControlRes.error },
         { department: 'Finance budgets', error: deptRes.error },
+        { department: 'Employee department assignments', error: employeeDepartmentsRes.error },
         { department: 'Overdue invoices', error: overdueInvoicesRes.error },
         { department: 'Overdue tasks', error: overdueTasksRes.error },
         { department: 'Access requests', error: pendingAccessRes.error },
@@ -175,13 +180,14 @@ export default function DashboardPage() {
         { department: 'Quality records', error: openQualityRecordsRes.error },
       ].filter(result => result.error);
       if (departmentQueryErrors.length > 0) {
-        toast.error(`Could not load dashboard data for: ${departmentQueryErrors.map(result => result.department).join(', ')}.`);
+        departmentQueryErrors.forEach(result => console.error(`[DASHBOARD] ${result.department} query failed:`, result.error));
+        toast.error(`Could not load dashboard data for: ${departmentQueryErrors.map(result => `${result.department} (${result.error?.message ?? 'query failed'})`).join('; ')}.`);
       }
 
       const invoices = revenueRes.data ?? [];
       const expenses = expenseRes.data ?? [];
       setFinanceDataError(Boolean(revenueRes.error || expenseRes.error));
-      setBudgetDataError(Boolean(deptRes.error));
+      setBudgetDataError(Boolean(deptRes.error || employeeDepartmentsRes.error || expenseRes.error));
       const totalRevenue = invoices
         .reduce((sum: number, invoice: any) => sum + Number(invoice.paid_amount ?? 0), 0);
       const openInvoices = invoiceRes.count ?? 0;
@@ -212,28 +218,29 @@ export default function DashboardPage() {
         color: chartColors[index % chartColors.length],
       })));
       const currentBudgets = deptRes.data ?? [];
-      setDeptSpend(currentBudgets.map((budget: any) => {
-        const budgetStart = budget.start_date ?? `${budget.fiscal_year}-01-01`;
-        const budgetEnd = budget.end_date ?? `${budget.fiscal_year}-12-31`;
-        const budgetCategory = String(budget.category ?? '').trim().toLowerCase();
-        const actualSpent = expenses.reduce((sum: number, expense: any) => {
-          const expenseDepartmentId = expense.employees?.department_id;
-          const expenseCategory = String(expense.category ?? '').trim().toLowerCase();
-          const sameCategory = budgetCategory === expenseCategory;
-          if (
-            expenseDepartmentId === budget.department_id
-            && expense.expense_date >= budgetStart
-            && expense.expense_date <= budgetEnd
-            && sameCategory
-          ) return sum + Number(expense.amount ?? 0);
-          return sum;
-        }, 0);
-        return {
-          dept: `${(budget as any).departments?.name ?? 'Department'} · ${budget.category}`,
-          budget: Number(budget.budgeted_amount ?? 0),
-          spent: actualSpent,
+      const employeeDepartments = new Map(
+        (employeeDepartmentsRes.data ?? []).map((employee: { id: string; department_id: string | null }) => [employee.id, employee.department_id])
+      );
+      const budgetTotals = new Map<string, { departmentId: string; department: string; budget: number }>();
+      currentBudgets.forEach((budget: any) => {
+        const key = `${budget.department_id}:${budget.fiscal_year}`;
+        const current = budgetTotals.get(key) ?? {
+          departmentId: budget.department_id,
+          department: budget.departments?.name ?? 'Department',
+          budget: 0,
         };
-      }));
+        current.budget += Number(budget.total_amount ?? 0);
+        budgetTotals.set(key, current);
+      });
+      setDeptSpend(Array.from(budgetTotals.values()).map(budget => ({
+        dept: budget.department,
+        budget: budget.budget,
+        spent: expenses.reduce((sum: number, expense: any) => (
+          employeeDepartments.get(expense.employee_id) === budget.departmentId
+            ? sum + Number(expense.amount ?? 0)
+            : sum
+        ), 0),
+      })));
       setAttentionItems([
         ...(canFinance ? [{ label: 'Overdue receivables', count: overdueInvoicesRes.error ? null : overdueInvoicesRes.count ?? 0, href: '/finance/receivables', detail: 'Customer invoices past due' }] : []),
         ...(canProjects ? [{ label: 'Overdue tasks', count: overdueTasksRes.error ? null : overdueTasksRes.count ?? 0, href: '/projects/tasks', detail: 'Open tasks past their due date' }] : []),
@@ -602,14 +609,14 @@ export default function DashboardPage() {
         {isAdmin && <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Department Budget Utilization</CardTitle>
-            <CardDescription>Approved or reimbursed expenses matched by the employee&apos;s current department, category, and budget period</CardDescription>
+            <CardDescription>Current-year active or approved budgets compared with approved or reimbursed expenses by the employee&apos;s current department</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {budgetDataError ? (
               <p className="py-5 text-center text-sm text-red-600">Budget utilization could not be loaded. Refresh to try again.</p>
             ) : deptSpend.length === 0 ? (
               <div className="py-5 text-center">
-                <p className="text-sm text-gray-500">No approved budgets are active today.</p>
+                <p className="text-sm text-gray-500">No active or approved budgets were found for this fiscal year.</p>
                 <Button variant="link" size="sm" asChild className="mt-1">
                   <Link href="/finance/budgets">Review budgets</Link>
                 </Button>

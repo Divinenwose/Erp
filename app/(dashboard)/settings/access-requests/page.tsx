@@ -54,7 +54,7 @@ export default function EmployeeAccessRequestsPage() {
     const [requestResult, roleResult] = await Promise.all([
       supabase
         .from('employee_access_requests')
-        .select('id, employee_id, company_id, request_reason, status, created_at, requested_role_id, employees:employee_id(first_name, last_name, email, employee_number, job_title, departments(name))')
+        .select('id, employee_id, company_id, request_reason, status, created_at, requested_role_id, employees:employees!employee_access_request_employee_company_fk(first_name, last_name, email, employee_number, job_title, departments(name))')
         .eq('company_id', company.id)
         .order('created_at', { ascending: false }),
       canReview

@@ -147,11 +147,15 @@ export async function reviewEmployeeAccessRequest(input: {
 
   const { data: request, error: requestError } = await supabaseAdmin
     .from('employee_access_requests')
-    .select('id, company_id, employee_id, status, employees(id, user_id, employment_status, first_name, last_name, email, phone, job_title, department_id, branch_id)')
+    .select('id, company_id, employee_id, status, employees!employee_access_request_employee_company_fk(id, user_id, employment_status, first_name, last_name, email, phone, job_title, department_id, branch_id)')
     .eq('id', input.request_id)
     .eq('company_id', actor.companyId)
     .maybeSingle();
-  if (requestError || !request) return { success: false, error: 'Access request was not found' };
+  if (requestError) {
+    console.error('[EMPLOYEE ACCESS] Request lookup failed:', requestError);
+    return { success: false, error: 'Unable to load the access request' };
+  }
+  if (!request) return { success: false, error: 'Access request was not found' };
   if (request.status !== 'pending') return { success: false, error: 'This request has already been reviewed' };
 
   const employee = request.employees as unknown as {

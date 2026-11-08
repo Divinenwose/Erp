@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { activateEmployeeAccess } from '@/app/actions/employee-access';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function SetupPasswordPage() {
@@ -80,12 +79,6 @@ export default function SetupPasswordPage() {
         return;
       }
 
-      const activation = await activateEmployeeAccess(session.access_token);
-      if (!activation.success) {
-        setError(activation.error || 'Unable to activate your employee account');
-        setSettingPassword(false);
-        return;
-      }
       await refreshProfile();
 
       setSuccess(true);

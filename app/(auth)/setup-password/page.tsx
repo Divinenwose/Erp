@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { activateEmployeeAccess } from '@/app/actions/employee-access';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SetupPasswordPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const { refreshProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [settingPassword, setSettingPassword] = useState(false);
   const [password, setPassword] = useState('');
@@ -24,23 +26,14 @@ export default function SetupPasswordPage() {
   useEffect(() => {
     const validateSession = async () => {
       try {
-        console.log('[Setup Password] Validating session...');
-        // Check if user has an active session (from auth callback)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        console.log('[Setup Password] Session:', session);
-        console.log('[Setup Password] Session error:', sessionError);
-
         if (sessionError || !session) {
-          console.log('[Setup Password] No valid session found');
           setError('Invalid invitation link. Please request a new invitation.');
           setLoading(false);
           return;
         }
 
-        // Check if user already has a password set (they shouldn't if coming from invite)
-        // This is a new user from invite, so they should be able to set password
-        console.log('[Setup Password] Session validated successfully');
         setTokenValid(true);
         setLoading(false);
       } catch (err) {
@@ -70,6 +63,13 @@ export default function SetupPasswordPage() {
     setSettingPassword(true);
 
     try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        setError('Your invitation session has expired. Please open the latest invitation email.');
+        setSettingPassword(false);
+        return;
+      }
+
       const { error: updateError } = await supabase.auth.updateUser({
         password: password,
       });
@@ -80,12 +80,18 @@ export default function SetupPasswordPage() {
         return;
       }
 
+      const activation = await activateEmployeeAccess(session.access_token);
+      if (!activation.success) {
+        setError(activation.error || 'Unable to activate your employee account');
+        setSettingPassword(false);
+        return;
+      }
+      await refreshProfile();
+
       setSuccess(true);
       toast.success('Password set successfully');
       
-      // Redirect to dashboard after 2 seconds
       setTimeout(() => {
-        console.log('[Setup Password] Redirecting to dashboard...');
         router.push('/dashboard');
       }, 2000);
     } catch (err) {

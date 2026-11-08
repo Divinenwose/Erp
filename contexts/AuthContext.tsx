@@ -46,6 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isInitialized = useRef(false);
 
   const fetchProfile = useCallback(async (userId: string) => {
+    const currentPath = typeof window === 'undefined' ? '' : window.location.pathname;
+    const isInvitationSetup = currentPath === '/auth/complete' || currentPath === '/setup-password';
     try {
       const { data: prof, error: profError } = await supabase
         .from('profiles')
@@ -57,9 +59,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('[AUTH] Error fetching profile:', profError);
         return;
       }
-
       if (prof) {
         if (!prof.is_active) {
+          if (isInvitationSetup) {
+            setProfile(null);
+            setCompany(null);
+            setRoles([]);
+            setPermissions([]);
+            setDepartmentName(null);
+            setDepartmentNames([]);
+            return;
+          }
           await supabase.auth.signOut({ scope: 'local' });
           return;
         }

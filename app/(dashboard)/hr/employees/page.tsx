@@ -280,11 +280,11 @@ export default function EmployeesPage() {
         </Link>
       ),
     },
-    { key: 'job_title', header: 'Job Title', sortable: true, cell: (row) => <span className="text-sm">{row.job_title ?? '—'}</span> },
-    { key: 'department', header: 'Department', cell: (row) => <span className="text-sm text-gray-600 dark:text-gray-400">{row.departments?.name ?? '—'}</span> },
-    { key: 'hire_date', header: 'Hire Date', sortable: true, cell: (row) => <span className="text-sm text-gray-500">{row.hire_date ? formatDate(row.hire_date) : '—'}</span> },
-    { key: 'employment_type', header: 'Type', cell: (row) => <span className="text-xs capitalize text-gray-600 dark:text-gray-400">{row.employment_type?.replace(/_/g, ' ')}</span> },
-    { key: 'salary', header: 'Salary', sortable: true, cell: (row) => <span className="text-sm font-medium">{row.salary ? formatCurrency(row.salary, company?.currency) : '—'}</span> },
+    { key: 'job_title', header: 'Job Title', sortable: true, className: 'hidden sm:table-cell', headerClassName: 'hidden sm:table-cell', cell: (row) => <span className="text-sm">{row.job_title ?? '—'}</span> },
+    { key: 'department', header: 'Department', className: 'hidden md:table-cell', headerClassName: 'hidden md:table-cell', cell: (row) => <span className="text-sm text-gray-600 dark:text-gray-400">{row.departments?.name ?? '—'}</span> },
+    { key: 'hire_date', header: 'Hire Date', sortable: true, className: 'hidden lg:table-cell', headerClassName: 'hidden lg:table-cell', cell: (row) => <span className="text-sm text-gray-500">{row.hire_date ? formatDate(row.hire_date) : '—'}</span> },
+    { key: 'employment_type', header: 'Type', className: 'hidden md:table-cell', headerClassName: 'hidden md:table-cell', cell: (row) => <span className="text-xs capitalize text-gray-600 dark:text-gray-400">{row.employment_type?.replace(/_/g, ' ')}</span> },
+    { key: 'salary', header: 'Salary', sortable: true, className: 'hidden lg:table-cell', headerClassName: 'hidden lg:table-cell', cell: (row) => <span className="text-sm font-medium">{row.salary ? formatCurrency(row.salary, company?.currency) : '—'}</span> },
     { key: 'employment_status', header: 'Status', cell: (row) => <StatusBadge status={row.employment_status} /> },
     {
       key: 'actions', header: '', headerClassName: 'w-10',
@@ -316,7 +316,7 @@ export default function EmployeesPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <PageHeader title="Employees" description="Manage your complete workforce" breadcrumbs={[{ label: 'HR' }, { label: 'Employees' }]}>
         <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" />Export</Button>
         <Button
@@ -341,7 +341,7 @@ export default function EmployeesPage() {
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editEmployee ? 'Edit Employee' : 'New Employee'}</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div><Label>First Name *</Label><Input className="mt-1" {...register('first_name')} />{errors.first_name && <p className="text-xs text-red-500 mt-1">{errors.first_name.message}</p>}</div>
                 <div><Label>Last Name *</Label><Input className="mt-1" {...register('last_name')} />{errors.last_name && <p className="text-xs text-red-500 mt-1">{errors.last_name.message}</p>}</div>
                 <div><Label>Email</Label><Input className="mt-1" type="email" {...register('email')} /></div>
@@ -447,7 +447,7 @@ export default function EmployeesPage() {
         </Dialog>
       </PageHeader>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard title="Total Employees" value={employees.length} icon={<Users className="h-4 w-4 text-blue-600" />} iconBg="bg-blue-50 dark:bg-blue-950/50" loading={loading} />
         <KPICard title="Active" value={active} change={3.2} changeLabel="this month" icon={<UserCheck className="h-4 w-4 text-emerald-600" />} iconBg="bg-emerald-50 dark:bg-emerald-950/50" loading={loading} />
         <KPICard title="Full-Time" value={employees.filter(e => e.employment_type === 'full_time').length} icon={<Users className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-50 dark:bg-violet-950/50" loading={loading} />
@@ -461,6 +461,7 @@ export default function EmployeesPage() {
         searchPlaceholder="Search employees..."
         searchKeys={['first_name', 'last_name', 'email', 'job_title', 'employee_number']}
         pageSize={15}
+        tableClassName="min-w-[360px] sm:min-w-[600px]"
         emptyTitle="No employees yet"
         emptyDescription="Add your first employee to get started"
         emptyAction={<Button onClick={() => setDialogOpen(true)} size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Add Employee</Button>}

@@ -34,6 +34,7 @@ interface DataTableProps<T extends object> {
   onExport?: () => void;
   rowKey?: string;
   onRowClick?: (row: T) => void;
+  tableClassName?: string;
 }
 
 function SkeletonRow({ cols }: { cols: number }) {
@@ -64,6 +65,7 @@ export default function DataTable<T extends object>({
   onExport,
   rowKey = 'id',
   onRowClick,
+  tableClassName,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -146,7 +148,7 @@ export default function DataTable<T extends object>({
 
       {/* Table */}
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <table className="w-full text-sm min-w-[600px]">
+        <table className={cn('w-full text-sm min-w-[600px]', tableClassName)}>
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
               {visibleColumns.map(col => (

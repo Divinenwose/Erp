@@ -26,7 +26,7 @@ export default function PageHeader({ title, description, children, breadcrumbs }
         <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">{title}</h1>
         {description && <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{description}</p>}
       </div>
-      {children && <div className="flex items-center gap-2 shrink-0 sm:mt-0 mt-2">{children}</div>}
+      {children && <div className="mt-2 flex w-full flex-wrap items-center gap-2 sm:mt-0 sm:w-auto sm:shrink-0">{children}</div>}
     </div>
   );
 }

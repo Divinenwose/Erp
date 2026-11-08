@@ -20,19 +20,28 @@ export default function AuthCompletePage() {
     setError('');
 
     try {
-      const code = new URLSearchParams(window.location.search).get('code');
+      const callbackParams = new URLSearchParams(window.location.search);
+      const code = callbackParams.get('code');
+      const isPasswordReset =
+        window.location.pathname === '/reset-password'
+        || callbackParams.get('next') === '/setup-password';
       const { data, error: authError } = code
         ? await supabase.auth.exchangeCodeForSession(code)
         : await supabase.auth.getSession();
 
       if (authError || !data.session) {
-        throw new Error(authError?.message || 'The invitation link is invalid or has expired.');
+        throw new Error(
+          authError?.message
+          || (isPasswordReset
+            ? 'The password reset link is invalid or has expired. Request a new one.'
+            : 'The invitation link is invalid or has expired.')
+        );
       }
 
       const { user, access_token: accessToken } = data.session;
       const metadata = user.user_metadata ?? {};
-      const isCompanyRegistration =
-        typeof metadata.first_name === 'string'
+      const isCompanyRegistration = !isPasswordReset
+        && typeof metadata.first_name === 'string'
         && typeof metadata.last_name === 'string'
         && typeof metadata.company_name === 'string';
 

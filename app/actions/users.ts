@@ -677,7 +677,7 @@ export async function sendUserPasswordReset(accessToken: string, companyId: stri
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const { error } = await supabasePublic.auth.resetPasswordForEmail(target.email, {
-      redirectTo: `${appUrl}/setup-password`,
+      redirectTo: `${appUrl}/auth/callback?next=%2Fsetup-password`,
     });
     if (error) {
       console.error('[USER ADMIN] Password reset email failed:', error);

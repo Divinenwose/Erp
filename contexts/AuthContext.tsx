@@ -47,7 +47,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = useCallback(async (userId: string) => {
     const currentPath = typeof window === 'undefined' ? '' : window.location.pathname;
-    const isInvitationSetup = currentPath === '/auth/complete' || currentPath === '/setup-password';
+    const isInvitationSetup =
+      currentPath === '/auth/complete'
+      || currentPath === '/setup-password'
+      || currentPath === '/reset-password';
     try {
       const { data: prof, error: profError } = await supabase
         .from('profiles')

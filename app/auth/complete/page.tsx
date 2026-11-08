@@ -60,7 +60,7 @@ export default function AuthCompletePage() {
         return;
       }
 
-      if (typeof metadata.employee_id === 'string') {
+      if (!isPasswordReset && typeof metadata.employee_id === 'string') {
         const activation = await activateEmployeeAccess(accessToken);
         if (!activation.success) {
           throw new Error(activation.error || 'Unable to activate your employee account.');

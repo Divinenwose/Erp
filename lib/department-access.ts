@@ -11,7 +11,7 @@
 
 /** Map department name → module identifiers the department owns. */
 const DEPARTMENT_MODULE_ACCESS: Record<string, string[]> = {
-  'Human Resources': ['hr', 'operations'],
+  'Human Resources': ['hr'],
   'Finance & Accounts': ['finance', 'operations'],
   'Inventory': ['inventory', 'operations'],
   'Procurement': ['procurement', 'operations'],

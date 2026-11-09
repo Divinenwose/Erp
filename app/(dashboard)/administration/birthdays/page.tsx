@@ -46,18 +46,22 @@ export default function BirthdaysPage() {
 
   useEffect(() => { load(); }, [company?.id]);
 
-  const sendBirthdayWish = async (employeeId: string, employeeName: string) => {
+  const sendBirthdayWish = async (employeeId: string, recipientUserId: string | null, employeeName: string) => {
     if (!company?.id || !user?.id) return;
+    if (!recipientUserId) {
+      toast.error('This employee does not have a linked user account');
+      return;
+    }
     setSendingWish(employeeId);
 
     try {
       const { error: notificationError } = await supabase.from('notifications').insert({
         company_id: company.id,
-        user_id: employeeId,
+        user_id: recipientUserId,
         title: 'Happy Birthday!',
         message: `Happy Birthday, ${employeeName}! Wishing you a wonderful day!`,
         type: 'birthday',
-        read: false,
+        is_read: false,
       });
 
       if (notificationError) throw notificationError;
@@ -233,7 +237,7 @@ export default function BirthdaysPage() {
                             size="sm" 
                             variant="outline" 
                             className="h-8"
-                            onClick={() => sendBirthdayWish(emp.id, `${emp.first_name} ${emp.last_name}`)}
+                            onClick={() => sendBirthdayWish(emp.id, emp.user_id ?? null, `${emp.first_name} ${emp.last_name}`)}
                             disabled={sendingWish === emp.id}
                           >
                             {sendingWish === emp.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}

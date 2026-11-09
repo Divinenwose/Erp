@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/common/PageHeader';
@@ -9,43 +9,34 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Check, CheckCheck, Trash2, Filter, AlertCircle, Info, CheckCircle, AlertTriangle } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { Bell, Cake, Check, CheckCheck, Trash2, AlertCircle, Info, CheckCircle, AlertTriangle } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
+
+interface NotificationRecord {
+  id: string;
+  title: string;
+  message: string | null;
+  type: string;
+  is_read: boolean;
+  action_url: string | null;
+  created_at: string;
+}
 
 export default function NotificationsPage() {
   const { company, user } = useAuth();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  useEffect(() => {
-    loadNotifications();
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('notifications-channel')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user?.id}`,
-        },
-        (payload) => {
-          loadNotifications();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [company?.id, user?.id, selectedType, selectedStatus]);
-
-  const loadNotifications = async () => {
-    if (!company?.id || !user?.id) return;
-    setLoading(true);
+  const loadNotifications = useCallback(async (showLoading = true) => {
+    if (!company?.id || !user?.id) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
+    if (showLoading) setLoading(true);
 
     let query = supabase
       .from('notifications')
@@ -58,30 +49,95 @@ export default function NotificationsPage() {
       query = query.eq('type', selectedType);
     }
     if (selectedStatus !== 'all') {
-      query = query.eq('read', selectedStatus === 'read');
+      query = query.eq('is_read', selectedStatus === 'read');
     }
 
-    const { data } = await query.limit(50);
-    setNotifications(data || []);
+    const { data, error } = await query.limit(50);
+    if (error) {
+      console.error('[NOTIFICATIONS] Failed to load notification center:', error);
+      toast.error('Could not load notifications');
+      setLoading(false);
+      return;
+    }
+    setNotifications(data ?? []);
     setLoading(false);
-  };
+  }, [company?.id, user?.id, selectedType, selectedStatus]);
+
+  const loadNotificationsRef = useRef(loadNotifications);
+
+  useEffect(() => {
+    loadNotificationsRef.current = loadNotifications;
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    void loadNotifications();
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    if (!company?.id || !user?.id) return;
+    const channel = supabase
+      .channel(`notifications-${company.id}-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          void loadNotificationsRef.current(false);
+        }
+      )
+      .subscribe(status => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error(`[NOTIFICATIONS] Center realtime subscription ${status.toLowerCase()}`);
+        }
+      });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [company?.id, user?.id]);
 
   const markAsRead = async (id: string) => {
-    await supabase.from('notifications').update({ read: true }).eq('id', id);
-    loadNotifications();
+    if (!company?.id || !user?.id) return;
+    const { error } = await supabase.from('notifications').update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('id', id).eq('company_id', company.id).eq('user_id', user.id);
+    if (error) {
+      console.error('[NOTIFICATIONS] Failed to mark notification as read:', error);
+      toast.error('Could not update notification');
+      return;
+    }
+    void loadNotifications(false);
   };
 
   const markAllAsRead = async () => {
-    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
-    if (unreadIds.length > 0) {
-      await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
-      loadNotifications();
+    if (!company?.id || !user?.id) return;
+    if (unreadCount) {
+      let query = supabase.from('notifications').update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('company_id', company.id).eq('user_id', user.id).eq('is_read', false);
+      if (selectedType !== 'all') query = query.eq('type', selectedType);
+      const { error } = await query;
+      if (error) {
+        console.error('[NOTIFICATIONS] Failed to mark all notifications as read:', error);
+        toast.error('Could not update notifications');
+        return;
+      }
+      void loadNotifications(false);
     }
   };
 
   const deleteNotification = async (id: string) => {
-    await supabase.from('notifications').delete().eq('id', id);
-    loadNotifications();
+    if (!company?.id || !user?.id) return;
+    const { error } = await supabase.from('notifications').delete()
+      .eq('id', id).eq('company_id', company.id).eq('user_id', user.id);
+    if (error) {
+      console.error('[NOTIFICATIONS] Failed to delete notification:', error);
+      toast.error('Could not delete notification');
+      return;
+    }
+    void loadNotifications(false);
   };
 
   const getNotificationIcon = (type: string) => {
@@ -91,6 +147,7 @@ export default function NotificationsPage() {
       info: <Info className="h-5 w-5 text-blue-600" />,
       warning: <AlertTriangle className="h-5 w-5 text-amber-600" />,
       system: <Bell className="h-5 w-5 text-purple-600" />,
+      birthday: <Cake className="h-5 w-5 text-pink-600" />,
     };
     return icons[type] || icons.info;
   };
@@ -102,11 +159,12 @@ export default function NotificationsPage() {
       info: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
       warning: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
       system: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+      birthday: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
     };
     return badges[type] || badges.info;
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
     <PermissionGuard permission="notifications.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view notifications</div>}>
@@ -144,6 +202,7 @@ export default function NotificationsPage() {
                   <SelectItem value="info">Info</SelectItem>
                   <SelectItem value="warning">Warnings</SelectItem>
                   <SelectItem value="system">System</SelectItem>
+                  <SelectItem value="birthday">Birthdays</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
@@ -176,7 +235,7 @@ export default function NotificationsPage() {
                 <div
                   key={notification.id}
                   className={`p-4 rounded-lg border ${
-                    !notification.read
+                    !notification.is_read
                       ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
                       : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800'
                   }`}
@@ -195,7 +254,7 @@ export default function NotificationsPage() {
                             {notification.message}
                           </p>
                         </div>
-                        {!notification.read && (
+                        {!notification.is_read && (
                           <Badge className="bg-blue-600 text-white">New</Badge>
                         )}
                       </div>
@@ -203,9 +262,9 @@ export default function NotificationsPage() {
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           {notification.created_at && formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                         </span>
-                        {notification.link && (
+                        {notification.action_url && (
                           <a
-                            href={notification.link}
+                            href={notification.action_url}
                             className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
                           >
                             View Details
@@ -214,7 +273,7 @@ export default function NotificationsPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      {!notification.read && (
+                      {!notification.is_read && (
                         <Button
                           size="sm"
                           variant="ghost"

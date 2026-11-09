@@ -20,7 +20,7 @@ export async function sendNotification(
   data: NotificationData
 ) {
   try {
-    await supabase.from('notifications').insert({
+    const { error } = await supabase.from('notifications').insert({
       company_id: companyId,
       user_id: userId,
       title: data.title,
@@ -30,6 +30,9 @@ export async function sendNotification(
       reference_id: data.reference_id,
       action_url: data.action_url,
     });
+    if (error) {
+      console.error('Failed to send notification:', error);
+    }
   } catch (error) {
     console.error('Failed to send notification:', error);
   }

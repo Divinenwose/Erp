@@ -32,47 +32,66 @@ export default function Topbar({ onMenuToggle, sidebarCollapsed, mobileOpen, onM
   const [notifications, setNotifications] = useState<Array<{
     id: string;
     title: string;
-    message: string;
+    message: string | null;
     created_at: string;
     type: string;
-    read: boolean;
+    is_read: boolean;
   }>>([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   useEffect(() => {
     if (!company?.id || !user?.id) {
       setNotifications([]);
+      setUnreadNotificationCount(0);
       return;
     }
 
     const loadNotifications = async () => {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('id, title, message, created_at, type, read')
-        .eq('company_id', company.id)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      if (error) {
-        console.error('[NOTIFICATIONS] Failed to load topbar notifications:', error);
-        return;
+      const [listResult, countResult] = await Promise.all([
+        supabase
+          .from('notifications')
+          .select('id, title, message, created_at, type, is_read')
+          .eq('company_id', company.id)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5),
+        supabase
+          .from('notifications')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', company.id)
+          .eq('user_id', user.id)
+          .eq('is_read', false),
+      ]);
+      if (listResult.error) {
+        console.error('[NOTIFICATIONS] Failed to load topbar notifications:', listResult.error);
+      } else {
+        setNotifications(listResult.data ?? []);
       }
-      setNotifications(data ?? []);
+      if (countResult.error) {
+        console.error('[NOTIFICATIONS] Failed to load unread notification count:', countResult.error);
+      } else {
+        setUnreadNotificationCount(countResult.count ?? 0);
+      }
     };
 
     void loadNotifications();
     const channel = supabase
-      .channel(`topbar-notifications-${user.id}`)
+      .channel(`topbar-notifications-${company.id}-${user.id}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'notifications',
         filter: `user_id=eq.${user.id}`,
       }, () => { void loadNotifications(); })
-      .subscribe();
+      .subscribe(status => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error(`[NOTIFICATIONS] Topbar realtime subscription ${status.toLowerCase()}`);
+        }
+      });
     return () => { void supabase.removeChannel(channel); };
   }, [company?.id, user?.id]);
 
-  const unreadCount = notifications.filter(notification => !notification.read).length;
+  const unreadCount = unreadNotificationCount;
   const displayName = profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() : user?.email ?? '';
   // Show the user's actual RBAC role(s) rather than the legacy profile.role
   // field, which may just hold "employee" regardless of assigned role.
@@ -168,7 +187,9 @@ export default function Topbar({ onMenuToggle, sidebarCollapsed, mobileOpen, onM
             <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-red-500 text-white text-[10px] leading-4 text-center rounded-full">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
               )}
             </Button>
           </DropdownMenuTrigger>
@@ -182,7 +203,7 @@ export default function Topbar({ onMenuToggle, sidebarCollapsed, mobileOpen, onM
                 <p className="px-3 py-6 text-center text-xs text-gray-500">You are all caught up.</p>
               )}
               {notifications.map(n => (
-                <div key={n.id} className={cn('px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 border-b last:border-b-0', !n.read && 'bg-blue-50/50 dark:bg-blue-950/20')}>
+                <div key={n.id} className={cn('px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 border-b last:border-b-0', !n.is_read && 'bg-blue-50/50 dark:bg-blue-950/20')}>
                   <div className="flex items-start gap-2">
                     <div className={cn('w-1.5 h-1.5 rounded-full mt-2 shrink-0', n.type === 'error' || n.type === 'alert' ? 'bg-red-500' : n.type === 'warning' ? 'bg-amber-500' : n.type === 'success' || n.type === 'approval' ? 'bg-emerald-500' : 'bg-blue-500')} />
                     <div className="min-w-0">

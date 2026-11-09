@@ -54,7 +54,7 @@ export default function LeavePage() {
   const loadData = async () => {
     if (!company?.id) return;
     const [req, types, emps, bal] = await Promise.all([
-      supabase.from('leave_requests').select('*, employees(first_name, last_name), leave_types(name, color)').eq('company_id', company.id).order('created_at', { ascending: false }),
+      supabase.from('leave_requests').select('*, employees!leave_requests_employee_id_fkey(first_name, last_name), leave_types(name, color)').eq('company_id', company.id).order('created_at', { ascending: false }),
       supabase.from('leave_types').select('*').eq('company_id', company.id),
       supabase.from('employees').select('id, first_name, last_name, user_id').eq('company_id', company.id).eq('employment_status', 'active'),
       canViewBalances ? supabase.from('leave_balances').select('*').eq('company_id', company.id) : Promise.resolve({ data: [] } as any),

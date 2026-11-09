@@ -22,7 +22,7 @@ const reportSections: ReportSection[] = [
   { title: 'Employees', permission: 'hr.employees.view', table: 'employees', select: 'id, employee_number, first_name, last_name, email, phone, department_id, branch_id, job_title, employment_type, employment_status, hire_date, termination_date, manager_id, created_at, updated_at, departments(name), branches(name)', sheet: 'Employees' },
   { title: 'Departments', permission: 'hr.departments.view', table: 'departments', select: '*', sheet: 'Departments' },
   { title: 'Attendance', permission: 'hr.attendance.view', table: 'attendance', select: '*, employees(first_name, last_name, employee_number, departments(name))', sheet: 'Attendance' },
-  { title: 'Leave requests', permission: 'hr.leave.view', table: 'leave_requests', select: '*, employees(first_name, last_name, employee_number, departments(name)), leave_types(name)', sheet: 'Leave Requests' },
+  { title: 'Leave requests', permission: 'hr.leave.view', table: 'leave_requests', select: '*, employees!leave_requests_employee_id_fkey(first_name, last_name, employee_number, departments(name)), leave_types(name)', sheet: 'Leave Requests' },
   { title: 'Payroll items', permission: 'hr.payroll.view', table: 'payroll_items', select: '*, employees(first_name, last_name, employee_number, job_title, departments(name)), payroll_runs(period_start, period_end, pay_date, status)', sheet: 'Payroll Items' },
   { title: 'Payroll runs', permission: 'hr.payroll.view', table: 'payroll_runs', select: '*', sheet: 'Payroll Runs' },
   { title: 'Position requisitions', permission: 'hr.recruitment.view', table: 'job_requisitions', select: '*, departments(name)', sheet: 'Requisitions' },
@@ -77,6 +77,10 @@ export default function HRReportsPage() {
     ));
     const failedIndex = results.findIndex(result => result.error);
     if (failedIndex !== -1) {
+      console.error(
+        `[HR REPORTS] Failed to load ${visibleSections[failedIndex].title.toLowerCase()} report:`,
+        results[failedIndex].error,
+      );
       toast.error(`Could not load the ${visibleSections[failedIndex].title.toLowerCase()} report`);
       setLoading(false);
       return;

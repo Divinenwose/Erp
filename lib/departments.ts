@@ -38,8 +38,6 @@ const TARGFIT_DEPARTMENTS: DepartmentConfig[] = [
   { name: 'Inventory', code: 'INV', budget: 150000 },
   { name: 'Procurement', code: 'PRC', budget: 100000 },
   { name: 'Sales & CRM', code: 'SLS', budget: 180000 },
-  { name: 'Client Servicing', code: 'CS', budget: 80000 },
-  { name: 'Client Marketing', code: 'CM', budget: 70000 },
   { name: 'Legal', code: 'LEG', budget: 60000 },
   { name: 'Administration', code: 'ADM', budget: 110000 },
   { name: 'Operations', code: 'OPS', budget: 200000 },

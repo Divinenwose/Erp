@@ -57,6 +57,7 @@ export function isModuleAllowed(module: string | undefined, departmentName?: str
   if (!module) return true;
   if (UNIVERSAL_MODULES.has(module)) return true;
   const departmentNames = Array.isArray(departmentName) ? departmentName : departmentName ? [departmentName] : [];
+  if (module === 'legal' && departmentNames.includes('Human Resources')) return true;
   return departmentNames.some(name => DEPARTMENT_MODULE_ACCESS[name]?.includes(module));
 }
 

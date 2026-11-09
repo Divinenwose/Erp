@@ -58,7 +58,6 @@ export const defaultNavigationConfig: NavItem[] = [
     module: 'hr',
     permission: 'hr.view',
     children: [
-      { title: 'Overview', href: '/hr', icon: LayoutDashboard, permission: 'hr.view' },
       { title: 'Employees', href: '/hr/employees', icon: Users, permission: 'hr.employees.view' },
       { title: 'Employee Requests', href: '/hr/employee-requests', icon: UserPlus, permission: 'hr.employee_requests.view' },
       { title: 'Account Access Requests', href: '/settings/access-requests', icon: ShieldCheck, permission: 'hr.access_requests.view' },
@@ -162,6 +161,7 @@ export const defaultNavigationConfig: NavItem[] = [
   {
     title: 'Legal',
     icon: Shield,
+    module: 'legal',
     children: [
       { title: 'Overview', href: '/legal', icon: LayoutDashboard, permission: 'legal.dashboard.view' },
       { title: 'Requests & Advisory', href: '/legal/requests', icon: Inbox, permission: 'legal.requests.create' },
@@ -618,7 +618,6 @@ export const navigationConfig: NavItem[] = [
     module: 'hr',
     permission: 'hr.view',
     children: [
-      { title: 'Overview', href: '/hr', icon: LayoutDashboard, permission: 'hr.view' },
       { title: 'Employees', href: '/hr/employees', icon: Users, permission: 'hr.employees.view' },
       { title: 'Employee Requests', href: '/hr/employee-requests', icon: UserPlus, permission: 'hr.employee_requests.view' },
       { title: 'Account Access Requests', href: '/settings/access-requests', icon: ShieldCheck, permission: 'hr.access_requests.view' },
@@ -772,6 +771,7 @@ export const navigationConfig: NavItem[] = [
   {
     title: 'Legal',
     icon: Shield,
+    module: 'legal',
     children: [
       { title: 'Overview', href: '/legal', icon: LayoutDashboard, permission: 'legal.dashboard.view' },
       { title: 'Requests & Advisory', href: '/legal/requests', icon: Inbox, permission: 'legal.requests.create' },

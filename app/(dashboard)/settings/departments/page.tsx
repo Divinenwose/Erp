@@ -48,9 +48,16 @@ export default function DepartmentsPage() {
     setLoading(true);
 
     const [deptRes, empRes] = await Promise.all([
-      supabase.from('departments').select('*').eq('company_id', company.id).order('name'),
+      supabase.from('departments').select('*').eq('company_id', company.id).eq('is_active', true).order('name'),
       supabase.from('employee_directory').select('department_id').eq('company_id', company.id),
     ]);
+
+    if (deptRes.error) {
+      console.error('[DEPARTMENTS] Failed to load departments:', deptRes.error);
+      toast.error('Failed to load departments');
+      setLoading(false);
+      return;
+    }
 
     const deptsWithCounts = (deptRes.data ?? []).map((dept: Department) => ({
       ...dept,
@@ -138,10 +145,20 @@ export default function DepartmentsPage() {
     if (!deleteId || !company?.id) return;
     setDeleting(true);
 
-    const { error } = await supabase.from('departments').delete().eq('id', deleteId);
+    const { data: deleted, error } = await supabase
+      .from('departments')
+      .delete()
+      .eq('id', deleteId)
+      .eq('company_id', company.id)
+      .select('id')
+      .maybeSingle();
 
     if (error) {
+      console.error('[DEPARTMENTS] Failed to delete department:', error);
       toast.error('Failed to delete department');
+    } else if (!deleted) {
+      console.error('[DEPARTMENTS] Department deletion affected no rows:', deleteId);
+      toast.error('Department was not deleted. Check your permissions and try again.');
     } else {
       await logAuditEvent(company.id, currentUser?.id || '', {
         action: 'department_deleted',
@@ -149,7 +166,7 @@ export default function DepartmentsPage() {
         record_id: deleteId,
       });
       toast.success('Department deleted');
-      load();
+      await load();
     }
 
     setDeleteId(null);
@@ -171,7 +188,7 @@ export default function DepartmentsPage() {
         toast.success(`Departments synced: ${result.created} created, ${result.updated} updated, ${result.deleted} deleted`);
       }
 
-      load();
+      await load();
     } catch (error: any) {
       toast.error('Failed to sync departments');
       console.error('Sync error:', error);

@@ -20,6 +20,8 @@ export type Database = {
       legal_records: { Row: LegalRecord; Insert: Omit<LegalRecord, 'id' | 'created_at' | 'updated_at'>; Update: Partial<LegalRecord> };
       legal_record_history: { Row: LegalRecordHistory; Insert: Omit<LegalRecordHistory, 'id' | 'created_at'>; Update: Partial<LegalRecordHistory> };
       legal_attachments: { Row: LegalAttachment; Insert: Omit<LegalAttachment, 'id' | 'created_at'>; Update: Partial<LegalAttachment> };
+      legal_record_events: { Row: LegalRecordEvent; Insert: Omit<LegalRecordEvent, 'id' | 'created_at'>; Update: never };
+      legal_record_versions: { Row: LegalRecordVersion; Insert: never; Update: never };
     };
   };
 };
@@ -75,6 +77,26 @@ export interface LegalAttachment {
   mime_type: string | null;
   file_size: number | null;
   uploaded_by: string;
+  created_at: string;
+}
+
+export interface LegalRecordEvent {
+  id: string;
+  company_id: string;
+  record_id: string;
+  actor_id: string;
+  event_type: 'comment' | 'requested_information' | 'assessment' | 'recommendation' | 'status_update' | 'deadline_update';
+  body: string;
+  created_at: string;
+}
+
+export interface LegalRecordVersion {
+  id: string;
+  company_id: string;
+  record_id: string;
+  version_number: number;
+  actor_id: string | null;
+  record_snapshot: Record<string, unknown>;
   created_at: string;
 }
 

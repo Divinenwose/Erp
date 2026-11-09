@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/rbac/PermissionGuard';
@@ -50,12 +50,7 @@ export default function ApprovalWorkflowsPage() {
     { key: 'actions', header: 'Actions' },
   ];
 
-  useEffect(() => {
-    loadWorkflows();
-    loadStages();
-  }, [company?.id]);
-
-  const loadWorkflows = async () => {
+  const loadWorkflows = useCallback(async () => {
     if (!company?.id) return;
     setLoading(true);
     const { data, error } = await supabase
@@ -71,9 +66,9 @@ export default function ApprovalWorkflowsPage() {
       setWorkflows(data || []);
     }
     setLoading(false);
-  };
+  }, [company?.id]);
 
-  const loadStages = async () => {
+  const loadStages = useCallback(async () => {
     if (!company?.id) return;
     const { data, error } = await supabase
       .from('approval_stages')
@@ -87,7 +82,12 @@ export default function ApprovalWorkflowsPage() {
     } else {
       setStages(data || []);
     }
-  };
+  }, [company?.id]);
+
+  useEffect(() => {
+    void loadWorkflows();
+    void loadStages();
+  }, [loadWorkflows, loadStages]);
 
   const createWorkflow = async () => {
     if (!company?.id || !workflowName || !requestType) return;
@@ -205,7 +205,7 @@ export default function ApprovalWorkflowsPage() {
   }));
 
   return (
-    <PermissionGuard permission="approvals.workflows.view" fallback={<div className="p-6 text-center text-gray-500">You don't have permission to view approval workflows</div>}>
+    <PermissionGuard permission="approvals.workflows.view" fallback={<div className="p-6 text-center text-gray-500">You do not have permission to view approval workflows</div>}>
     <div className="space-y-6">
       <PageHeader
         title="Approval Workflows"
@@ -249,6 +249,22 @@ export default function ApprovalWorkflowsPage() {
                     <SelectItem value="maintenance_request">Maintenance Request</SelectItem>
                     <SelectItem value="leave_request">Leave Request</SelectItem>
                     <SelectItem value="expense_request">Expense Request</SelectItem>
+                    <SelectItem value="legal">All Legal Records</SelectItem>
+                    <SelectItem value="legal_request">Legal Request</SelectItem>
+                    <SelectItem value="legal_contract">Legal Contract</SelectItem>
+                    <SelectItem value="legal_opinion">Legal Opinion</SelectItem>
+                    <SelectItem value="legal_compliance">Legal Compliance</SelectItem>
+                    <SelectItem value="legal_governance">Corporate Governance</SelectItem>
+                    <SelectItem value="legal_litigation">Litigation</SelectItem>
+                    <SelectItem value="legal_dispute">Legal Dispute</SelectItem>
+                    <SelectItem value="legal_risk">Legal Risk</SelectItem>
+                    <SelectItem value="legal_intellectual_property">Intellectual Property</SelectItem>
+                    <SelectItem value="legal_employment">Employment Legal Matter</SelectItem>
+                    <SelectItem value="legal_counsel">External Counsel</SelectItem>
+                    <SelectItem value="legal_policy">Legal Policy</SelectItem>
+                    <SelectItem value="legal_draft">Legal Draft</SelectItem>
+                    <SelectItem value="legal_document">Legal Document</SelectItem>
+                    <SelectItem value="legal_obligation">Legal Obligation</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

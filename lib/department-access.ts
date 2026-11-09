@@ -105,6 +105,8 @@ export function getModuleFromPath(pathname: string): string | null {
 export function isRouteAllowedForDepartment(pathname: string, departmentName?: string | string[]): boolean {
   const moduleId = getModuleFromPath(pathname);
   if (!moduleId) return true; // unknown routes are not department-restricted
+  // Legal request intake is cross-department; route permissions still gate each page.
+  if (moduleId === 'legal') return true;
   return isModuleAllowed(moduleId, departmentName);
 }
 

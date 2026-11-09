@@ -252,8 +252,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       const requiredPermission = getRequiredPermission(pathname);
       const companyAdminDashboardAccess = isCompanyAdmin() && pathname === '/dashboard';
+      const employmentMatterAccess = pathname === '/legal/employment'
+        && hasPermission('hr.employment_matters.view');
       if (!isPersonalProfile && !canAccessAllCompanyPages && !companyAdminDashboardAccess
-        && (!requiredPermission || !hasPermission(requiredPermission))) {
+        && (!requiredPermission || (!hasPermission(requiredPermission) && !employmentMatterAccess))) {
         router.replace('/unauthorized');
       }
     }

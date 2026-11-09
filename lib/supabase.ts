@@ -17,9 +17,66 @@ export type Database = {
       permissions: { Row: Permission; Insert: Omit<Permission, 'id' | 'created_at'>; Update: Partial<Permission> };
       role_permissions: { Row: RolePermission; Insert: Omit<RolePermission, 'id' | 'created_at'>; Update: Partial<RolePermission> };
       user_roles: { Row: UserRole; Insert: Omit<UserRole, 'id' | 'assigned_at'>; Update: Partial<UserRole> };
+      legal_records: { Row: LegalRecord; Insert: Omit<LegalRecord, 'id' | 'created_at' | 'updated_at'>; Update: Partial<LegalRecord> };
+      legal_record_history: { Row: LegalRecordHistory; Insert: Omit<LegalRecordHistory, 'id' | 'created_at'>; Update: Partial<LegalRecordHistory> };
+      legal_attachments: { Row: LegalAttachment; Insert: Omit<LegalAttachment, 'id' | 'created_at'>; Update: Partial<LegalAttachment> };
     };
   };
 };
+
+export interface LegalRecord {
+  id: string;
+  company_id: string;
+  record_type: string;
+  reference: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  status: string;
+  priority: string;
+  approval_status: string | null;
+  department_id: string | null;
+  requester_id: string | null;
+  owner_id: string | null;
+  assigned_to: string | null;
+  due_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  renewal_date: string | null;
+  contract_value: number | null;
+  currency: string | null;
+  risk_level: string | null;
+  likelihood: number | null;
+  impact: number | null;
+  details: Record<string, unknown>;
+  created_by: string;
+  closed_at: string | null;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LegalRecordHistory {
+  id: string;
+  company_id: string;
+  record_id: string;
+  actor_id: string | null;
+  action: 'created' | 'updated';
+  snapshot: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface LegalAttachment {
+  id: string;
+  company_id: string;
+  record_id: string;
+  object_path: string;
+  file_name: string;
+  mime_type: string | null;
+  file_size: number | null;
+  uploaded_by: string;
+  created_at: string;
+}
 
 export interface Company {
   id: string;

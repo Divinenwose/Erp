@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -75,13 +75,16 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
   const isAdmin = isSuperAdmin() || isCompanyAdmin();
   const isCompanyAdminUser = isCompanyAdmin();
   const canBypassNavPermissions = accessLevel === 'super_admin' || accessLevel === 'company_super_admin';
+  const hasPermissionForNav = useCallback((permission: string) => permission === 'hr.employment_matters.view'
+    ? hasPermission(permission) || hasPermission('legal.employment_matters.view')
+    : hasPermission(permission), [hasPermission]);
 
   // Check if user has RBAC permission for this item
   const hasItemPermission = useMemo(() => {
     if (canBypassNavPermissions || (isCompanyAdminUser && item.href === '/dashboard')) return true;
     if (!item.permission) return true;
-    return hasPermission(item.permission);
-  }, [item.href, item.permission, hasPermission, canBypassNavPermissions, isCompanyAdminUser]);
+    return hasPermissionForNav(item.permission);
+  }, [item.href, item.permission, hasPermissionForNav, canBypassNavPermissions, isCompanyAdminUser]);
 
   // Check if user's department allows this module
   const hasDepartmentAccess = useMemo(() => {
@@ -96,9 +99,9 @@ function NavItemComponent({ item, collapsed, depth = 0, onMobileClose, departmen
   const visibleChildren = useMemo(() => {
     if (!item.children) return [];
     return item.children.filter(child =>
-      isNavItemAccessible(child, departmentNames, hasPermission, canBypassNavPermissions, isAdmin)
+      isNavItemAccessible(child, departmentNames, hasPermissionForNav, canBypassNavPermissions, isAdmin)
     );
-  }, [item.children, hasPermission, departmentNames, canBypassNavPermissions, isAdmin]);
+  }, [item.children, hasPermissionForNav, departmentNames, canBypassNavPermissions, isAdmin]);
 
   const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + '/') : false;
   const isParentActive = visibleChildren.some(
